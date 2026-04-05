@@ -96,4 +96,10 @@ EMSCRIPTEN_BINDINGS(pokefinder_glue)
         .field("method", &ExtendedWildSearcherState::method)
         .field("hiddenPower", &ExtendedWildSearcherState::hiddenPower)
         .field("hiddenPowerStrength", &ExtendedWildSearcherState::hiddenPowerStrength);
+
+    emscripten::value_immutable_unconstructable<ExtendedIDState>("ExtendedIDState")
+        .field("advances", &ExtendedIDState::advances)
+        .field("tid", &ExtendedIDState::tid)
+        .field("sid", &ExtendedIDState::sid)
+        .field("tsv", &ExtendedIDState::tsv);
 }

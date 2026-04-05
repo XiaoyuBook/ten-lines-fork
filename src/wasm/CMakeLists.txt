@@ -42,6 +42,7 @@ endif()
 add_executable(ten_lines
     src/calibration.cpp
     src/fetch_util.cpp
+    src/id_combo.cpp
     src/initial_seed.cpp
     src/iv_calc.cpp
     src/pokefinder_glue.cpp

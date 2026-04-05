@@ -5,6 +5,7 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 
 import InitialSeedForm from "./components/InitialSeedForm";
 import SearcherForm from "./components/SearcherForm";
+import IdComboForm from "./components/IdComboForm";
 import { Box, Tab, Tabs } from "@mui/material";
 import CalibrationForm from "./components/CalibrationForm";
 import FrLgSeedsTimestamp from "./wasm/src/generated/frlg_seeds_timestamp.txt?raw";
@@ -38,6 +39,11 @@ function TenLinesPages() {
             sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
             hidden={currentPage != 2}
         />,
+        <IdComboForm
+            key={4}
+            sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
+            hidden={currentPage != 4}
+        />,
         bingoActive && <BingoPage key={3} hidden={currentPage != 3} />,
     ];
 
@@ -56,6 +62,7 @@ function TenLinesPages() {
                     variant="fullWidth"
                 >
                     <Tab label="Searcher" value={2} />
+                    <Tab label="ID Combo" value={4} />
                     <Tab label="Initial Seed" value={0} />
                     <Tab label="Calibration" value={1} />
                     {bingoActive && <Tab label="Bingo" value={3} />}

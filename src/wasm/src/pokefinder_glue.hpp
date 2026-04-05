@@ -8,6 +8,7 @@
 #include <Core/Parents/Filters/StateFilter.hpp>
 #include <Core/Parents/States/State.hpp>
 #include <Core/Parents/States/WildState.hpp>
+#include <Core/Parents/States/IDState.hpp>
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
@@ -218,4 +219,17 @@ public:
     using WildSearcherState::specie;
 
     int method;
+};
+
+class ExtendedIDState : public IDState {
+public:
+    ExtendedIDState(const IDState& state)
+        : IDState(state)
+    {
+    }
+
+    using IDState::advances;
+    using IDState::sid;
+    using IDState::tid;
+    using IDState::tsv;
 };
