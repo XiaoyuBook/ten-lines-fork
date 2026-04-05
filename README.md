@@ -1,39 +1,94 @@
-[![](public/icon-180x180.png)](https://lincoln-lm.github.io/ten-lines/)
+[![](public/icon-180x180.png)](https://tenlines.skrxiaoyu.com)
 
-## [Ten Lines](https://lincoln-lm.github.io/ten-lines/): A Suite of Tools for RNG Manipulation in Generation 3
+## Ten Lines Fork
 
-**_Ten Lines_** (name inspired by an old script by Shao that finds initial seeds "in like 10 lines") aims to provide tools to facilitate retail rng manipulation in the 3rd generation of Pok&eacute;mon games.
+This repository is a personal fork of Lincoln-LM's **Ten Lines**, focused on practical FRLG target filtering and easier self-hosted deployment.
 
-## Features
+Original upstream project:
+[Lincoln-LM/ten-lines](https://github.com/Lincoln-LM/ten-lines)
 
--   Direct incorporation of farmed seed lists for FireRed/LeafGreen (live updated every new build)
--   Searcher tab for finding targets
--   Initial Seed tab for finding potential initial seeds for a particular target (both RSE painting and FRLG initial seed manip)
--   Gen-3-Seed-Assistant-like calibration tab with builtin IV calculation.
--   Support for [blisy's e-reader events](https://www.youtube.com/watch?v=fgX36SAeTwQ)
--   Progressive Web App for use offline
--   (Hopefully) mobile-friendly UI
+## What Changed
 
-## Contribution
+- Searcher now supports **reachable advance filtering**
+- You can enter an **Allowed Advances** range directly in the Searcher tab
+- Searcher results are automatically checked against Initial Seed reachability logic
+- Results with no reachable Initial Seed route inside the allowed range are filtered out
+- Searcher can display **Min Reachable Advances** for each remaining target
+- Build flow supports **offline cached FRLG seed data**
+- Vite base path is configurable so the site can be deployed cleanly on a custom domain or subdomain
 
-Welcome!
+## Why This Fork Exists
 
-## Building and Running Locally (see [main.yml](.github/workflows/main.yml) & [package.json](package.json))
+In the original workflow, a target found in the Searcher could still be useless in practice:
 
-To build & run locally:
+1. You find a desirable target seed in Searcher
+2. You open it in Initial Seed
+3. The reachable advances are far too large to be realistic
 
-1. [Install emsdk](https://emscripten.org/docs/getting_started/downloads.html)
-1. Clone the repository: `git clone --recursive https://github.com/lincoln-lm/ten-lines.git`
-1. Enter project directory: `cd ten-lines`
-1. Install python dependencies `pip install -r src/wasm/requirements.txt`
-    - On a system with an externally managed environment, install these in a virtualenv
-1. Install TS dependencies: `npm install`
-1. Build WebAssembly library: `emcmake cmake -S src/wasm -B src/wasm/build && cmake --build src/wasm/build`
-1. Build the project: `npx tsc -b && npx vite build`
-1. Start the development server: `npx vite`
+This fork reduces that problem by letting Searcher pre-filter targets using an allowed advance range, so obviously unreachable targets can be removed earlier.
 
-## Powered by
+## Main Features
 
--   Static site hosting by GitHub
--   Static site built via [Vite](https://vite.dev/) & [React](https://react.dev/)
--   Processing is done in-browser via an [emscripten](https://emscripten.org/)-compiled [WebAssembly module](src/wasm/) that makes use of [PokeFinderCore](https://github.com/Admiral-Fish/PokeFinder)
+- FRLG / RSE search tools
+- Initial Seed lookup
+- Calibration tools
+- Reachable-advance prefiltering in Searcher
+- Offline-friendly generated FRLG seed cache
+- Self-hostable Vite build output
+
+## Building Locally
+
+Requirements:
+
+- `git`
+- `node` / `npm`
+- Python with `numpy` and `requests`
+- Emscripten / `emsdk`
+- `cmake`
+- `ninja`
+
+Typical setup:
+
+```bash
+git clone --recursive <your-fork-url>
+cd ten-lines
+npm install
+python3 -m pip install --user numpy requests pytest
+source ~/emsdk/emsdk_env.sh
+npm run build
+```
+
+On Windows, use the equivalent Python and emsdk activation commands for your local environment.
+
+## Offline Build Notes
+
+This fork supports cached FRLG seed binaries in:
+
+- `src/wasm/src/generated`
+- `public/generated`
+
+If those generated files already exist, the build can reuse them without re-downloading seed data from Google Sheets.
+
+To force a refresh of FRLG seed cache during build:
+
+```bash
+TEN_LINES_REFRESH_FRLG_SEEDS=true npm run build
+```
+
+## Deployment
+
+After building, deploy the contents of `dist/` to a static web root.
+
+Example:
+
+```bash
+npm run build
+rsync -av --delete dist/ /var/www/ten-lines/
+```
+
+For subdomain deployment, this fork defaults to root-path hosting and no longer requires a hardcoded `/ten-lines/` base path.
+
+## Credit
+
+- Original Ten Lines concept and implementation by Lincoln-LM and upstream contributors
+- PokeFinderCore by [Admiral-Fish](https://github.com/Admiral-Fish/PokeFinder)
