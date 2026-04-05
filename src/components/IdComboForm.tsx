@@ -29,6 +29,8 @@ interface IdComboURLState {
     idAdvancesMin: string;
     idAdvancesMax: string;
     idMaxResults: string;
+    idTid: string;
+    idSid: string;
 }
 
 function useIdComboURLState() {
@@ -37,6 +39,8 @@ function useIdComboURLState() {
     const idAdvancesMin = searchParams.get("idAdvancesMin") || "1000";
     const idAdvancesMax = searchParams.get("idAdvancesMax") || "10000";
     const maxResults = searchParams.get("idMaxResults") || "2000";
+    const tid = searchParams.get("idTid") || "";
+    const sid = searchParams.get("idSid") || "";
 
     const setIdComboURLState = (state: Partial<IdComboURLState>) => {
         setSearchParams((prev) => {
@@ -52,6 +56,8 @@ function useIdComboURLState() {
         idAdvancesMin,
         idAdvancesMax,
         maxResults,
+        tid,
+        sid,
         setIdComboURLState,
     };
 }
@@ -107,6 +113,8 @@ export default function IdComboForm({
         idAdvancesMin,
         idAdvancesMax,
         maxResults,
+        tid,
+        sid,
         setIdComboURLState,
     } = useIdComboURLState();
 
@@ -117,6 +125,8 @@ export default function IdComboForm({
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
     const [idRangeIsValid, setIdRangeIsValid] = useState(true);
     const [maxResultsIsValid, setMaxResultsIsValid] = useState(true);
+    const [tidIsValid, setTidIsValid] = useState(true);
+    const [sidIsValid, setSidIsValid] = useState(true);
 
     const ivRanges = ivRangesAreValid
         ? formState.ivRangeStrings.map((range) => [
@@ -134,7 +144,19 @@ export default function IdComboForm({
     );
 
     const isNotSubmittable =
-        searching || !ivRangesAreValid || !idRangeIsValid || !maxResultsIsValid;
+        searching ||
+        !ivRangesAreValid ||
+        !idRangeIsValid ||
+        !maxResultsIsValid ||
+        !tidIsValid ||
+        !sidIsValid;
+
+    const parseOptionalId = (value: string) => {
+        if (value === "") {
+            return -1;
+        }
+        return parseInt(value, 10);
+    };
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -189,6 +211,8 @@ export default function IdComboForm({
                     [...tsvCounts.keys()],
                     idRange[0],
                     idRange[1],
+                    parseOptionalId(tid),
+                    parseOptionalId(sid),
                     parseInt(maxResults, 10)
                 );
 
@@ -291,6 +315,62 @@ export default function IdComboForm({
                     setIdRangeIsValid(value.isValid);
                 }}
             />
+            <Box sx={{ flexDirection: "row", display: "flex" }}>
+                <TextField
+                    label="TID Filter"
+                    margin="normal"
+                    value={tid}
+                    onChange={(event) => {
+                        const value = event.target.value;
+                        const isValid =
+                            value === "" ||
+                            (/^\d+$/.test(value) &&
+                                parseInt(value, 10) >= 0 &&
+                                parseInt(value, 10) <= 65535);
+                        setIdComboURLState({ idTid: value });
+                        setTidIsValid(isValid);
+                    }}
+                    error={!tidIsValid}
+                    helperText={!tidIsValid ? "Leave blank or enter 0-65535" : "Optional exact TID filter"}
+                    fullWidth
+                    slotProps={{
+                        htmlInput: {
+                            inputMode: "numeric",
+                        },
+                    }}
+                />
+                <span
+                    style={{
+                        margin: "0 10px",
+                        alignSelf: "center",
+                    }}
+                >
+                    /
+                </span>
+                <TextField
+                    label="SID Filter"
+                    margin="normal"
+                    value={sid}
+                    onChange={(event) => {
+                        const value = event.target.value;
+                        const isValid =
+                            value === "" ||
+                            (/^\d+$/.test(value) &&
+                                parseInt(value, 10) >= 0 &&
+                                parseInt(value, 10) <= 65535);
+                        setIdComboURLState({ idSid: value });
+                        setSidIsValid(isValid);
+                    }}
+                    error={!sidIsValid}
+                    helperText={!sidIsValid ? "Leave blank or enter 0-65535" : "Optional exact SID filter"}
+                    fullWidth
+                    slotProps={{
+                        htmlInput: {
+                            inputMode: "numeric",
+                        },
+                    }}
+                />
+            </Box>
             <TextField
                 label="Shininess"
                 margin="normal"
