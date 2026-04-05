@@ -6,15 +6,17 @@ import {
     Checkbox,
     FormControlLabel,
     MenuItem,
+    type SxProps,
     TextField,
+    type Theme,
 } from "@mui/material";
 
 import fetchTenLines, {
     COMBINED_WILD_METHOD,
+    fetchSeedData,
     SEED_IDENTIFIER_TO_GAME,
     STATIC_2,
     STATIC_4,
-    hexSeed,
 } from "../tenLines";
 import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
@@ -56,7 +58,6 @@ export interface SearcherURLState {
     trainerID: string;
     secretID: string;
     reachableAdvancesFilter: string;
-    targetInitialSeed: string;
     advancesMin: string;
     advancesMax: string;
 }
@@ -68,8 +69,9 @@ function useSearcherURLState() {
     const secretID = searchParams.get("secretID") || "0";
     const reachableAdvancesFilter =
         searchParams.get("reachableAdvancesFilter") ||
-        (searchParams.has("targetInitialSeed") ? "true" : "false");
-    const targetInitialSeed = searchParams.get("targetInitialSeed") || "0";
+        (searchParams.has("advancesMin") || searchParams.has("advancesMax")
+            ? "true"
+            : "false");
     const advancesMin = searchParams.get("advancesMin") || "0";
     const advancesMax = searchParams.get("advancesMax") || "4294967295";
     const setSearcherURLState = (state: Partial<SearcherURLState>) => {
@@ -85,7 +87,6 @@ function useSearcherURLState() {
         trainerID,
         secretID,
         reachableAdvancesFilter,
-        targetInitialSeed,
         advancesMin,
         advancesMax,
         setSearcherURLState,
@@ -93,14 +94,14 @@ function useSearcherURLState() {
 }
 
 type SearcherRowWithAdvances =
-    | (ExtendedSearcherState & { requiredAdvances?: number })
-    | (ExtendedWildSearcherState & { requiredAdvances?: number });
+    | (ExtendedSearcherState & { reachableAdvances?: number })
+    | (ExtendedWildSearcherState & { reachableAdvances?: number });
 
 export default function CalibrationForm({
     sx,
     hidden,
 }: {
-    sx?: any;
+    sx?: SxProps<Theme>;
     hidden?: boolean;
 }) {
     const [searcherFormState, setSearcherFormState] =
@@ -130,7 +131,6 @@ export default function CalibrationForm({
         trainerID,
         secretID,
         reachableAdvancesFilter,
-        targetInitialSeed,
         advancesMin,
         advancesMax,
         setSearcherURLState,
@@ -150,8 +150,6 @@ export default function CalibrationForm({
 
     const [trainerIDIsValid, setTrainerIDIsValid] = useState(true);
     const [secretIDIsValid, setSecretIDIsValid] = useState(true);
-    const [targetInitialSeedIsValid, setTargetInitialSeedIsValid] =
-        useState(true);
     const [requiredAdvancesRangeIsValid, setRequiredAdvancesRangeIsValid] =
         useState(true);
 
@@ -170,8 +168,7 @@ export default function CalibrationForm({
         !trainerIDIsValid ||
         !secretIDIsValid ||
         !ivRangesAreValid ||
-        (isReachableAdvancesFilterEnabled &&
-            (!targetInitialSeedIsValid || !requiredAdvancesRangeIsValid));
+        (isReachableAdvancesFilterEnabled && !requiredAdvancesRangeIsValid);
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -180,6 +177,9 @@ export default function CalibrationForm({
             const tenLines = await fetchTenLines();
             setRows([]);
             setSearching(true);
+            const seedData = game.endsWith("painting")
+                ? new Uint8Array()
+                : await fetchSeedData(game);
             const filterResultsByRequiredAdvances = async <
                 T extends ExtendedSearcherState | ExtendedWildSearcherState,
             >(
@@ -188,21 +188,32 @@ export default function CalibrationForm({
                 if (!isReachableAdvancesFilterEnabled) {
                     return results as SearcherRowWithAdvances[];
                 }
-                const advances = await tenLines.calculate_required_advances(
-                    parseInt(targetInitialSeed, 16),
-                    results.map((result) => result.seed)
-                );
+                const reachabilityResults =
+                    await tenLines.filter_reachable_target_seeds(
+                        results.map((result) => result.seed),
+                        requiredAdvancesRange,
+                        game,
+                        0,
+                        seedData
+                    );
                 return results
                     .map((result, index) => ({
                         ...result,
-                        requiredAdvances: advances[index],
+                        reachableAdvances: reachabilityResults[index].reachable
+                            ? reachabilityResults[index].advances
+                            : undefined,
                     }))
                     .filter(
-                        (result) =>
-                            result.requiredAdvances >=
-                                requiredAdvancesRange[0] &&
-                            result.requiredAdvances <= requiredAdvancesRange[1]
+                        (_result, index) => reachabilityResults[index].reachable
                     ) as SearcherRowWithAdvances[];
+            };
+            const appendResults = (results: SearcherRowWithAdvances[]) => {
+                setRows((rows) => {
+                    if (rows.length > 1000 || results.length === 0) {
+                        return rows;
+                    }
+                    return [...rows, ...results];
+                });
             };
             if (isStatic) {
                 await tenLines.search_seeds_static(
@@ -218,14 +229,9 @@ export default function CalibrationForm({
                     searcherFormState.hiddenPower,
                     ivRanges,
                     proxy(async (results: ExtendedSearcherState[]) => {
-                        const filteredResults =
-                            await filterResultsByRequiredAdvances(results);
-                        setRows((rows) => {
-                            if (rows.length > 1000 || results.length === 0) {
-                                return rows;
-                            }
-                            return [...rows, ...filteredResults];
-                        });
+                        appendResults(
+                            await filterResultsByRequiredAdvances(results)
+                        );
                     }),
                     proxy(setSearching)
                 );
@@ -245,14 +251,9 @@ export default function CalibrationForm({
                     searcherFormState.hiddenPower,
                     ivRanges,
                     proxy(async (results: ExtendedWildSearcherState[]) => {
-                        const filteredResults =
-                            await filterResultsByRequiredAdvances(results);
-                        setRows((rows) => {
-                            if (rows.length > 1000 || results.length === 0) {
-                                return rows;
-                            }
-                            return [...rows, ...filteredResults];
-                        });
+                        appendResults(
+                            await filterResultsByRequiredAdvances(results)
+                        );
                     }),
                     proxy(setSearching)
                 );
@@ -363,38 +364,20 @@ export default function CalibrationForm({
                 label="Filter by reachable advances"
             />
             {isReachableAdvancesFilterEnabled && (
-                <>
-                    <NumericalInput
-                        label="Initial Seed"
-                        name="targetInitialSeed"
-                        minimumValue={0}
-                        maximumValue={0xffff}
-                        isHex
-                        onChange={(_, value) => {
-                            setSearcherURLState({
-                                targetInitialSeed: value.isValid
-                                    ? hexSeed(parseInt(value.value, 16), 16)
-                                    : value.value,
-                            });
-                            setTargetInitialSeedIsValid(value.isValid);
-                        }}
-                        value={targetInitialSeed}
-                    />
-                    <RangeInput
-                        label="Required Advances"
-                        name="requiredAdvances"
-                        minimumValue={0}
-                        maximumValue={4294967295}
-                        value={[advancesMin, advancesMax]}
-                        onChange={(_, value) => {
-                            setSearcherURLState({
-                                advancesMin: value.value[0],
-                                advancesMax: value.value[1],
-                            });
-                            setRequiredAdvancesRangeIsValid(value.isValid);
-                        }}
-                    />
-                </>
+                <RangeInput
+                    label="Allowed Advances"
+                    name="requiredAdvances"
+                    minimumValue={0}
+                    maximumValue={4294967295}
+                    value={[advancesMin, advancesMax]}
+                    onChange={(_, value) => {
+                        setSearcherURLState({
+                            advancesMin: value.value[0],
+                            advancesMax: value.value[1],
+                        });
+                        setRequiredAdvancesRangeIsValid(value.isValid);
+                    }}
+                />
             )}
             <TextField
                 label="Method"

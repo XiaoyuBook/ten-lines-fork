@@ -16,6 +16,13 @@ struct FRLGContiguousSeedEntry {
     u16 initialSeed;
 };
 
+struct InitialSeedReachability {
+    bool reachable;
+    u32 advances;
+    u16 initialSeed;
+    std::string key;
+};
+
 struct FRLGSeedEntry {
     const char* key;
     const char button_mode;

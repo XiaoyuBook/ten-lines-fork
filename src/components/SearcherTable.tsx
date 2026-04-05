@@ -30,8 +30,8 @@ const SearcherTable = memo(function SearcherTable({
     showRequiredAdvances,
 }: {
     rows:
-        | (ExtendedSearcherState & { requiredAdvances?: number })[]
-        | (ExtendedWildSearcherState & { requiredAdvances?: number })[];
+        | (ExtendedSearcherState & { reachableAdvances?: number })[]
+        | (ExtendedWildSearcherState & { reachableAdvances?: number })[];
     isStatic: boolean;
     isMultiMethod: boolean;
     showRequiredAdvances: boolean;
@@ -71,7 +71,7 @@ const SearcherTable = memo(function SearcherTable({
                         <TableCell>Power</TableCell>
                         <TableCell>Gender</TableCell>
                         {showRequiredAdvances && (
-                            <TableCell>Required Advances</TableCell>
+                            <TableCell>Min Reachable Advances</TableCell>
                         )}
                         <TableCell>Open In Initial Seed</TableCell>
                     </TableRow>
@@ -135,7 +135,7 @@ const SearcherTable = memo(function SearcherTable({
                                 <TableCell>{GENDERS_EN[row.gender]}</TableCell>
                                 {showRequiredAdvances && (
                                     <TableCell>
-                                        {row.requiredAdvances ?? "-"}
+                                        {row.reachableAdvances ?? "-"}
                                     </TableCell>
                                 )}
 

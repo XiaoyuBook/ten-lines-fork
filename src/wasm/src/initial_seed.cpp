@@ -139,15 +139,99 @@ emscripten::typed_array<FRLGContiguousSeedEntry> get_contiguous_seed_list(
     return entries;
 }
 
-emscripten::typed_array<u32> calculate_required_advances(
-    u16 initial_seed,
-    emscripten::typed_array<u32> target_seeds)
+InitialSeedReachability find_reachable_initial_seed(
+    u32 target_seed,
+    u32 advances_min,
+    u32 advances_max,
+    std::string game_version,
+    u32 ttv_frames_out,
+    emscripten::val seed_data)
 {
-    emscripten::typed_array<u32> advances;
-    for (u32 i = 0; i < static_cast<u32>(target_seeds.size()); i++) {
-        advances.push_back(PokeRNG::distance(initial_seed, target_seeds[i]));
+    InitialSeedReachability unreachable {
+        .reachable = false,
+        .advances = 0,
+        .initialSeed = 0,
+        .key = "",
+    };
+
+    u32 distance_from_base = PokeRNG::distance(0, target_seed);
+    u32 result_index = find_closest_initial_seed_index(target_seed);
+
+    if (game_version.ends_with("painting")) {
+        for (u32 i = 0; i < sorted_initial_seeds.size(); i++) {
+            auto [offset_advances, seed] = sorted_initial_seeds[(result_index + i) % sorted_initial_seeds.size()];
+            u32 advances = offset_advances + distance_from_base;
+            if (advances < advances_min) {
+                continue;
+            }
+            if (advances > advances_max) {
+                break;
+            }
+            return InitialSeedReachability {
+                .reachable = true,
+                .advances = advances,
+                .initialSeed = seed,
+                .key = "",
+            };
+        }
+        return unreachable;
     }
-    return advances;
+
+    std::vector<u8> seed_data_vector = emscripten::convertJSArrayToNumberVector<u8>(seed_data);
+    FRLGSeedDataStore seed_store(seed_data_vector, game_version.ends_with("nx"));
+    auto frlg_seed_map = seed_store.seed_map;
+    auto held_button_offsets = HELD_BUTTON_OFFSETS.at(game_version);
+
+    for (u32 i = 0; i < sorted_initial_seeds.size(); i++) {
+        auto [offset_advances, seed] = sorted_initial_seeds[(result_index + i) % sorted_initial_seeds.size()];
+        u32 advances = offset_advances + distance_from_base;
+        if (advances < advances_min || advances < ttv_frames_out) {
+            continue;
+        }
+        if (advances > advances_max) {
+            break;
+        }
+        for (auto& held_button_offset : held_button_offsets) {
+            u16 unoffset_seed = seed - held_button_offset.offset;
+            auto it = frlg_seed_map.find(unoffset_seed);
+            if (it == frlg_seed_map.end()) {
+                continue;
+            }
+            for (auto& entry : it->second) {
+                if (entry.button_mode != held_button_offset.button_mode) {
+                    continue;
+                }
+                return InitialSeedReachability {
+                    .reachable = true,
+                    .advances = advances,
+                    .initialSeed = seed,
+                    .key = std::string(entry.key) + "_" + held_button_offset.held_button,
+                };
+            }
+        }
+    }
+
+    return unreachable;
+}
+
+emscripten::typed_array<InitialSeedReachability> filter_reachable_target_seeds(
+    emscripten::typed_array<u32> target_seeds,
+    emscripten::typed_range<u32> advances_range,
+    std::string game_version,
+    u32 ttv_frames_out,
+    emscripten::val seed_data)
+{
+    emscripten::typed_array<InitialSeedReachability> results;
+    for (u32 i = 0; i < static_cast<u32>(target_seeds.size()); i++) {
+        results.push_back(find_reachable_initial_seed(
+            target_seeds[i],
+            advances_range.min(),
+            advances_range.max(),
+            game_version,
+            ttv_frames_out,
+            seed_data));
+    }
+    return results;
 }
 
 EMSCRIPTEN_BINDINGS(initial_seed)
@@ -155,7 +239,7 @@ EMSCRIPTEN_BINDINGS(initial_seed)
     emscripten::smart_function("ten_lines_painting", &painting_seeds);
     emscripten::smart_function("ten_lines_frlg", &frlg_seeds);
     emscripten::smart_function("get_contiguous_seed_list", &get_contiguous_seed_list);
-    emscripten::smart_function("calculate_required_advances", &calculate_required_advances);
+    emscripten::smart_function("filter_reachable_target_seeds", &filter_reachable_target_seeds);
 
     emscripten::value_object<FRLGContiguousSeedEntry>("FRLGContiguousSeedEntry")
         .field("seedTime", &FRLGContiguousSeedEntry::seedTime)
@@ -166,4 +250,10 @@ EMSCRIPTEN_BINDINGS(initial_seed)
         .field("seedTime", &InitialSeedResult::seedTime)
         .field("settings", &InitialSeedResult::key)
         .field("initialSeed", &InitialSeedResult::initialSeed);
+
+    emscripten::value_object<InitialSeedReachability>("InitialSeedReachability")
+        .field("reachable", &InitialSeedReachability::reachable)
+        .field("advances", &InitialSeedReachability::advances)
+        .field("initialSeed", &InitialSeedReachability::initialSeed)
+        .field("settings", &InitialSeedReachability::key);
 }
