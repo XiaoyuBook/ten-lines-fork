@@ -5,9 +5,11 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import { Button } from "@mui/material";
 import { memo } from "react";
 import { hexSeed } from "../tenLines";
 import { SHININESS_EN } from "../tenLines/resources";
+import { useSearchParams } from "react-router-dom";
 
 export interface IDComboRow {
     advances: number;
@@ -25,6 +27,21 @@ const IdComboTable = memo(function IdComboTable({
 }: {
     rows: IDComboRow[];
 }) {
+    const [, setSearchParams] = useSearchParams();
+
+    function openInInitialSeed(row: IDComboRow, isAuxClick: boolean) {
+        setSearchParams((previous) => {
+            const params = new URLSearchParams(previous);
+            params.set("targetSeed", hexSeed(row.exampleSeed, 32));
+            params.set("page", "0");
+            if (isAuxClick) {
+                window.open(`?${params.toString()}`);
+                return previous;
+            }
+            return params;
+        });
+    }
+
     return (
         <TableContainer component={Paper}>
             <Table>
@@ -38,6 +55,7 @@ const IdComboTable = memo(function IdComboTable({
                         <TableCell>Matching Targets</TableCell>
                         <TableCell>Example Seed</TableCell>
                         <TableCell>Example PID</TableCell>
+                        <TableCell>Open In Initial Seed</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -51,6 +69,23 @@ const IdComboTable = memo(function IdComboTable({
                             <TableCell>{row.matchCount}</TableCell>
                             <TableCell>{hexSeed(row.exampleSeed, 32)}</TableCell>
                             <TableCell>{hexSeed(row.examplePid, 32)}</TableCell>
+                            <TableCell>
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={() => {
+                                        openInInitialSeed(row, false);
+                                    }}
+                                    onMouseDown={(event) => {
+                                        if (event.button === 1) {
+                                            event.preventDefault();
+                                            openInInitialSeed(row, true);
+                                        }
+                                    }}
+                                >
+                                    Initial Seed
+                                </Button>
+                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
