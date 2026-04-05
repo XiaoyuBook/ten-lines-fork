@@ -347,7 +347,7 @@ export default function IdComboForm({
                 label="Advances"
                 name="idAdvances"
                 minimumValue={0}
-                maximumValue={65535}
+                maximumValue={4294967295}
                 value={[idAdvancesMin, idAdvancesMax]}
                 onChange={(_, value) => {
                     setIdComboURLState({
