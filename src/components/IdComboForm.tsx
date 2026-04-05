@@ -233,9 +233,20 @@ export default function IdComboForm({
                 );
             }
 
+            const eligibleTSVs = [...tsvCounts.keys()].filter((tsv) => {
+                const advances = tsvAdvances.get(tsv) ?? 0;
+                return advances >= idRange[0] && advances <= idRange[1];
+            });
+
+            if (eligibleTSVs.length === 0) {
+                setSummary("No matching targets fall within the selected advances range.");
+                setSearching(false);
+                return;
+            }
+
             const idResults: ExtendedIDState[] =
                 await tenLines.search_frlge_id_combos(
-                    [...tsvCounts.keys()],
+                    eligibleTSVs,
                     idRange[0],
                     idRange[1],
                     parseOptionalId(tid),
@@ -262,6 +273,9 @@ export default function IdComboForm({
                     game,
                 };
             }).filter((row) => {
+                if (row.advances < idRange[0] || row.advances > idRange[1]) {
+                    return false;
+                }
                 if (formState.shininess === 3) {
                     return row.shiny === 1 || row.shiny === 2;
                 }
