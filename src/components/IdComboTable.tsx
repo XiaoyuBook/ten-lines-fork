@@ -35,6 +35,8 @@ const IdComboTable = memo(function IdComboTable({
             const params = new URLSearchParams(previous);
             params.set("targetSeed", hexSeed(row.exampleSeed, 32));
             params.set("game", row.game);
+            params.set("trainerID", row.tid.toString());
+            params.set("secretID", row.sid.toString());
             params.set("page", "0");
             if (isAuxClick) {
                 window.open(`?${params.toString()}`);
