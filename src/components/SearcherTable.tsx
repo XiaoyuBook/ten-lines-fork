@@ -27,19 +27,23 @@ const SearcherTable = memo(function SearcherTable({
     rows,
     isStatic,
     isMultiMethod,
+    showRequiredAdvances,
 }: {
-    rows: ExtendedSearcherState[] | ExtendedWildSearcherState[];
+    rows:
+        | (ExtendedSearcherState & { requiredAdvances?: number })[]
+        | (ExtendedWildSearcherState & { requiredAdvances?: number })[];
     isStatic: boolean;
     isMultiMethod: boolean;
+    showRequiredAdvances: boolean;
 }) {
-    const [_, setSearchParams] = useSearchParams();
+    const [, setSearchParams] = useSearchParams();
 
     function openInInitialSeed(
         row: ExtendedSearcherState | ExtendedWildSearcherState,
         isAuxClick: boolean
     ) {
         setSearchParams((previous) => {
-            let params = new URLSearchParams(previous);
+            const params = new URLSearchParams(previous);
             params.set("targetSeed", hexSeed(row.seed, 32));
             params.set("page", "0");
             if (isAuxClick) {
@@ -66,6 +70,9 @@ const SearcherTable = memo(function SearcherTable({
                         <TableCell>Hidden</TableCell>
                         <TableCell>Power</TableCell>
                         <TableCell>Gender</TableCell>
+                        {showRequiredAdvances && (
+                            <TableCell>Required Advances</TableCell>
+                        )}
                         <TableCell>Open In Initial Seed</TableCell>
                     </TableRow>
                 </TableHead>
@@ -126,6 +133,11 @@ const SearcherTable = memo(function SearcherTable({
                                 </TableCell>
                                 <TableCell>{row.hiddenPowerStrength}</TableCell>
                                 <TableCell>{GENDERS_EN[row.gender]}</TableCell>
+                                {showRequiredAdvances && (
+                                    <TableCell>
+                                        {row.requiredAdvances ?? "-"}
+                                    </TableCell>
+                                )}
 
                                 <TableCell>
                                     <Button

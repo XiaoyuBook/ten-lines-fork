@@ -138,11 +138,24 @@ emscripten::typed_array<FRLGContiguousSeedEntry> get_contiguous_seed_list(
     }
     return entries;
 }
+
+emscripten::typed_array<u32> calculate_required_advances(
+    u16 initial_seed,
+    emscripten::typed_array<u32> target_seeds)
+{
+    emscripten::typed_array<u32> advances;
+    for (u32 i = 0; i < target_seeds.length(); i++) {
+        advances.push_back(PokeRNG::distance(initial_seed, target_seeds[i]));
+    }
+    return advances;
+}
+
 EMSCRIPTEN_BINDINGS(initial_seed)
 {
     emscripten::smart_function("ten_lines_painting", &painting_seeds);
     emscripten::smart_function("ten_lines_frlg", &frlg_seeds);
     emscripten::smart_function("get_contiguous_seed_list", &get_contiguous_seed_list);
+    emscripten::smart_function("calculate_required_advances", &calculate_required_advances);
 
     emscripten::value_object<FRLGContiguousSeedEntry>("FRLGContiguousSeedEntry")
         .field("seedTime", &FRLGContiguousSeedEntry::seedTime)

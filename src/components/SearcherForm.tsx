@@ -1,14 +1,23 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import { Box, Button, MenuItem, TextField } from "@mui/material";
+import {
+    Box,
+    Button,
+    Checkbox,
+    FormControlLabel,
+    MenuItem,
+    TextField,
+} from "@mui/material";
 
 import fetchTenLines, {
     COMBINED_WILD_METHOD,
     SEED_IDENTIFIER_TO_GAME,
     STATIC_2,
     STATIC_4,
+    hexSeed,
 } from "../tenLines";
 import NumericalInput from "./NumericalInput";
+import RangeInput from "./RangeInput";
 import { proxy } from "comlink";
 import {
     type ExtendedSearcherState,
@@ -46,6 +55,10 @@ export interface SearcherURLState {
     game: string;
     trainerID: string;
     secretID: string;
+    reachableAdvancesFilter: string;
+    targetInitialSeed: string;
+    advancesMin: string;
+    advancesMax: string;
 }
 
 function useSearcherURLState() {
@@ -53,6 +66,12 @@ function useSearcherURLState() {
     const game = searchParams.get("game") || "r_painting";
     const trainerID = searchParams.get("trainerID") || "0";
     const secretID = searchParams.get("secretID") || "0";
+    const reachableAdvancesFilter =
+        searchParams.get("reachableAdvancesFilter") ||
+        (searchParams.has("targetInitialSeed") ? "true" : "false");
+    const targetInitialSeed = searchParams.get("targetInitialSeed") || "0";
+    const advancesMin = searchParams.get("advancesMin") || "0";
+    const advancesMax = searchParams.get("advancesMax") || "4294967295";
     const setSearcherURLState = (state: Partial<SearcherURLState>) => {
         setSearchParams((prev) => {
             for (const [key, value] of Object.entries(state)) {
@@ -65,15 +84,23 @@ function useSearcherURLState() {
         game,
         trainerID,
         secretID,
+        reachableAdvancesFilter,
+        targetInitialSeed,
+        advancesMin,
+        advancesMax,
         setSearcherURLState,
     };
 }
+
+type SearcherRowWithAdvances =
+    | (ExtendedSearcherState & { requiredAdvances?: number })
+    | (ExtendedWildSearcherState & { requiredAdvances?: number });
 
 export default function CalibrationForm({
     sx,
     hidden,
 }: {
-    sx?: any;
+    sx?: unknown;
     hidden?: boolean;
 }) {
     const [searcherFormState, setSearcherFormState] =
@@ -98,10 +125,19 @@ export default function CalibrationForm({
             wildLead: 255,
             method: 1,
         });
-    const { game, trainerID, secretID, setSearcherURLState } =
+    const {
+        game,
+        trainerID,
+        secretID,
+        reachableAdvancesFilter,
+        targetInitialSeed,
+        advancesMin,
+        advancesMax,
+        setSearcherURLState,
+    } =
         useSearcherURLState();
 
-    const [rows, setRows] = useState<ExtendedSearcherState[]>([]);
+    const [rows, setRows] = useState<SearcherRowWithAdvances[]>([]);
     const [searching, setSearching] = useState(false);
 
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
@@ -114,9 +150,28 @@ export default function CalibrationForm({
 
     const [trainerIDIsValid, setTrainerIDIsValid] = useState(true);
     const [secretIDIsValid, setSecretIDIsValid] = useState(true);
+    const [targetInitialSeedIsValid, setTargetInitialSeedIsValid] =
+        useState(true);
+    const [requiredAdvancesRangeIsValid, setRequiredAdvancesRangeIsValid] =
+        useState(true);
+
+    const isReachableAdvancesFilterEnabled =
+        reachableAdvancesFilter === "true";
+    const requiredAdvancesRange = useMemo(
+        () =>
+            requiredAdvancesRangeIsValid
+                ? [parseInt(advancesMin, 10), parseInt(advancesMax, 10)]
+                : [0, 0],
+        [advancesMin, advancesMax, requiredAdvancesRangeIsValid]
+    );
 
     const isNotSubmittable =
-        searching || !trainerIDIsValid || !secretIDIsValid || !ivRangesAreValid;
+        searching ||
+        !trainerIDIsValid ||
+        !secretIDIsValid ||
+        !ivRangesAreValid ||
+        (isReachableAdvancesFilterEnabled &&
+            (!targetInitialSeedIsValid || !requiredAdvancesRangeIsValid));
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -125,6 +180,30 @@ export default function CalibrationForm({
             const tenLines = await fetchTenLines();
             setRows([]);
             setSearching(true);
+            const filterResultsByRequiredAdvances = async <
+                T extends ExtendedSearcherState | ExtendedWildSearcherState,
+            >(
+                results: T[]
+            ) => {
+                if (!isReachableAdvancesFilterEnabled) {
+                    return results as SearcherRowWithAdvances[];
+                }
+                const advances = await tenLines.calculate_required_advances(
+                    parseInt(targetInitialSeed, 16),
+                    results.map((result) => result.seed)
+                );
+                return results
+                    .map((result, index) => ({
+                        ...result,
+                        requiredAdvances: advances[index],
+                    }))
+                    .filter(
+                        (result) =>
+                            result.requiredAdvances >=
+                                requiredAdvancesRange[0] &&
+                            result.requiredAdvances <= requiredAdvancesRange[1]
+                    ) as SearcherRowWithAdvances[];
+            };
             if (isStatic) {
                 await tenLines.search_seeds_static(
                     SEED_IDENTIFIER_TO_GAME[game],
@@ -138,12 +217,14 @@ export default function CalibrationForm({
                     searcherFormState.gender,
                     searcherFormState.hiddenPower,
                     ivRanges,
-                    proxy((results: ExtendedSearcherState[]) => {
+                    proxy(async (results: ExtendedSearcherState[]) => {
+                        const filteredResults =
+                            await filterResultsByRequiredAdvances(results);
                         setRows((rows) => {
                             if (rows.length > 1000 || results.length === 0) {
                                 return rows;
                             }
-                            return [...rows, ...results];
+                            return [...rows, ...filteredResults];
                         });
                     }),
                     proxy(setSearching)
@@ -163,12 +244,14 @@ export default function CalibrationForm({
                     searcherFormState.gender,
                     searcherFormState.hiddenPower,
                     ivRanges,
-                    proxy((results: ExtendedWildSearcherState[]) => {
+                    proxy(async (results: ExtendedWildSearcherState[]) => {
+                        const filteredResults =
+                            await filterResultsByRequiredAdvances(results);
                         setRows((rows) => {
                             if (rows.length > 1000 || results.length === 0) {
                                 return rows;
                             }
-                            return [...rows, ...results];
+                            return [...rows, ...filteredResults];
                         });
                     }),
                     proxy(setSearching)
@@ -265,6 +348,54 @@ export default function CalibrationForm({
                     name="secretID"
                 />
             </Box>
+            <FormControlLabel
+                control={
+                    <Checkbox
+                        checked={isReachableAdvancesFilterEnabled}
+                        onChange={(event) =>
+                            setSearcherURLState({
+                                reachableAdvancesFilter:
+                                    event.target.checked.toString(),
+                            })
+                        }
+                    />
+                }
+                label="Filter by reachable advances"
+            />
+            {isReachableAdvancesFilterEnabled && (
+                <>
+                    <NumericalInput
+                        label="Initial Seed"
+                        name="targetInitialSeed"
+                        minimumValue={0}
+                        maximumValue={0xffff}
+                        isHex
+                        onChange={(_, value) => {
+                            setSearcherURLState({
+                                targetInitialSeed: value.isValid
+                                    ? hexSeed(parseInt(value.value, 16), 16)
+                                    : value.value,
+                            });
+                            setTargetInitialSeedIsValid(value.isValid);
+                        }}
+                        value={targetInitialSeed}
+                    />
+                    <RangeInput
+                        label="Required Advances"
+                        name="requiredAdvances"
+                        minimumValue={0}
+                        maximumValue={4294967295}
+                        value={[advancesMin, advancesMax]}
+                        onChange={(_, value) => {
+                            setSearcherURLState({
+                                advancesMin: value.value[0],
+                                advancesMax: value.value[1],
+                            });
+                            setRequiredAdvancesRangeIsValid(value.isValid);
+                        }}
+                    />
+                </>
+            )}
             <TextField
                 label="Method"
                 margin="normal"
@@ -280,7 +411,7 @@ export default function CalibrationForm({
                 fullWidth
             >
                 {Object.entries(METHODS_EN)
-                    .filter(([value, _name]) => parseInt(value) != STATIC_2)
+                    .filter(([value]) => parseInt(value) != STATIC_2)
                     .map(([value, name], index) => (
                         <MenuItem key={index} value={parseInt(value)}>
                             {name}
@@ -312,8 +443,7 @@ export default function CalibrationForm({
                         wildCategory,
                         wildLocation,
                         wildPokemon,
-                        wildLead,
-                        _
+                        wildLead
                     ) => {
                         setSearcherFormState((data) => ({
                             ...data,
@@ -435,6 +565,7 @@ export default function CalibrationForm({
                 isMultiMethod={
                     searcherFormState.method === COMBINED_WILD_METHOD
                 }
+                showRequiredAdvances={isReachableAdvancesFilterEnabled}
             />
         </Box>
     );
