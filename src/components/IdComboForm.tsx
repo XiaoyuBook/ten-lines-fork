@@ -282,10 +282,29 @@ export default function IdComboForm({
                 return row.shiny === formState.shininess;
             });
 
-            setRows(mappedRows);
+            const dedupedRows = [
+                ...new Map(
+                    mappedRows.map((row) => [
+                        [
+                            row.advances,
+                            row.tid,
+                            row.sid,
+                            row.tsv,
+                            row.shiny,
+                            row.matchCount,
+                            row.exampleSeed,
+                            row.examplePid,
+                            row.game,
+                        ].join(":"),
+                        row,
+                    ])
+                ).values(),
+            ];
+
+            setRows(dedupedRows);
             setSummary(
-                `Found ${candidateResults.length} matching target seed(s), ${tsvCounts.size} unique TSV(s), and ${mappedRows.length} TID/SID combo(s).${
-                    mappedRows.length === parseInt(maxResults, 10)
+                `Found ${candidateResults.length} matching target seed(s), ${tsvCounts.size} unique TSV(s), and ${dedupedRows.length} TID/SID combo(s).${
+                    dedupedRows.length === parseInt(maxResults, 10)
                         ? " Results hit the max-results cap."
                         : ""
                 }`
