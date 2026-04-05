@@ -176,9 +176,22 @@ class callback<ReturnType(Args...)> : public val {
 public:
     ReturnType operator()(Args... args)
     {
-        using namespace internal;
+        return this->template call<ReturnType>(
+            "call",
+            val::undefined(),
+            sanitizeValue(std::forward<Args>(args))...);
+    }
+};
 
-        return internalCall<EM_INVOKER_KIND::FUNCTION, WithPolicies<>, val>(as_handle(), nullptr, sanitizeValue(std::forward<Args>(args))...).template as<ReturnType>();
+template <typename... Args>
+class callback<void(Args...)> : public val {
+public:
+    void operator()(Args... args)
+    {
+        this->template call<void>(
+            "call",
+            val::undefined(),
+            sanitizeValue(std::forward<Args>(args))...);
     }
 };
 

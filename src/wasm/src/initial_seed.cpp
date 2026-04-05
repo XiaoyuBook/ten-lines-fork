@@ -144,7 +144,7 @@ emscripten::typed_array<u32> calculate_required_advances(
     emscripten::typed_array<u32> target_seeds)
 {
     emscripten::typed_array<u32> advances;
-    for (u32 i = 0; i < target_seeds.length(); i++) {
+    for (u32 i = 0; i < static_cast<u32>(target_seeds.size()); i++) {
         advances.push_back(PokeRNG::distance(initial_seed, target_seeds[i]));
     }
     return advances;
