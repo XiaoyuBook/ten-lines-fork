@@ -11,6 +11,18 @@ import requests
 import numpy as np
 
 BASE_SEED = 0
+GENERATED_DIR = "/src/generated"
+FRLG_SEED_FILES = (
+    "fr_eng.bin",
+    "lg_eng.bin",
+    "fr_jpn_1_0.bin",
+    "fr_jpn_1_1.bin",
+    "lg_jpn.bin",
+    "fr_eng_mgba.bin",
+    "lg_eng_mgba.bin",
+    "fr_eng_nx.bin",
+    "lg_eng_nx.bin",
+)
 
 FR_ENG_SHEET = "https://docs.google.com/spreadsheets/d/1ZNchTvoCpHFVPBscEJZG3JaaqR41D8VVnbXb23fzc44/gviz/tq?tqx=out:csv&gid=0"
 LG_ENG_SHEET = "https://docs.google.com/spreadsheets/d/12TUcXGbLY_bBDfVsgWZKvqrX13U6XAATQZrYnzBKP6Y/gviz/tq?tqx=out:csv&sheet=Leaf%20Green%20Seeds"
@@ -94,11 +106,45 @@ class NXSeedDataStore(SeedDataStore):
         return data
 
 
+def generated_path(root: str, file_name: str) -> str:
+    """Build an absolute path in src/generated."""
+    return root + GENERATED_DIR + "/" + file_name
+
+
+def should_refresh_seed_cache() -> bool:
+    """Allow callers to explicitly refresh the downloaded FRLG seed cache."""
+    return os.environ.get("TEN_LINES_REFRESH_FRLG_SEEDS", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def has_cached_frlg_seeds(root: str) -> bool:
+    """Return True when all generated FRLG seed binaries are already present."""
+    return all(os.path.exists(generated_path(root, file_name)) for file_name in FRLG_SEED_FILES)
+
+
+def copy_generated_bins_to_public(root: str):
+    """Copy generated seed bins into the public directory for Vite builds."""
+    if os.path.exists(root + "/../../public/"):
+        os.makedirs(root + "/../../public/generated", exist_ok=True)
+        for file in glob.glob(root + GENERATED_DIR + "/*.bin"):
+            shutil.copy(file, root + "/../../public/generated")
+    else:
+        print("Can't find public dir, assuming building standalone")
+
+
 def pull_frlg_seeds():
     """Pull FRLG seeds from spreadsheet"""
+    if not should_refresh_seed_cache() and has_cached_frlg_seeds(sys.argv[1]):
+        print("Using cached FRLG seed binaries from src/generated")
+        copy_generated_bins_to_public(sys.argv[1])
+        return
+
     time_stamp = datetime.now()
     with open(
-        sys.argv[1] + "/src/generated/frlg_seeds_timestamp.txt", "w+", encoding="utf-8"
+        generated_path(sys.argv[1], "frlg_seeds_timestamp.txt"), "w+", encoding="utf-8"
     ) as f:
         f.write(str(time_stamp))
     sheet_txt = requests.get(
@@ -306,22 +352,17 @@ def pull_frlg_seeds():
             # lg_eng_nx_seeds.add_str_seed("mono", "a", "l", row[14])
             # lg_eng_nx_seeds.add_str_seed("stereo", "a", "l", row[15])
 
-    fr_eng_seeds.save(sys.argv[1] + "/src/generated/fr_eng.bin")
-    lg_eng_seeds.save(sys.argv[1] + "/src/generated/lg_eng.bin")
-    fr_jpn_1_0_seeds.save(sys.argv[1] + "/src/generated/fr_jpn_1_0.bin")
-    fr_jpn_1_1_seeds.save(sys.argv[1] + "/src/generated/fr_jpn_1_1.bin")
-    lg_jpn_seeds.save(sys.argv[1] + "/src/generated/lg_jpn.bin")
-    fr_eng_mgba_seeds.save(sys.argv[1] + "/src/generated/fr_eng_mgba.bin")
-    lg_eng_mgba_seeds.save(sys.argv[1] + "/src/generated/lg_eng_mgba.bin")
-    fr_eng_nx_seeds.save(sys.argv[1] + "/src/generated/fr_eng_nx.bin")
-    lg_eng_nx_seeds.save(sys.argv[1] + "/src/generated/lg_eng_nx.bin")
+    fr_eng_seeds.save(generated_path(sys.argv[1], "fr_eng.bin"))
+    lg_eng_seeds.save(generated_path(sys.argv[1], "lg_eng.bin"))
+    fr_jpn_1_0_seeds.save(generated_path(sys.argv[1], "fr_jpn_1_0.bin"))
+    fr_jpn_1_1_seeds.save(generated_path(sys.argv[1], "fr_jpn_1_1.bin"))
+    lg_jpn_seeds.save(generated_path(sys.argv[1], "lg_jpn.bin"))
+    fr_eng_mgba_seeds.save(generated_path(sys.argv[1], "fr_eng_mgba.bin"))
+    lg_eng_mgba_seeds.save(generated_path(sys.argv[1], "lg_eng_mgba.bin"))
+    fr_eng_nx_seeds.save(generated_path(sys.argv[1], "fr_eng_nx.bin"))
+    lg_eng_nx_seeds.save(generated_path(sys.argv[1], "lg_eng_nx.bin"))
 
-    if os.path.exists(sys.argv[1] + "/../../public/"):
-        os.makedirs(sys.argv[1] + "/../../public/generated", exist_ok=True)
-        for file in glob.glob(sys.argv[1] + "/src/generated/*.bin"):
-            shutil.copy(file, sys.argv[1] + "/../../public/generated")
-    else:
-        print("Can't find public dir, assuming building standalone")
+    copy_generated_bins_to_public(sys.argv[1])
 
 
 # mults/adds for jumping 2^i LCRNG advances

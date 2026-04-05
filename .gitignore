@@ -13,6 +13,10 @@ dev-dist
 dist-ssr
 build
 generated
+!src/wasm/src/generated/
+!src/wasm/src/generated/**
+!public/generated/
+!public/generated/**
 .cache
 *.local
 
