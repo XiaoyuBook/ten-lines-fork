@@ -25,10 +25,10 @@ interface IdComboFormState {
 }
 
 interface IdComboURLState {
-    game: string;
+    idGame: string;
     idAdvancesMin: string;
     idAdvancesMax: string;
-    maxResults: string;
+    idMaxResults: string;
 }
 
 function useIdComboURLState() {
@@ -257,7 +257,9 @@ export default function IdComboForm({
                 label="Game"
                 margin="normal"
                 style={{ textAlign: "left" }}
-                onChange={(event) => setIdComboURLState({ game: event.target.value })}
+                onChange={(event) =>
+                    setIdComboURLState({ idGame: event.target.value })
+                }
                 value={game}
                 select
                 fullWidth
@@ -311,7 +313,7 @@ export default function IdComboForm({
                 label="Max Results"
                 margin="normal"
                 onChange={(_event, value) => {
-                    setIdComboURLState({ maxResults: value.value });
+                    setIdComboURLState({ idMaxResults: value.value });
                     setMaxResultsIsValid(value.isValid);
                 }}
                 value={maxResults}
