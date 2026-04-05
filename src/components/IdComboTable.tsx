@@ -20,6 +20,7 @@ export interface IDComboRow {
     matchCount: number;
     examplePid: number;
     exampleSeed: number;
+    game: string;
 }
 
 const IdComboTable = memo(function IdComboTable({
@@ -33,6 +34,7 @@ const IdComboTable = memo(function IdComboTable({
         setSearchParams((previous) => {
             const params = new URLSearchParams(previous);
             params.set("targetSeed", hexSeed(row.exampleSeed, 32));
+            params.set("game", row.game);
             params.set("page", "0");
             if (isAuxClick) {
                 window.open(`?${params.toString()}`);

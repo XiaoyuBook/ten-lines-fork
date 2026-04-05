@@ -4,7 +4,12 @@ import { Box, Button, MenuItem, TextField, type SxProps, type Theme } from "@mui
 import { proxy } from "comlink";
 import { useSearchParams } from "react-router-dom";
 
-import fetchTenLines, { SEED_IDENTIFIER_TO_GAME, STATIC_2, STATIC_4 } from "../tenLines";
+import fetchTenLines, {
+    fetchSeedData,
+    SEED_IDENTIFIER_TO_GAME,
+    STATIC_2,
+    STATIC_4,
+} from "../tenLines";
 import type { ExtendedIDState, ExtendedSearcherState } from "../tenLines/generated";
 import { GENDERS_EN, METHODS_EN, NATURES_EN, TYPES_EN } from "../tenLines/resources";
 import IvEntry from "./IvEntry";
@@ -169,6 +174,9 @@ export default function IdComboForm({
             setSearching(true);
             setRows([]);
             setSummary("");
+            const seedData = game.endsWith("painting")
+                ? new Uint8Array()
+                : await fetchSeedData(game);
 
             const candidateResults: ExtendedSearcherState[] = [];
 
@@ -206,6 +214,25 @@ export default function IdComboForm({
                 }
             }
 
+            const tsvExampleEntries = [...tsvExamples.entries()];
+            const reachabilityResults =
+                await tenLines.filter_reachable_target_seeds(
+                    tsvExampleEntries.map(([, result]) => result.seed),
+                    [0, 4294967295],
+                    game,
+                    0,
+                    seedData
+                );
+            const tsvAdvances = new Map<number, number>();
+            for (let index = 0; index < tsvExampleEntries.length; index++) {
+                const [tsv] = tsvExampleEntries[index];
+                const reachability = reachabilityResults[index];
+                tsvAdvances.set(
+                    tsv,
+                    reachability.reachable ? reachability.advances : 0
+                );
+            }
+
             const idResults: ExtendedIDState[] =
                 await tenLines.search_frlge_id_combos(
                     [...tsvCounts.keys()],
@@ -224,7 +251,7 @@ export default function IdComboForm({
                     idState.sid
                 );
                 return {
-                    advances: idState.advances,
+                    advances: tsvAdvances.get(idState.tsv) ?? 0,
                     tid: idState.tid,
                     sid: idState.sid,
                     tsv: idState.tsv,
@@ -232,6 +259,7 @@ export default function IdComboForm({
                     matchCount: tsvCounts.get(idState.tsv) ?? 0,
                     examplePid: example.pid,
                     exampleSeed: example.seed,
+                    game,
                 };
             }).filter((row) => {
                 if (formState.shininess === 3) {
