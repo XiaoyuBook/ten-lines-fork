@@ -7,12 +7,14 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { memo } from "react";
 import { hexSeed } from "../tenLines";
+import { SHININESS_EN } from "../tenLines/resources";
 
 export interface IDComboRow {
     advances: number;
     tid: number;
     sid: number;
     tsv: number;
+    shiny: number;
     matchCount: number;
     examplePid: number;
     exampleSeed: number;
@@ -28,10 +30,11 @@ const IdComboTable = memo(function IdComboTable({
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>ID Frame</TableCell>
+                        <TableCell>Advances</TableCell>
                         <TableCell>TID</TableCell>
                         <TableCell>SID</TableCell>
                         <TableCell>TSV</TableCell>
+                        <TableCell>Shiny</TableCell>
                         <TableCell>Matching Targets</TableCell>
                         <TableCell>Example Seed</TableCell>
                         <TableCell>Example PID</TableCell>
@@ -44,6 +47,7 @@ const IdComboTable = memo(function IdComboTable({
                             <TableCell>{row.tid}</TableCell>
                             <TableCell>{row.sid}</TableCell>
                             <TableCell>{row.tsv}</TableCell>
+                            <TableCell>{SHININESS_EN[row.shiny]}</TableCell>
                             <TableCell>{row.matchCount}</TableCell>
                             <TableCell>{hexSeed(row.exampleSeed, 32)}</TableCell>
                             <TableCell>{hexSeed(row.examplePid, 32)}</TableCell>

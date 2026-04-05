@@ -14,6 +14,7 @@ import StaticEncounterSelector from "./StaticEncounterSelector";
 import IdComboTable, { type IDComboRow } from "./IdComboTable";
 
 interface IdComboFormState {
+    shininess: number;
     nature: number;
     gender: number;
     hiddenPower: number;
@@ -61,6 +62,21 @@ function pidToTSV(pid: number) {
     return ((high ^ low) >>> 3) & 0x1fff;
 }
 
+function getShinyType(pid: number, tid: number, sid: number) {
+    const high = (pid >>> 16) & 0xffff;
+    const low = pid & 0xffff;
+    const psv = high ^ low;
+    const tsv = tid ^ sid;
+
+    if (tsv === psv) {
+        return 2;
+    }
+    if ((tsv ^ psv) < 8) {
+        return 1;
+    }
+    return 0;
+}
+
 export default function IdComboForm({
     sx,
     hidden,
@@ -69,6 +85,7 @@ export default function IdComboForm({
     hidden?: boolean;
 }) {
     const [formState, setFormState] = useState<IdComboFormState>({
+        shininess: 3,
         nature: -1,
         gender: 255,
         hiddenPower: -1,
@@ -177,15 +194,26 @@ export default function IdComboForm({
 
             const mappedRows = idResults.map((idState) => {
                 const example = tsvExamples.get(idState.tsv)!;
+                const shiny = getShinyType(
+                    example.pid,
+                    idState.tid,
+                    idState.sid
+                );
                 return {
                     advances: idState.advances,
                     tid: idState.tid,
                     sid: idState.sid,
                     tsv: idState.tsv,
+                    shiny,
                     matchCount: tsvCounts.get(idState.tsv) ?? 0,
                     examplePid: example.pid,
                     exampleSeed: example.seed,
                 };
+            }).filter((row) => {
+                if (formState.shininess === 3) {
+                    return row.shiny === 1 || row.shiny === 2;
+                }
+                return row.shiny === formState.shininess;
             });
 
             setRows(mappedRows);
@@ -248,8 +276,8 @@ export default function IdComboForm({
                 <MenuItem value="lg_mgba">LeafGreen (MGBA 10.5)</MenuItem>
             </TextField>
             <RangeInput
-                label="ID Frame"
-                name="idFrame"
+                label="Advances"
+                name="idAdvances"
                 minimumValue={0}
                 maximumValue={65535}
                 value={[idAdvancesMin, idAdvancesMax]}
@@ -261,6 +289,24 @@ export default function IdComboForm({
                     setIdRangeIsValid(value.isValid);
                 }}
             />
+            <TextField
+                label="Shininess"
+                margin="normal"
+                style={{ textAlign: "left" }}
+                onChange={(event) => {
+                    setFormState((data) => ({
+                        ...data,
+                        shininess: parseInt(event.target.value),
+                    }));
+                }}
+                value={formState.shininess}
+                select
+                fullWidth
+            >
+                <MenuItem value="3">Star/Square</MenuItem>
+                <MenuItem value="1">Star</MenuItem>
+                <MenuItem value="2">Square</MenuItem>
+            </TextField>
             <NumericalInput
                 label="Max Results"
                 margin="normal"
