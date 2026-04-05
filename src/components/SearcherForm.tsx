@@ -100,7 +100,7 @@ export default function CalibrationForm({
     sx,
     hidden,
 }: {
-    sx?: unknown;
+    sx?: any;
     hidden?: boolean;
 }) {
     const [searcherFormState, setSearcherFormState] =
@@ -283,7 +283,7 @@ export default function CalibrationForm({
     }
 
     return (
-        <Box component="form" onSubmit={handleSubmit} sx={{ sx }}>
+        <Box component="form" onSubmit={handleSubmit} sx={sx}>
             <TextField
                 label="Game"
                 margin="normal"
