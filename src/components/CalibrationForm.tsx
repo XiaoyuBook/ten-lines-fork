@@ -298,7 +298,14 @@ export default function CalibrationForm({
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (isNotSubmittable) return;
+        runSearch();
+    };
+
+    const runSearch = () => {
+        if (isNotSubmittable) {
+            setRows([]);
+            return;
+        }
         const searchSeeds = seedList.slice(
             Math.max(0, targetSeedIndex - seedLeeway),
             Math.min(seedList.length, targetSeedIndex + seedLeeway + 1)
@@ -387,6 +394,50 @@ export default function CalibrationForm({
         calibrationFormState.staticCategory = 0;
         setCalibrationFormState(calibrationFormState);
     }
+
+    useEffect(() => {
+        if (hidden) {
+            return;
+        }
+        runSearch();
+    }, [
+        hidden,
+        seedList,
+        targetSeedIndex,
+        seedLeeway,
+        advancesMin,
+        advancesMax,
+        ttvAdvancesMin,
+        ttvAdvancesMax,
+        offset,
+        game,
+        trainerID,
+        secretID,
+        calibrationFormState.staticCategory,
+        calibrationFormState.staticPokemon,
+        calibrationFormState.wildCategory,
+        calibrationFormState.wildLocation,
+        calibrationFormState.wildPokemon,
+        calibrationFormState.wildLead,
+        calibrationFormState.shouldFilterPokemon,
+        calibrationFormState.method,
+        calibrationFormState.shininess,
+        calibrationFormState.nature,
+        calibrationFormState.gender,
+        calibrationFormState.seedLeewayString,
+        calibrationFormState.ivRangeStrings,
+        calibrationFormState.ivCalculatorText,
+        teachyTVMode,
+        overworldFrames,
+        seedLeewayIsValid,
+        advancesRangeIsValid,
+        ttvAdvancesRangeIsValid,
+        ivRangesAreValid,
+        offsetIsValid,
+        overworldFramesIsValid,
+        trainerIDIsValid,
+        secretIDIsValid,
+    ]);
 
     if (hidden) {
         return null;

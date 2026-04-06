@@ -1,5 +1,5 @@
 import { proxy } from "comlink";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Box, Button, MenuItem, TextField } from "@mui/material";
 
@@ -83,9 +83,12 @@ export default function TenLinesForm({
         !initialSeedFormState.targetSeedIsValid ||
         !initialSeedFormState.countIsValid ||
         !initialSeedFormState.offsetIsValid;
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (isNotSubmittable) return;
+
+    const runSearch = () => {
+        if (isNotSubmittable) {
+            setData([]);
+            return;
+        }
         fetchTenLines().then((lib) => {
             setData([]);
             if (!isFRLG) {
@@ -113,9 +116,33 @@ export default function TenLinesForm({
         });
     };
 
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        runSearch();
+    };
+
     const isFRLG = !game.endsWith("painting");
     const isSwitch = game.endsWith("nx");
     const isTeachyTVMode = teachyTVMode === "true" && isFRLG;
+
+    useEffect(() => {
+        if (hidden) {
+            return;
+        }
+        runSearch();
+    }, [
+        hidden,
+        targetSeed,
+        count,
+        offset,
+        game,
+        gameConsole,
+        teachyTVMode,
+        teachyTVRegularOut,
+        initialSeedFormState.targetSeedIsValid,
+        initialSeedFormState.countIsValid,
+        initialSeedFormState.offsetIsValid,
+    ]);
 
     if (hidden) {
         return null;
