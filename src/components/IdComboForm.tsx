@@ -247,6 +247,27 @@ export default function IdComboForm({
                 }
             }
 
+            if (hasExactIdPair) {
+                const exactRows = eligibleCandidateResults.map(({ result, reachability }) => ({
+                    advances: reachability.advances,
+                    tid: candidateTid,
+                    sid: candidateSid,
+                    tsv: pidToTSV(result.pid),
+                    shiny: getShinyType(result.pid, candidateTid, candidateSid),
+                    matchCount: 1,
+                    examplePid: result.pid,
+                    exampleSeed: result.seed,
+                    game,
+                }));
+
+                setRows(exactRows);
+                setSummary(
+                    `Found ${candidateResults.length} matching target seed(s), ${tsvCounts.size} unique TSV(s), and ${exactRows.length} matching target(s) for the selected TID/SID.`
+                );
+                setSearching(false);
+                return;
+            }
+
             const eligibleTSVs = [...tsvCounts.keys()];
 
             const idResults: ExtendedIDState[] =
