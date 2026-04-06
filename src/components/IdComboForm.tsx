@@ -183,17 +183,21 @@ export default function IdComboForm({
             const seedData = game.endsWith("painting")
                 ? new Uint8Array()
                 : await fetchSeedData(game);
+            const hasExactIdPair = tid !== "" && sid !== "";
+            const candidateTid = hasExactIdPair ? parseInt(tid, 10) : 0;
+            const candidateSid = hasExactIdPair ? parseInt(sid, 10) : 0;
+            const candidateShininess = hasExactIdPair ? formState.shininess : 255;
 
             const candidateResults: ExtendedSearcherState[] = [];
 
             await tenLines.search_seeds_static(
                 SEED_IDENTIFIER_TO_GAME[game],
-                0,
-                0,
+                candidateTid,
+                candidateSid,
                 formState.staticCategory,
                 formState.staticPokemon,
                 formState.method,
-                255,
+                candidateShininess,
                 formState.nature,
                 formState.gender,
                 formState.hiddenPower,
