@@ -18,6 +18,8 @@ import RangeInput from "./RangeInput";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import IdComboTable, { type IDComboRow } from "./IdComboTable";
 
+const MAX_ID_ADVANCES_SEARCH = 65535;
+
 interface IdComboFormState {
     shininess: number;
     nature: number;
@@ -273,8 +275,8 @@ export default function IdComboForm({
             const idResults: ExtendedIDState[] =
                 await tenLines.search_frlge_id_combos(
                     eligibleTSVs,
-                    idRange[0],
-                    idRange[1],
+                    0,
+                    MAX_ID_ADVANCES_SEARCH,
                     parseOptionalId(tid),
                     parseOptionalId(sid),
                     parseInt(maxResults, 10)
