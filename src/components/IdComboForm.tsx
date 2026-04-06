@@ -214,45 +214,40 @@ export default function IdComboForm({
                 return;
             }
 
-            const tsvCounts = new Map<number, number>();
-            const tsvExamples = new Map<number, ExtendedSearcherState>();
-            for (const result of candidateResults) {
-                const tsv = pidToTSV(result.pid);
-                tsvCounts.set(tsv, (tsvCounts.get(tsv) ?? 0) + 1);
-                if (!tsvExamples.has(tsv)) {
-                    tsvExamples.set(tsv, result);
-                }
-            }
-
-            const tsvExampleEntries = [...tsvExamples.entries()];
             const reachabilityResults =
                 await tenLines.filter_reachable_target_seeds(
-                    tsvExampleEntries.map(([, result]) => result.seed),
-                    [0, 4294967295],
+                    candidateResults.map((result) => result.seed),
+                    idRange,
                     game,
                     0,
                     seedData
                 );
-            const tsvAdvances = new Map<number, number>();
-            for (let index = 0; index < tsvExampleEntries.length; index++) {
-                const [tsv] = tsvExampleEntries[index];
-                const reachability = reachabilityResults[index];
-                tsvAdvances.set(
-                    tsv,
-                    reachability.reachable ? reachability.advances : 0
-                );
-            }
+            const eligibleCandidateResults = candidateResults
+                .map((result, index) => ({
+                    result,
+                    reachability: reachabilityResults[index],
+                }))
+                .filter(({ reachability }) => reachability.reachable);
 
-            const eligibleTSVs = [...tsvCounts.keys()].filter((tsv) => {
-                const advances = tsvAdvances.get(tsv) ?? 0;
-                return advances >= idRange[0] && advances <= idRange[1];
-            });
-
-            if (eligibleTSVs.length === 0) {
+            if (eligibleCandidateResults.length === 0) {
                 setSummary("No matching targets fall within the selected advances range.");
                 setSearching(false);
                 return;
             }
+
+            const tsvAdvances = new Map<number, number>();
+            const tsvCounts = new Map<number, number>();
+            const tsvExamples = new Map<number, ExtendedSearcherState>();
+            for (const { result, reachability } of eligibleCandidateResults) {
+                const tsv = pidToTSV(result.pid);
+                tsvCounts.set(tsv, (tsvCounts.get(tsv) ?? 0) + 1);
+                if (!tsvExamples.has(tsv)) {
+                    tsvExamples.set(tsv, result);
+                    tsvAdvances.set(tsv, reachability.advances);
+                }
+            }
+
+            const eligibleTSVs = [...tsvCounts.keys()];
 
             const idResults: ExtendedIDState[] =
                 await tenLines.search_frlge_id_combos(
