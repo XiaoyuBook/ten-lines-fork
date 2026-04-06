@@ -30,7 +30,7 @@ interface IdComboFormState {
 }
 
 interface IdComboURLState {
-    idGame: string;
+    game: string;
     idAdvancesMin: string;
     idAdvancesMax: string;
     idMaxResults: string;
@@ -40,7 +40,10 @@ interface IdComboURLState {
 
 function useIdComboURLState() {
     const [searchParams, setSearchParams] = useSearchParams();
-    const game = searchParams.get("idGame") || "fr";
+    const game =
+        searchParams.get("game") ||
+        searchParams.get("idGame") ||
+        "fr";
     const idAdvancesMin = searchParams.get("idAdvancesMin") || "1000";
     const idAdvancesMax = searchParams.get("idAdvancesMax") || "10000";
     const maxResults = searchParams.get("idMaxResults") || "2000";
@@ -51,6 +54,9 @@ function useIdComboURLState() {
         setSearchParams((prev) => {
             for (const [key, value] of Object.entries(state)) {
                 prev.set(key, value);
+            }
+            if (state.game !== undefined) {
+                prev.delete("idGame");
             }
             return prev;
         });
@@ -343,7 +349,7 @@ export default function IdComboForm({
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) =>
-                    setIdComboURLState({ idGame: event.target.value })
+                    setIdComboURLState({ game: event.target.value })
                 }
                 value={game}
                 select
@@ -354,13 +360,13 @@ export default function IdComboForm({
                 <MenuItem value="fr_eu">FireRed (SPA/FRE/ITA/GER)</MenuItem>
                 <MenuItem value="fr_jpn_1_0">FireRed (JPN) (1.0)</MenuItem>
                 <MenuItem value="fr_jpn_1_1">FireRed (JPN) (1.1)</MenuItem>
-                <MenuItem value="fr_nx">Switch FireRed</MenuItem>
-                <MenuItem value="fr_mgba">FireRed (MGBA 10.5)</MenuItem>
+                <MenuItem value="fr_nx">Switch FireRed (ENG/SPA/FRE/ITA/GER)</MenuItem>
+                <MenuItem value="fr_mgba">FireRed (ENG) (MGBA 10.5)</MenuItem>
                 <MenuItem value="lg">LeafGreen (ENG)</MenuItem>
                 <MenuItem value="lg_eu">LeafGreen (SPA/FRE/ITA/GER)</MenuItem>
                 <MenuItem value="lg_jpn">LeafGreen (JPN)</MenuItem>
-                <MenuItem value="lg_nx">Switch LeafGreen</MenuItem>
-                <MenuItem value="lg_mgba">LeafGreen (MGBA 10.5)</MenuItem>
+                <MenuItem value="lg_nx">Switch LeafGreen (ENG/SPA/FRE/ITA/GER)</MenuItem>
+                <MenuItem value="lg_mgba">LeafGreen (ENG) (MGBA 10.5)</MenuItem>
             </TextField>
             <RangeInput
                 label="Advances"
