@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18n } from "../i18n";
 import RangeInput from "./RangeInput";
 import React from "react";
 
@@ -12,6 +13,7 @@ function IvEntry({
         value: { value: [string, string][]; isValid: boolean }
     ) => void;
 }) {
+    const { t } = useI18n();
     const [ivRangeVailidities, setIvRangeVailidities] = useState([
         true,
         true,
@@ -44,7 +46,7 @@ function IvEntry({
     return (
         <React.Fragment>
             <RangeInput
-                label="HP"
+                label={t("stats.hp")}
                 name="hpRange"
                 onChange={(event, value) => handleChange(0, event, value)}
                 value={value[0]}
@@ -53,7 +55,7 @@ function IvEntry({
                 resetButton
             />
             <RangeInput
-                label="Attack"
+                label={t("stats.attack")}
                 name="atkRange"
                 onChange={(event, value) => handleChange(1, event, value)}
                 value={value[1]}
@@ -62,7 +64,7 @@ function IvEntry({
                 resetButton
             />
             <RangeInput
-                label="Defense"
+                label={t("stats.defense")}
                 name="defRange"
                 onChange={(event, value) => handleChange(2, event, value)}
                 value={value[2]}
@@ -71,7 +73,7 @@ function IvEntry({
                 resetButton
             />
             <RangeInput
-                label="Special Attack"
+                label={t("stats.specialAttack")}
                 name="spaRange"
                 onChange={(event, value) => handleChange(3, event, value)}
                 value={value[3]}
@@ -80,7 +82,7 @@ function IvEntry({
                 resetButton
             />
             <RangeInput
-                label="Special Defense"
+                label={t("stats.specialDefense")}
                 name="spdRange"
                 onChange={(event, value) => handleChange(4, event, value)}
                 value={value[4]}
@@ -89,7 +91,7 @@ function IvEntry({
                 resetButton
             />
             <RangeInput
-                label="Speed"
+                label={t("stats.speed")}
                 name="speRange"
                 onChange={(event, value) => handleChange(5, event, value)}
                 value={value[5]}

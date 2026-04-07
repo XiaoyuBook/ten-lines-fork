@@ -7,7 +7,7 @@ import type {
     FRLGContiguousSeedEntry,
 } from "../tenLines/generated";
 import fetchTenLines, { hexSeed, SEED_IDENTIFIER_TO_GAME } from "../tenLines";
-import { GENDERS_EN, NATURES_EN } from "../tenLines/resources";
+import { useI18n } from "../i18n";
 import type { CalibrationFormState } from "./CalibrationForm";
 import { proxy } from "comlink";
 import useLocalStorage from "../hooks/useLocalStorage";
@@ -163,6 +163,7 @@ export default function BingoPage({
     sx?: any;
     hidden?: boolean;
 }) {
+    const { resources } = useI18n();
     const [bingoBoard, _setBingoBoard, counters, setCounters] = useBingoBoard();
 
     const width = bingoBoard[0]?.length ?? 0;
@@ -251,8 +252,8 @@ export default function BingoPage({
                             />
                             <br />
                             <span>
-                                {GENDERS_EN[entry.gender]}{" "}
-                                {NATURES_EN[entry.nature]}
+                                {resources.genders[entry.gender]}{" "}
+                                {resources.natures[entry.nature]}
                             </span>
                             <br />
                             <span>{entry.stats.join("/")}</span>

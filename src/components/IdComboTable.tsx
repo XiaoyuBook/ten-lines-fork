@@ -1,3 +1,4 @@
+import { Button } from "@mui/material";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -5,11 +6,10 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import { Button } from "@mui/material";
 import { memo } from "react";
-import { hexSeed } from "../tenLines";
-import { SHININESS_EN } from "../tenLines/resources";
 import { useSearchParams } from "react-router-dom";
+import { useI18n } from "../i18n";
+import { hexSeed } from "../tenLines";
 
 export interface IDComboRow {
     advances: number;
@@ -28,6 +28,7 @@ const IdComboTable = memo(function IdComboTable({
 }: {
     rows: IDComboRow[];
 }) {
+    const { t, resources } = useI18n();
     const [, setSearchParams] = useSearchParams();
 
     function openInInitialSeed(row: IDComboRow, isAuxClick: boolean) {
@@ -51,15 +52,15 @@ const IdComboTable = memo(function IdComboTable({
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>Advances</TableCell>
+                        <TableCell>{t("table.advances")}</TableCell>
                         <TableCell>TID</TableCell>
                         <TableCell>SID</TableCell>
                         <TableCell>TSV</TableCell>
-                        <TableCell>Shiny</TableCell>
-                        <TableCell>Matching Targets</TableCell>
-                        <TableCell>Example Seed</TableCell>
-                        <TableCell>Example PID</TableCell>
-                        <TableCell>Open In Initial Seed</TableCell>
+                        <TableCell>{t("table.shiny")}</TableCell>
+                        <TableCell>{t("table.matchingTargets")}</TableCell>
+                        <TableCell>{t("table.exampleSeed")}</TableCell>
+                        <TableCell>{t("table.examplePid")}</TableCell>
+                        <TableCell>{t("table.openInInitialSeed")}</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -69,7 +70,7 @@ const IdComboTable = memo(function IdComboTable({
                             <TableCell>{row.tid}</TableCell>
                             <TableCell>{row.sid}</TableCell>
                             <TableCell>{row.tsv}</TableCell>
-                            <TableCell>{SHININESS_EN[row.shiny]}</TableCell>
+                            <TableCell>{resources.shininess[row.shiny]}</TableCell>
                             <TableCell>{row.matchCount}</TableCell>
                             <TableCell>{hexSeed(row.exampleSeed, 32)}</TableCell>
                             <TableCell>{hexSeed(row.examplePid, 32)}</TableCell>
@@ -87,7 +88,7 @@ const IdComboTable = memo(function IdComboTable({
                                         }
                                     }}
                                 >
-                                    Initial Seed
+                                    {t("table.initialSeed")}
                                 </Button>
                             </TableCell>
                         </TableRow>

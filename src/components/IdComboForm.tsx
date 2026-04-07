@@ -11,7 +11,7 @@ import fetchTenLines, {
     STATIC_4,
 } from "../tenLines";
 import type { ExtendedIDState, ExtendedSearcherState } from "../tenLines/generated";
-import { GENDERS_EN, METHODS_EN, NATURES_EN, TYPES_EN } from "../tenLines/resources";
+import { getIdComboGameOptions, useI18n } from "../i18n";
 import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
@@ -103,6 +103,7 @@ export default function IdComboForm({
     sx?: SxProps<Theme>;
     hidden?: boolean;
 }) {
+    const { t, resources } = useI18n();
     const [formState, setFormState] = useState<IdComboFormState>({
         shininess: 3,
         nature: -1,
@@ -211,7 +212,7 @@ export default function IdComboForm({
             );
 
             if (candidateResults.length === 0) {
-                setSummary("No matching static targets found for the selected filters.");
+                setSummary(t("messages.noMatchingStaticTargets"));
                 setSearching(false);
                 return;
             }
@@ -232,7 +233,7 @@ export default function IdComboForm({
                 .filter(({ reachability }) => reachability.reachable);
 
             if (eligibleCandidateResults.length === 0) {
-                setSummary("No matching targets fall within the selected advances range.");
+                setSummary(t("messages.noMatchingAdvances"));
                 setSearching(false);
                 return;
             }
@@ -264,7 +265,11 @@ export default function IdComboForm({
 
                 setRows(exactRows);
                 setSummary(
-                    `Found ${candidateResults.length} matching target seed(s), ${tsvCounts.size} unique TSV(s), and ${exactRows.length} matching target(s) for the selected TID/SID.`
+                    t("messages.exactIdSummary", {
+                        candidateCount: `${candidateResults.length}`,
+                        tsvCount: `${tsvCounts.size}`,
+                        resultCount: `${exactRows.length}`,
+                    })
                 );
                 setSearching(false);
                 return;
@@ -331,9 +336,13 @@ export default function IdComboForm({
 
             setRows(dedupedRows);
             setSummary(
-                `Found ${candidateResults.length} matching target seed(s), ${tsvCounts.size} unique TSV(s), and ${dedupedRows.length} TID/SID combo(s).${
+                `${t("messages.comboSummary", {
+                    candidateCount: `${candidateResults.length}`,
+                    tsvCount: `${tsvCounts.size}`,
+                    resultCount: `${dedupedRows.length}`,
+                })}${
                     dedupedRows.length === parseInt(maxResults, 10)
-                        ? " Results hit the max-results cap."
+                        ? ` ${t("messages.resultsCapHit")}`
                         : ""
                 }`
             );
@@ -364,10 +373,10 @@ export default function IdComboForm({
     return (
         <Box component="form" onSubmit={handleSubmit} sx={sx}>
             <Box sx={{ mt: 2, textAlign: "left" }}>
-                Search for TID/SID combinations whose TSV makes the matching static target shiny.
+                {t("messages.idComboIntro")}
             </Box>
             <TextField
-                label="Game"
+                label={t("labels.game")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) =>
@@ -377,21 +386,14 @@ export default function IdComboForm({
                 select
                 fullWidth
             >
-                <MenuItem value="e_painting">Emerald</MenuItem>
-                <MenuItem value="fr">FireRed (ENG)</MenuItem>
-                <MenuItem value="fr_eu">FireRed (SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="fr_jpn_1_0">FireRed (JPN) (1.0)</MenuItem>
-                <MenuItem value="fr_jpn_1_1">FireRed (JPN) (1.1)</MenuItem>
-                <MenuItem value="fr_nx">Switch FireRed (ENG/SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="fr_mgba">FireRed (ENG) (MGBA 10.5)</MenuItem>
-                <MenuItem value="lg">LeafGreen (ENG)</MenuItem>
-                <MenuItem value="lg_eu">LeafGreen (SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="lg_jpn">LeafGreen (JPN)</MenuItem>
-                <MenuItem value="lg_nx">Switch LeafGreen (ENG/SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="lg_mgba">LeafGreen (ENG) (MGBA 10.5)</MenuItem>
+                {getIdComboGameOptions(t).map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                    </MenuItem>
+                ))}
             </TextField>
             <RangeInput
-                label="Advances"
+                label={t("labels.advances")}
                 name="idAdvances"
                 minimumValue={0}
                 maximumValue={4294967295}
@@ -406,7 +408,7 @@ export default function IdComboForm({
             />
             <Box sx={{ flexDirection: "row", display: "flex" }}>
                 <TextField
-                    label="TID Filter"
+                    label={t("labels.tidFilter")}
                     margin="normal"
                     value={tid}
                     onChange={(event) => {
@@ -420,7 +422,11 @@ export default function IdComboForm({
                         setTidIsValid(isValid);
                     }}
                     error={!tidIsValid}
-                    helperText={!tidIsValid ? "Leave blank or enter 0-65535" : "Optional exact TID filter"}
+                    helperText={
+                        !tidIsValid
+                            ? t("messages.leaveBlankOrEnterId")
+                            : t("messages.optionalExactTidFilter")
+                    }
                     fullWidth
                     slotProps={{
                         htmlInput: {
@@ -437,7 +443,7 @@ export default function IdComboForm({
                     /
                 </span>
                 <TextField
-                    label="SID Filter"
+                    label={t("labels.sidFilter")}
                     margin="normal"
                     value={sid}
                     onChange={(event) => {
@@ -451,7 +457,11 @@ export default function IdComboForm({
                         setSidIsValid(isValid);
                     }}
                     error={!sidIsValid}
-                    helperText={!sidIsValid ? "Leave blank or enter 0-65535" : "Optional exact SID filter"}
+                    helperText={
+                        !sidIsValid
+                            ? t("messages.leaveBlankOrEnterId")
+                            : t("messages.optionalExactSidFilter")
+                    }
                     fullWidth
                     slotProps={{
                         htmlInput: {
@@ -461,7 +471,7 @@ export default function IdComboForm({
                 />
             </Box>
             <TextField
-                label="Shininess"
+                label={t("labels.shininess")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -474,12 +484,12 @@ export default function IdComboForm({
                 select
                 fullWidth
             >
-                <MenuItem value="3">Star/Square</MenuItem>
-                <MenuItem value="1">Star</MenuItem>
-                <MenuItem value="2">Square</MenuItem>
+                <MenuItem value="3">{t("options.starSquare")}</MenuItem>
+                <MenuItem value="1">{t("options.star")}</MenuItem>
+                <MenuItem value="2">{t("options.square")}</MenuItem>
             </TextField>
             <NumericalInput
-                label="Max Results"
+                label={t("labels.maxResults")}
                 margin="normal"
                 onChange={(_event, value) => {
                     setIdComboURLState({ idMaxResults: value.value });
@@ -492,7 +502,7 @@ export default function IdComboForm({
                 name="maxResults"
             />
             <TextField
-                label="Method"
+                label={t("labels.method")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -505,7 +515,7 @@ export default function IdComboForm({
                 select
                 fullWidth
             >
-                {Object.entries(METHODS_EN)
+                {Object.entries(resources.methods)
                     .filter(([value]) => parseInt(value) <= STATIC_4 && parseInt(value) != STATIC_2)
                     .map(([value, name], index) => (
                         <MenuItem key={index} value={parseInt(value)}>
@@ -526,7 +536,7 @@ export default function IdComboForm({
                 }}
             />
             <TextField
-                label="Nature"
+                label={t("labels.nature")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -539,15 +549,15 @@ export default function IdComboForm({
                 select
                 fullWidth
             >
-                <MenuItem value="-1">Any</MenuItem>
-                {NATURES_EN.map((nature, index) => (
+                <MenuItem value="-1">{t("common.any")}</MenuItem>
+                {resources.natures.map((nature, index) => (
                     <MenuItem key={index} value={index}>
                         {nature}
                     </MenuItem>
                 ))}
             </TextField>
             <TextField
-                label="Gender"
+                label={t("labels.gender")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -560,15 +570,15 @@ export default function IdComboForm({
                 select
                 fullWidth
             >
-                <MenuItem value="255">Any</MenuItem>
-                {GENDERS_EN.slice(0, 2).map((gender, index) => (
+                <MenuItem value="255">{t("common.any")}</MenuItem>
+                {resources.genders.slice(0, 2).map((gender, index) => (
                     <MenuItem key={index} value={index}>
                         {gender}
                     </MenuItem>
                 ))}
             </TextField>
             <TextField
-                label="Hidden Power"
+                label={t("labels.hiddenPower")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -581,8 +591,8 @@ export default function IdComboForm({
                 select
                 fullWidth
             >
-                <MenuItem value="-1">Any</MenuItem>
-                {TYPES_EN.map((type, index) => (
+                <MenuItem value="-1">{t("common.any")}</MenuItem>
+                {resources.types.map((type, index) => (
                     <MenuItem key={index} value={index}>
                         {type}
                     </MenuItem>
@@ -605,7 +615,7 @@ export default function IdComboForm({
                 disabled={isNotSubmittable}
                 fullWidth
             >
-                {searching ? "Searching..." : "Find TID/SID Combos"}
+                {searching ? t("common.searching") : t("messages.findTidSidCombos")}
             </Button>
             {summary && (
                 <Box sx={{ mt: 2, mb: 2, textAlign: "left" }}>

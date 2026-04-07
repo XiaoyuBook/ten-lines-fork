@@ -26,12 +26,7 @@ import {
     type ExtendedWildSearcherState,
 } from "../tenLines/generated";
 import React from "react";
-import {
-    GENDERS_EN,
-    METHODS_EN,
-    NATURES_EN,
-    TYPES_EN,
-} from "../tenLines/resources";
+import { getAllGameOptions, useI18n } from "../i18n";
 import IvEntry from "./IvEntry";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import { useSearchParams } from "react-router-dom";
@@ -107,6 +102,7 @@ export default function CalibrationForm({
     sx?: SxProps<Theme>;
     hidden?: boolean;
 }) {
+    const { t, resources } = useI18n();
     const [searcherFormState, setSearcherFormState] =
         useState<SearcherFormState>({
             shininess: 255,
@@ -291,7 +287,7 @@ export default function CalibrationForm({
     return (
         <Box component="form" onSubmit={handleSubmit} sx={sx}>
             <TextField
-                label="Game"
+                label={t("labels.game")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) =>
@@ -303,24 +299,15 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                <MenuItem value="r_painting">Ruby Painting Seed</MenuItem>
-                <MenuItem value="s_painting">Sapphire Painting Seed</MenuItem>
-                <MenuItem value="e_painting">Emerald Painting Seed</MenuItem>
-                <MenuItem value="fr">FireRed (ENG)</MenuItem>
-                <MenuItem value="fr_eu">FireRed (SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="fr_jpn_1_0">FireRed (JPN) (1.0)</MenuItem>
-                <MenuItem value="fr_jpn_1_1">FireRed (JPN) (1.1)</MenuItem>
-                <MenuItem value="fr_nx">Switch FireRed (ENG/SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="fr_mgba">FireRed (ENG) (MGBA 10.5)</MenuItem>
-                <MenuItem value="lg">LeafGreen (ENG)</MenuItem>
-                <MenuItem value="lg_eu">LeafGreen (SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="lg_jpn">LeafGreen (JPN)</MenuItem>
-                <MenuItem value="lg_nx">Switch LeafGreen (ENG/SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="lg_mgba">LeafGreen (ENG) (MGBA 10.5)</MenuItem>
+                {getAllGameOptions(t).map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                    </MenuItem>
+                ))}
             </TextField>
             <Box sx={{ flexDirection: "row", display: "flex" }}>
                 <NumericalInput
-                    label="Trainer ID"
+                    label={t("labels.trainerId")}
                     margin="normal"
                     onChange={(_event, value) => {
                         setSearcherURLState({ trainerID: value.value });
@@ -341,7 +328,7 @@ export default function CalibrationForm({
                     /
                 </span>
                 <NumericalInput
-                    label="Secret ID"
+                    label={t("labels.secretId")}
                     margin="normal"
                     onChange={(_event, value) => {
                         setSearcherURLState({ secretID: value.value });
@@ -366,11 +353,11 @@ export default function CalibrationForm({
                         }
                     />
                 }
-                label="Filter by reachable advances"
+                label={t("messages.filterByReachableAdvances")}
             />
             {isReachableAdvancesFilterEnabled && isFRLG && (
                 <TextField
-                    label="Sound"
+                    label={t("labels.sound")}
                     margin="normal"
                     style={{ textAlign: "left" }}
                     onChange={(event) =>
@@ -382,13 +369,13 @@ export default function CalibrationForm({
                     select
                     fullWidth
                 >
-                    <MenuItem value="mono">Mono</MenuItem>
-                    <MenuItem value="stereo">Stereo</MenuItem>
+                    <MenuItem value="mono">{t("common.mono")}</MenuItem>
+                    <MenuItem value="stereo">{t("common.stereo")}</MenuItem>
                 </TextField>
             )}
             {isReachableAdvancesFilterEnabled && (
                 <RangeInput
-                    label="Allowed Advances"
+                    label={t("labels.allowedAdvances")}
                     name="requiredAdvances"
                     minimumValue={0}
                     maximumValue={4294967295}
@@ -403,7 +390,7 @@ export default function CalibrationForm({
                 />
             )}
             <TextField
-                label="Method"
+                label={t("labels.method")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -416,7 +403,7 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                {Object.entries(METHODS_EN)
+                {Object.entries(resources.methods)
                     .filter(([value]) => parseInt(value) != STATIC_2)
                     .map(([value, name], index) => (
                         <MenuItem key={index} value={parseInt(value)}>
@@ -465,7 +452,7 @@ export default function CalibrationForm({
                 />
             )}
             <TextField
-                label="Shininess"
+                label={t("labels.shininess")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -478,13 +465,13 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                <MenuItem value="255">Any</MenuItem>
-                <MenuItem value="1">Star</MenuItem>
-                <MenuItem value="2">Square</MenuItem>
-                <MenuItem value="3">Star/Square</MenuItem>
+                <MenuItem value="255">{t("common.any")}</MenuItem>
+                <MenuItem value="1">{t("options.star")}</MenuItem>
+                <MenuItem value="2">{t("options.square")}</MenuItem>
+                <MenuItem value="3">{t("options.starSquare")}</MenuItem>
             </TextField>
             <TextField
-                label="Nature"
+                label={t("labels.nature")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -497,15 +484,15 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                <MenuItem value="-1">Any</MenuItem>
-                {NATURES_EN.map((nature, index) => (
+                <MenuItem value="-1">{t("common.any")}</MenuItem>
+                {resources.natures.map((nature, index) => (
                     <MenuItem key={index} value={index}>
                         {nature}
                     </MenuItem>
                 ))}
             </TextField>
             <TextField
-                label="Gender"
+                label={t("labels.gender")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -518,15 +505,15 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                <MenuItem value="255">Any</MenuItem>
-                {GENDERS_EN.slice(0, 2).map((gender, index) => (
+                <MenuItem value="255">{t("common.any")}</MenuItem>
+                {resources.genders.slice(0, 2).map((gender, index) => (
                     <MenuItem key={index} value={index}>
                         {gender}
                     </MenuItem>
                 ))}
             </TextField>
             <TextField
-                label="Hidden Power"
+                label={t("labels.hiddenPower")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -539,8 +526,8 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                <MenuItem value="-1">Any</MenuItem>
-                {TYPES_EN.map((type, index) => (
+                <MenuItem value="-1">{t("common.any")}</MenuItem>
+                {resources.types.map((type, index) => (
                     <MenuItem key={index} value={index}>
                         {type}
                     </MenuItem>
@@ -563,7 +550,7 @@ export default function CalibrationForm({
                 disabled={isNotSubmittable}
                 fullWidth
             >
-                {searching ? "Searching..." : "Submit"}
+                {searching ? t("common.searching") : t("common.submit")}
             </Button>
             <SearcherTable
                 rows={rows}

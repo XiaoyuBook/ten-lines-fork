@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import React from "react";
-import fetchTenLines, { Game } from "../tenLines";
 import {
     Autocomplete,
     Box,
@@ -9,7 +8,8 @@ import {
     MenuItem,
     TextField,
 } from "@mui/material";
-import { getLocationEn, getNameEn, NATURES_EN } from "../tenLines/resources";
+import { getLocation, getName, useI18n } from "../i18n";
+import fetchTenLines, { Game } from "../tenLines";
 
 function WildEncounterSelector({
     wildCategory,
@@ -38,24 +38,22 @@ function WildEncounterSelector({
     allowAnyPokemon?: boolean;
     isSearcher?: boolean;
 }) {
+    const { t, resources } = useI18n();
     const [wildLocations, setWildLocations] = useState<number[]>([]);
     const [areaSpecies, setAreaSpecies] = useState<number[]>([]);
 
     useEffect(() => {
         const fetchWildLocations = async () => {
             const tenLines = await fetchTenLines();
-            const wildLocations = await tenLines.get_wild_locations(
-                game,
-                wildCategory
-            );
-            setWildLocations(wildLocations);
+            const locations = await tenLines.get_wild_locations(game, wildCategory);
+            setWildLocations(locations);
             onChange(
                 wildCategory,
-                wildLocations.contains(wildLocation)
+                locations.includes(wildLocation)
                     ? wildLocation
-                    : wildLocations.length > 0
-                    ? wildLocations[0]
-                    : 0,
+                    : locations.length > 0
+                      ? 0
+                      : 0,
                 wildPokemon,
                 wildLead,
                 shouldFilterPokemon
@@ -67,20 +65,16 @@ function WildEncounterSelector({
     useEffect(() => {
         const fetchAreaSpecies = async () => {
             const tenLines = await fetchTenLines();
-            const areaSpecies = await tenLines.get_area_species(
+            const species = await tenLines.get_area_species(
                 game,
                 wildCategory,
                 wildLocation
             );
-            setAreaSpecies(areaSpecies);
+            setAreaSpecies(species);
             onChange(
                 wildCategory,
                 wildLocation,
-                allowAnyPokemon
-                    ? -1
-                    : areaSpecies.length > 0
-                    ? areaSpecies[0]
-                    : 0,
+                allowAnyPokemon ? -1 : species.length > 0 ? species[0] : 0,
                 wildLead,
                 shouldFilterPokemon
             );
@@ -93,7 +87,7 @@ function WildEncounterSelector({
     return (
         <React.Fragment>
             <TextField
-                label="Category"
+                label={t("labels.category")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -109,29 +103,29 @@ function WildEncounterSelector({
                 select
                 fullWidth
             >
-                <MenuItem value="0">Grass</MenuItem>
-                <MenuItem value="3">Rock Smash</MenuItem>
-                <MenuItem value="4">Surfing</MenuItem>
-                <MenuItem value="6">Old Rod</MenuItem>
-                <MenuItem value="7">Good Rod</MenuItem>
-                <MenuItem value="8">Super Rod</MenuItem>
+                <MenuItem value="0">{t("options.grass")}</MenuItem>
+                <MenuItem value="3">{t("options.rockSmash")}</MenuItem>
+                <MenuItem value="4">{t("options.surfing")}</MenuItem>
+                <MenuItem value="6">{t("options.oldRod")}</MenuItem>
+                <MenuItem value="7">{t("options.goodRod")}</MenuItem>
+                <MenuItem value="8">{t("options.superRod")}</MenuItem>
             </TextField>
             <Autocomplete
                 options={wildLocations.map((_, index) => index)}
                 onChange={(_event, newValue) => {
                     onChange(
                         wildCategory,
-                        newValue,
+                        newValue ?? 0,
                         wildPokemon,
                         wildLead,
                         shouldFilterPokemon
                     );
                 }}
                 getOptionLabel={(option) =>
-                    getLocationEn(game, wildLocations[option]) || ""
+                    getLocation(resources, game, wildLocations[option]) || ""
                 }
                 renderInput={(params) => (
-                    <TextField {...params} label="Location" margin="normal" />
+                    <TextField {...params} label={t("labels.location")} margin="normal" />
                 )}
                 value={wildLocation}
                 disablePortal
@@ -141,7 +135,7 @@ function WildEncounterSelector({
             />
             <Box sx={{ display: "flex", alignItems: "center" }}>
                 <TextField
-                    label="Pokémon"
+                    label={t("labels.pokemon")}
                     margin="normal"
                     style={{ textAlign: "left" }}
                     onChange={(event) => {
@@ -157,10 +151,12 @@ function WildEncounterSelector({
                     select
                     fullWidth
                 >
-                    {allowAnyPokemon && <MenuItem value="-1">Any</MenuItem>}
+                    {allowAnyPokemon && (
+                        <MenuItem value="-1">{t("common.any")}</MenuItem>
+                    )}
                     {areaSpecies.map((speciesForm) => (
                         <MenuItem key={speciesForm} value={speciesForm}>
-                            {getNameEn(speciesForm & 0x7ff, speciesForm >> 11)}
+                            {getName(resources, speciesForm & 0x7ff, speciesForm >> 11)}
                         </MenuItem>
                     ))}
                 </TextField>
@@ -181,7 +177,7 @@ function WildEncounterSelector({
                                 }}
                             />
                         }
-                        label="Filter"
+                        label={t("common.filter")}
                         sx={{
                             whiteSpace: "nowrap",
                         }}
@@ -190,7 +186,7 @@ function WildEncounterSelector({
             </Box>
             {isEmerald && (
                 <TextField
-                    label="Lead"
+                    label={t("labels.lead")}
                     margin="normal"
                     style={{ textAlign: "left" }}
                     onChange={(event) => {
@@ -206,18 +202,20 @@ function WildEncounterSelector({
                     select
                     fullWidth
                 >
-                    <MenuItem value="255">None</MenuItem>
-                    <MenuItem value="25">Female Cute Charm</MenuItem>
-                    <MenuItem value="26">Male Cute Charm</MenuItem>
-                    <MenuItem value="27">Magnet Pull</MenuItem>
-                    <MenuItem value="28">Static</MenuItem>
-                    <MenuItem value="32">Hustle/Pressure/Vital Spirit</MenuItem>
+                    <MenuItem value="255">{t("common.none")}</MenuItem>
+                    <MenuItem value="25">{t("options.femaleCuteCharm")}</MenuItem>
+                    <MenuItem value="26">{t("options.maleCuteCharm")}</MenuItem>
+                    <MenuItem value="27">{t("options.magnetPull")}</MenuItem>
+                    <MenuItem value="28">{t("options.static")}</MenuItem>
+                    <MenuItem value="32">
+                        {t("options.hustlePressureVitalSpirit")}
+                    </MenuItem>
                     {isSearcher ? (
-                        <MenuItem value="0">Matching Synchronize</MenuItem>
+                        <MenuItem value="0">{t("options.matchingSynchronize")}</MenuItem>
                     ) : (
-                        NATURES_EN.map((nature, index) => (
+                        resources.natures.map((nature, index) => (
                             <MenuItem key={index} value={index}>
-                                {nature} Synchronize
+                                {`${nature} ${t("messages.matchingSynchronizeSuffix")}`}
                             </MenuItem>
                         ))
                     )}

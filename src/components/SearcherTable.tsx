@@ -1,3 +1,4 @@
+import { Button } from "@mui/material";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -6,22 +7,13 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { memo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { getName, useI18n } from "../i18n";
 import { hexSeed } from "../tenLines";
 import type {
     ExtendedSearcherState,
     ExtendedWildSearcherState,
 } from "../tenLines/generated";
-import {
-    ABILITIES_EN,
-    GENDERS_EN,
-    getNameEn,
-    METHODS_EN,
-    NATURES_EN,
-    SHININESS_EN,
-    TYPES_EN,
-} from "../tenLines/resources";
-import { useSearchParams } from "react-router-dom";
-import { Button } from "@mui/material";
 
 const SearcherTable = memo(function SearcherTable({
     rows,
@@ -36,6 +28,7 @@ const SearcherTable = memo(function SearcherTable({
     isMultiMethod: boolean;
     showRequiredAdvances: boolean;
 }) {
+    const { t, resources } = useI18n();
     const [, setSearchParams] = useSearchParams();
 
     function openInInitialSeed(
@@ -53,27 +46,28 @@ const SearcherTable = memo(function SearcherTable({
             return params;
         });
     }
+
     return (
         <TableContainer component={Paper}>
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>Seed</TableCell>
-                        {isMultiMethod && <TableCell>Method</TableCell>}
-                        {!isStatic && <TableCell>Slot</TableCell>}
-                        {!isStatic && <TableCell>Level</TableCell>}
-                        <TableCell>PID</TableCell>
-                        <TableCell>Shiny</TableCell>
-                        <TableCell>Nature</TableCell>
-                        <TableCell>Ability</TableCell>
-                        <TableCell>IVs</TableCell>
-                        <TableCell>Hidden</TableCell>
-                        <TableCell>Power</TableCell>
-                        <TableCell>Gender</TableCell>
+                        <TableCell>{t("table.seed")}</TableCell>
+                        {isMultiMethod && <TableCell>{t("table.method")}</TableCell>}
+                        {!isStatic && <TableCell>{t("table.slot")}</TableCell>}
+                        {!isStatic && <TableCell>{t("table.level")}</TableCell>}
+                        <TableCell>{t("table.pid")}</TableCell>
+                        <TableCell>{t("table.shiny")}</TableCell>
+                        <TableCell>{t("table.nature")}</TableCell>
+                        <TableCell>{t("table.ability")}</TableCell>
+                        <TableCell>{t("table.ivs")}</TableCell>
+                        <TableCell>{t("table.hidden")}</TableCell>
+                        <TableCell>{t("table.power")}</TableCell>
+                        <TableCell>{t("table.gender")}</TableCell>
                         {showRequiredAdvances && (
-                            <TableCell>Min Reachable Advances</TableCell>
+                            <TableCell>{t("table.minReachableAdvances")}</TableCell>
                         )}
-                        <TableCell>Open In Initial Seed</TableCell>
+                        <TableCell>{t("table.openInInitialSeed")}</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -89,54 +83,39 @@ const SearcherTable = memo(function SearcherTable({
                                 {isMultiMethod && (
                                     <TableCell>
                                         {
-                                            METHODS_EN[
-                                                (
-                                                    row as ExtendedWildSearcherState
-                                                ).method
+                                            resources.methods[
+                                                (row as ExtendedWildSearcherState).method
                                             ]
                                         }
                                     </TableCell>
                                 )}
                                 {!isStatic && (
                                     <TableCell>
-                                        {
-                                            (row as ExtendedWildSearcherState)
-                                                .encounterSlot
-                                        }
-                                        :{" "}
-                                        {getNameEn(
-                                            (row as ExtendedWildSearcherState)
-                                                .species,
-                                            (row as ExtendedWildSearcherState)
-                                                .form
+                                        {(row as ExtendedWildSearcherState).encounterSlot}:{" "}
+                                        {getName(
+                                            resources,
+                                            (row as ExtendedWildSearcherState).species,
+                                            (row as ExtendedWildSearcherState).form
                                         )}
                                     </TableCell>
                                 )}
                                 {!isStatic && (
                                     <TableCell>
-                                        {
-                                            (row as ExtendedWildSearcherState)
-                                                .level
-                                        }
+                                        {(row as ExtendedWildSearcherState).level}
                                     </TableCell>
                                 )}
                                 <TableCell>{hexSeed(row.pid, 32)}</TableCell>
-                                <TableCell>{SHININESS_EN[row.shiny]}</TableCell>
-                                <TableCell>{NATURES_EN[row.nature]}</TableCell>
+                                <TableCell>{resources.shininess[row.shiny]}</TableCell>
+                                <TableCell>{resources.natures[row.nature]}</TableCell>
                                 <TableCell>
-                                    {row.ability}:{" "}
-                                    {ABILITIES_EN[row.abilityIndex - 1]}
+                                    {row.ability}: {resources.abilities[row.abilityIndex - 1]}
                                 </TableCell>
                                 <TableCell>{row.ivs.join("/")}</TableCell>
-                                <TableCell>
-                                    {TYPES_EN[row.hiddenPower]}
-                                </TableCell>
+                                <TableCell>{resources.types[row.hiddenPower]}</TableCell>
                                 <TableCell>{row.hiddenPowerStrength}</TableCell>
-                                <TableCell>{GENDERS_EN[row.gender]}</TableCell>
+                                <TableCell>{resources.genders[row.gender]}</TableCell>
                                 {showRequiredAdvances && (
-                                    <TableCell>
-                                        {row.reachableAdvances ?? "-"}
-                                    </TableCell>
+                                    <TableCell>{row.reachableAdvances ?? "-"}</TableCell>
                                 )}
 
                                 <TableCell>
@@ -153,7 +132,7 @@ const SearcherTable = memo(function SearcherTable({
                                             }
                                         }}
                                     >
-                                        Initial Seed
+                                        {t("table.initialSeed")}
                                     </Button>
                                 </TableCell>
                             </TableRow>

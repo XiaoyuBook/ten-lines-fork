@@ -1,5 +1,6 @@
 import { Box, Checkbox, FormControlLabel } from "@mui/material";
 import { useState } from "react";
+import { useI18n } from "../i18n";
 import NumericalInput from "./NumericalInput";
 
 function TeachyTVEntry({
@@ -14,6 +15,7 @@ function TeachyTVEntry({
         teachyTVRegularOut: { isValid: boolean; value: string }
     ) => void;
 }) {
+    const { t } = useI18n();
     const [teachyTVRegularOutValid, setTeachyTVRegularOutValid] =
         useState(true);
     return (
@@ -22,7 +24,7 @@ function TeachyTVEntry({
         >
             {isTeachyTVMode && (
                 <NumericalInput
-                    label="Minimum Advances Outside of TeachyTV"
+                    label={t("labels.minimumAdvancesOutsideTeachyTv")}
                     name="teachyTVRegularOut"
                     value={teachyTVRegularOut}
                     minimumValue={0}
@@ -46,7 +48,7 @@ function TeachyTVEntry({
                         }}
                     />
                 }
-                label="TeachyTV Mode"
+                label={t("labels.teachyTvMode")}
                 sx={{
                     whiteSpace: "nowrap",
                 }}

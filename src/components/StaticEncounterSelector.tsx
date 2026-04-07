@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import React from "react";
-import type { EnumeratedStaticTemplate3 } from "../tenLines/generated";
-import fetchTenLines, { Game } from "../tenLines";
 import { MenuItem, TextField } from "@mui/material";
-import { GAMES_EN, getNameEn } from "../tenLines/resources";
+import { useI18n, getName } from "../i18n";
+import fetchTenLines, { Game } from "../tenLines";
+import type { EnumeratedStaticTemplate3 } from "../tenLines/generated";
 
 function StaticEncounterSelector({
     staticCategory,
@@ -16,6 +16,7 @@ function StaticEncounterSelector({
     onChange: (staticCategory: number, staticPokemon: number) => void;
     game?: number;
 }) {
+    const { t, resources } = useI18n();
     const [staticTemplates, setStaticTemplates] = useState<
         EnumeratedStaticTemplate3[]
     >([]);
@@ -23,22 +24,22 @@ function StaticEncounterSelector({
     useEffect(() => {
         const fetchStaticTemplates = async () => {
             const tenLines = await fetchTenLines();
-            const staticTemplates = (
+            const templates = (
                 await tenLines.get_static_template_info(staticCategory)
             ).filter(
                 (template: EnumeratedStaticTemplate3) => template.version & game
             );
-            setStaticTemplates(staticTemplates);
+            setStaticTemplates(templates);
             onChange(
                 staticCategory,
-                staticTemplates.some(
+                templates.some(
                     (template: EnumeratedStaticTemplate3) =>
                         template.index == staticPokemon
                 )
                     ? staticPokemon
-                    : staticTemplates.length > 0
-                    ? staticTemplates[0].index
-                    : 0
+                    : templates.length > 0
+                      ? templates[0].index
+                      : 0
             );
         };
         fetchStaticTemplates();
@@ -50,7 +51,7 @@ function StaticEncounterSelector({
     return (
         <React.Fragment>
             <TextField
-                label="Category"
+                label={t("labels.category")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -60,20 +61,20 @@ function StaticEncounterSelector({
                 select
                 fullWidth
             >
-                <MenuItem value="0">Starters</MenuItem>
-                <MenuItem value="1">Fossils</MenuItem>
-                <MenuItem value="2">Gifts</MenuItem>
-                {isFRLG && <MenuItem value="3">Game Corner</MenuItem>}
-                <MenuItem value="4">Stationary</MenuItem>
-                <MenuItem value="5">Legends</MenuItem>
-                {isFRLGE && <MenuItem value="6">Events</MenuItem>}
-                <MenuItem value="7">Roamers</MenuItem>
+                <MenuItem value="0">{t("options.starters")}</MenuItem>
+                <MenuItem value="1">{t("options.fossils")}</MenuItem>
+                <MenuItem value="2">{t("options.gifts")}</MenuItem>
+                {isFRLG && <MenuItem value="3">{t("options.gameCorner")}</MenuItem>}
+                <MenuItem value="4">{t("options.stationary")}</MenuItem>
+                <MenuItem value="5">{t("options.legends")}</MenuItem>
+                {isFRLGE && <MenuItem value="6">{t("options.events")}</MenuItem>}
+                <MenuItem value="7">{t("options.roamers")}</MenuItem>
                 {!isFRLG && (
-                    <MenuItem value="8">Blisy's E-Reader Events</MenuItem>
+                    <MenuItem value="8">{t("options.blisyEvents")}</MenuItem>
                 )}
             </TextField>
             <TextField
-                label="Pokémon"
+                label={t("labels.pokemon")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -85,13 +86,13 @@ function StaticEncounterSelector({
             >
                 {staticTemplates.map((template) => (
                     <MenuItem key={template.index} value={template.index}>
-                        {`${getNameEn(template.species, template.form)}${
+                        {`${getName(resources, template.species, template.form)}${
                             template.shiny == 1
-                                ? " (Shiny Locked)"
+                                ? ` (${t("options.shinyLocked")})`
                                 : template.species == 251
-                                ? " (Lock Break)"
-                                : ""
-                        } - ${GAMES_EN[template.version]}`}
+                                  ? ` (${t("options.lockBreak")})`
+                                  : ""
+                        } - ${resources.games[template.version]}`}
                     </MenuItem>
                 ))}
             </TextField>

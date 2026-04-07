@@ -6,21 +6,13 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { memo } from "react";
+import { getName, useI18n } from "../i18n";
 import { frameToMS, hexSeed } from "../tenLines";
 import type {
     ExtendedGeneratorState,
     ExtendedWildGeneratorState,
     FRLGContiguousSeedEntry,
 } from "../tenLines/generated";
-import {
-    ABILITIES_EN,
-    GENDERS_EN,
-    getNameEn,
-    METHODS_EN,
-    NATURES_EN,
-    SHININESS_EN,
-    TYPES_EN,
-} from "../tenLines/resources";
 
 const CalibrationTable = memo(function CalibrationTable({
     rows,
@@ -30,7 +22,7 @@ const CalibrationTable = memo(function CalibrationTable({
     isMultiMethod,
     isTeachyTVMode,
     isSwitch,
-    overworldFrames
+    overworldFrames,
 }: {
     rows: ExtendedGeneratorState[] | ExtendedWildGeneratorState[];
     target: FRLGContiguousSeedEntry;
@@ -41,33 +33,35 @@ const CalibrationTable = memo(function CalibrationTable({
     isSwitch: boolean;
     overworldFrames: number;
 }) {
+    const { t, resources } = useI18n();
+
     return (
         <TableContainer component={Paper}>
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>Seed</TableCell>
-                        <TableCell>Advances</TableCell>
-                        {isMultiMethod && <TableCell>Method</TableCell>}
+                        <TableCell>{t("table.seed")}</TableCell>
+                        <TableCell>{t("table.advances")}</TableCell>
+                        {isMultiMethod && <TableCell>{t("table.method")}</TableCell>}
                         {isTeachyTVMode && (
-                            <TableCell>Final A Press Frame</TableCell>
+                            <TableCell>{t("table.finalAPressFrame")}</TableCell>
                         )}
                         {isTeachyTVMode && (
-                            <TableCell>TeachyTV Advances</TableCell>
+                            <TableCell>{t("table.teachyTvAdvances")}</TableCell>
                         )}
                         {isSwitch && (
-                            <TableCell>Continue Screen Frames</TableCell>
+                            <TableCell>{t("table.continueScreenFrames")}</TableCell>
                         )}
-                        {!isStatic && <TableCell>Slot</TableCell>}
-                        {!isStatic && <TableCell>Level</TableCell>}
-                        <TableCell>PID</TableCell>
-                        <TableCell>Shiny</TableCell>
-                        <TableCell>Nature</TableCell>
-                        <TableCell>Ability</TableCell>
-                        <TableCell>IVs</TableCell>
-                        <TableCell>Hidden</TableCell>
-                        <TableCell>Power</TableCell>
-                        <TableCell>Gender</TableCell>
+                        {!isStatic && <TableCell>{t("table.slot")}</TableCell>}
+                        {!isStatic && <TableCell>{t("table.level")}</TableCell>}
+                        <TableCell>{t("table.pid")}</TableCell>
+                        <TableCell>{t("table.shiny")}</TableCell>
+                        <TableCell>{t("table.nature")}</TableCell>
+                        <TableCell>{t("table.ability")}</TableCell>
+                        <TableCell>{t("table.ivs")}</TableCell>
+                        <TableCell>{t("table.hidden")}</TableCell>
+                        <TableCell>{t("table.power")}</TableCell>
+                        <TableCell>{t("table.gender")}</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -84,32 +78,27 @@ const CalibrationTable = memo(function CalibrationTable({
                         return (
                             <TableRow key={index}>
                                 <TableCell>
-                                    {/* so only the actual number gets selected on double click */}
                                     <div style={{ float: "left" }}>
-                                        {hexSeed(row.initialSeed, 16)} |{" "}
-                                        {seedMS}
+                                        {hexSeed(row.initialSeed, 16)} | {seedMS}
                                     </div>
-                                    <span>ms</span> ({offsetMS >= 0 && "+"}
+                                    <span>{t("messages.ms")}</span> (
+                                    {offsetMS >= 0 && "+"}
                                     {offsetMS}
-                                    ms)
+                                    {t("messages.ms")})
                                 </TableCell>
                                 <TableCell>{row.advances}</TableCell>
                                 {isMultiMethod && (
                                     <TableCell>
                                         {
-                                            METHODS_EN[
-                                            (
-                                                row as ExtendedWildGeneratorState
-                                            ).method
+                                            resources.methods[
+                                                (row as ExtendedWildGeneratorState).method
                                             ]
                                         }
                                     </TableCell>
                                 )}
                                 {isTeachyTVMode && (
                                     <TableCell>
-                                        {row.advances -
-                                            row.ttvAdvances * 313 +
-                                            row.ttvAdvances}
+                                        {row.advances - row.ttvAdvances * 313 + row.ttvAdvances}
                                     </TableCell>
                                 )}
                                 {isTeachyTVMode && (
@@ -117,46 +106,34 @@ const CalibrationTable = memo(function CalibrationTable({
                                 )}
                                 {isSwitch && (
                                     <TableCell>
-                                        {/* the overworld advances 2x2 in the switch games */}
                                         {row.advances - overworldFrames * 2}
                                     </TableCell>
                                 )}
                                 {!isStatic && (
                                     <TableCell>
-                                        {
-                                            (row as ExtendedWildGeneratorState)
-                                                .encounterSlot
-                                        }
-                                        :{" "}
-                                        {getNameEn(
-                                            (row as ExtendedWildGeneratorState)
-                                                .species,
-                                            (row as ExtendedWildGeneratorState)
-                                                .form
+                                        {(row as ExtendedWildGeneratorState).encounterSlot}:{" "}
+                                        {getName(
+                                            resources,
+                                            (row as ExtendedWildGeneratorState).species,
+                                            (row as ExtendedWildGeneratorState).form
                                         )}
                                     </TableCell>
                                 )}
                                 {!isStatic && (
                                     <TableCell>
-                                        {
-                                            (row as ExtendedWildGeneratorState)
-                                                .level
-                                        }
+                                        {(row as ExtendedWildGeneratorState).level}
                                     </TableCell>
                                 )}
                                 <TableCell>{hexSeed(row.pid, 32)}</TableCell>
-                                <TableCell>{SHININESS_EN[row.shiny]}</TableCell>
-                                <TableCell>{NATURES_EN[row.nature]}</TableCell>
+                                <TableCell>{resources.shininess[row.shiny]}</TableCell>
+                                <TableCell>{resources.natures[row.nature]}</TableCell>
                                 <TableCell>
-                                    {row.ability}:{" "}
-                                    {ABILITIES_EN[row.abilityIndex - 1]}
+                                    {row.ability}: {resources.abilities[row.abilityIndex - 1]}
                                 </TableCell>
                                 <TableCell>{row.ivs.join("/")}</TableCell>
-                                <TableCell>
-                                    {TYPES_EN[row.hiddenPower]}
-                                </TableCell>
+                                <TableCell>{resources.types[row.hiddenPower]}</TableCell>
                                 <TableCell>{row.hiddenPowerStrength}</TableCell>
-                                <TableCell>{GENDERS_EN[row.gender]}</TableCell>
+                                <TableCell>{resources.genders[row.gender]}</TableCell>
                             </TableRow>
                         );
                     })}
