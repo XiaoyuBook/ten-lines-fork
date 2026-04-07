@@ -145,6 +145,7 @@ InitialSeedReachability find_reachable_initial_seed(
     u32 advances_max,
     std::string game_version,
     u32 ttv_frames_out,
+    std::string sound_filter,
     emscripten::val seed_data)
 {
     InitialSeedReachability unreachable {
@@ -201,6 +202,12 @@ InitialSeedReachability find_reachable_initial_seed(
                 if (entry.button_mode != held_button_offset.button_mode) {
                     continue;
                 }
+                if (!sound_filter.empty()) {
+                    std::string expected_prefix = sound_filter + "_";
+                    if (std::string(entry.key).rfind(expected_prefix, 0) != 0) {
+                        continue;
+                    }
+                }
                 return InitialSeedReachability {
                     .reachable = true,
                     .advances = advances,
@@ -229,6 +236,29 @@ emscripten::typed_array<InitialSeedReachability> filter_reachable_target_seeds(
             advances_range.max(),
             game_version,
             ttv_frames_out,
+            "",
+            seed_data));
+    }
+    return results;
+}
+
+emscripten::typed_array<InitialSeedReachability> filter_reachable_target_seeds_with_sound(
+    emscripten::typed_array<u32> target_seeds,
+    emscripten::typed_range<u32> advances_range,
+    std::string game_version,
+    u32 ttv_frames_out,
+    std::string sound_filter,
+    emscripten::val seed_data)
+{
+    emscripten::typed_array<InitialSeedReachability> results;
+    for (u32 i = 0; i < static_cast<u32>(target_seeds.size()); i++) {
+        results.push_back(find_reachable_initial_seed(
+            target_seeds[i],
+            advances_range.min(),
+            advances_range.max(),
+            game_version,
+            ttv_frames_out,
+            sound_filter,
             seed_data));
     }
     return results;
@@ -240,6 +270,7 @@ EMSCRIPTEN_BINDINGS(initial_seed)
     emscripten::smart_function("ten_lines_frlg", &frlg_seeds);
     emscripten::smart_function("get_contiguous_seed_list", &get_contiguous_seed_list);
     emscripten::smart_function("filter_reachable_target_seeds", &filter_reachable_target_seeds);
+    emscripten::smart_function("filter_reachable_target_seeds_with_sound", &filter_reachable_target_seeds_with_sound);
 
     emscripten::value_object<FRLGContiguousSeedEntry>("FRLGContiguousSeedEntry")
         .field("seedTime", &FRLGContiguousSeedEntry::seedTime)

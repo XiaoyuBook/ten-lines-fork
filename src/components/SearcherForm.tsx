@@ -58,6 +58,7 @@ export interface SearcherURLState {
     trainerID: string;
     secretID: string;
     reachableAdvancesFilter: string;
+    sound: string;
     advancesMin: string;
     advancesMax: string;
 }
@@ -67,6 +68,7 @@ function useSearcherURLState() {
     const game = searchParams.get("game") || "r_painting";
     const trainerID = searchParams.get("trainerID") || "0";
     const secretID = searchParams.get("secretID") || "0";
+    const sound = searchParams.get("sound") || "mono";
     const reachableAdvancesFilter =
         searchParams.get("reachableAdvancesFilter") ||
         (searchParams.has("advancesMin") || searchParams.has("advancesMax")
@@ -86,6 +88,7 @@ function useSearcherURLState() {
         game,
         trainerID,
         secretID,
+        sound,
         reachableAdvancesFilter,
         advancesMin,
         advancesMax,
@@ -130,6 +133,7 @@ export default function CalibrationForm({
         game,
         trainerID,
         secretID,
+        sound,
         reachableAdvancesFilter,
         advancesMin,
         advancesMax,
@@ -189,11 +193,12 @@ export default function CalibrationForm({
                     return results as SearcherRowWithAdvances[];
                 }
                 const reachabilityResults =
-                    await tenLines.filter_reachable_target_seeds(
+                    await tenLines.filter_reachable_target_seeds_with_sound(
                         results.map((result) => result.seed),
                         requiredAdvancesRange,
                         game,
                         0,
+                        isFRLG ? sound : "",
                         seedData
                     );
                 return results
@@ -363,6 +368,24 @@ export default function CalibrationForm({
                 }
                 label="Filter by reachable advances"
             />
+            {isReachableAdvancesFilterEnabled && isFRLG && (
+                <TextField
+                    label="Sound"
+                    margin="normal"
+                    style={{ textAlign: "left" }}
+                    onChange={(event) =>
+                        setSearcherURLState({
+                            sound: event.target.value,
+                        })
+                    }
+                    value={sound}
+                    select
+                    fullWidth
+                >
+                    <MenuItem value="mono">Mono</MenuItem>
+                    <MenuItem value="stereo">Stereo</MenuItem>
+                </TextField>
+            )}
             {isReachableAdvancesFilterEnabled && (
                 <RangeInput
                     label="Allowed Advances"
