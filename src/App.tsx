@@ -30,26 +30,27 @@ function TenLinesPages() {
     const [searchParams, setSearchParams] = useSearchParams();
     const currentPage = parseInt(searchParams.get("page") || "0") ?? 0;
     const bingoActive = getBingoActive();
+    const pageSx = { maxWidth: 1100, width: "100%", minWidth: 0 };
 
     const pages = [
         <InitialSeedForm
             key={0}
-            sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
+            sx={pageSx}
             hidden={currentPage != 0}
         />,
         <CalibrationForm
             key={1}
-            sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
+            sx={pageSx}
             hidden={currentPage != 1}
         />,
         <SearcherForm
             key={2}
-            sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
+            sx={pageSx}
             hidden={currentPage != 2}
         />,
         <IdComboForm
             key={4}
-            sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
+            sx={pageSx}
             hidden={currentPage != 4}
         />,
         bingoActive && <BingoPage key={3} hidden={currentPage != 3} />,

@@ -518,7 +518,7 @@ export default function CalibrationForm({
                         fullWidth
                     >
                         <MenuItem value="a">A</MenuItem>
-                        <MenuItem value="start">Start</MenuItem>
+                        <MenuItem value="start">{t("options.start")}</MenuItem>
                         <MenuItem value="l">L (L=A)</MenuItem>
                     </TextField>
                     <TextField

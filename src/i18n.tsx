@@ -9,9 +9,12 @@ import powers_en_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/en/p
 import rs_en_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/en/rs_en.txt?raw";
 import species_en_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/en/species_en.txt?raw";
 import abilities_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/abilities_zh.txt?raw";
+import e_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/e_zh.txt?raw";
 import forms_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/forms_zh.txt?raw";
+import frlg_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/frlg_zh.txt?raw";
 import natures_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/natures_zh.txt?raw";
 import powers_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/powers_zh.txt?raw";
+import rs_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/rs_zh.txt?raw";
 import species_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/species_zh.txt?raw";
 import useLocalStorage from "./hooks/useLocalStorage";
 import {
@@ -34,19 +37,6 @@ type I18nContextValue = {
     setLocale: (locale: Locale) => void;
 };
 
-const I18nContext = createContext<I18nContextValue | null>(null);
-
-const parseMap = (text: string) => {
-    return Object.fromEntries(parseList(text).map((line) => line.split(",")));
-};
-
-const parseList = (text: string) => {
-    return text
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line !== "");
-};
-
 type ResourceBundle = {
     methods: Record<number, string>;
     genders: string[];
@@ -61,6 +51,23 @@ type ResourceBundle = {
     eLocations: Record<string, string>;
     games: Record<number, string>;
 };
+
+const I18nContext = createContext<I18nContextValue | null>(null);
+
+const parseList = (text: string) =>
+    text
+        .replace(/^\uFEFF/, "")
+        .split("\n")
+        .map((line) => line.trim().replace(/^\uFEFF/, ""))
+        .filter((line) => line !== "");
+
+const parseMap = (text: string) =>
+    Object.fromEntries(
+        parseList(text).map((line) => {
+            const [key, ...rest] = line.split(",");
+            return [key, rest.join(",")];
+        })
+    );
 
 const RESOURCES: Record<Locale, ResourceBundle> = {
     en: {
@@ -106,19 +113,19 @@ const RESOURCES: Record<Locale, ResourceBundle> = {
     },
     zh: {
         methods: {
-            [STATIC_1]: "静态 1",
-            [STATIC_2]: "静态 2",
-            [STATIC_4]: "静态 4",
-            [WILD_1]: "野生 1",
-            [WILD_2]: "野生 2",
-            [WILD_4]: "野生 4",
-            [COMBINED_WILD_METHOD]: "全部野生方法",
+            [STATIC_1]: "\u9759\u6001 1",
+            [STATIC_2]: "\u9759\u6001 2",
+            [STATIC_4]: "\u9759\u6001 4",
+            [WILD_1]: "\u91ce\u751f 1",
+            [WILD_2]: "\u91ce\u751f 2",
+            [WILD_4]: "\u91ce\u751f 4",
+            [COMBINED_WILD_METHOD]: "\u5168\u90e8\u91ce\u751f\u65b9\u6cd5",
         },
-        genders: ["公", "母", "-"],
-        shininess: ["否", "星闪", "方闪"],
+        genders: ["\u516c", "\u6bcd", "-"],
+        shininess: ["\u5426", "\u661f\u95ea", "\u65b9\u95ea"],
         natures: parseList(natures_zh_txt),
         abilities: parseList(abilities_zh_txt),
-        species: ["蛋", ...parseList(species_zh_txt)],
+        species: ["\u86cb", ...parseList(species_zh_txt)],
         forms: Object.fromEntries(
             parseList(forms_zh_txt).map((line) => {
                 const [species, form, name] = line.split(",");
@@ -126,23 +133,27 @@ const RESOURCES: Record<Locale, ResourceBundle> = {
             })
         ),
         types: parseList(powers_zh_txt),
-        frlgLocations: parseMap(frlg_en_txt),
-        rsLocations: parseMap(rs_en_txt),
-        eLocations: parseMap(e_en_txt),
+        frlgLocations: parseMap(frlg_zh_txt),
+        rsLocations: parseMap(rs_zh_txt),
+        eLocations: parseMap(e_zh_txt),
         games: {
-            [Game.None]: "无",
-            [Game.Ruby]: "红宝石",
-            [Game.Sapphire]: "蓝宝石",
-            [Game.RS]: "红宝石 / 蓝宝石",
-            [Game.Emerald]: "绿宝石",
-            [Game.Ruby | Game.Emerald]: "红宝石 / 绿宝石",
-            [Game.Sapphire | Game.Emerald]: "蓝宝石 / 绿宝石",
-            [Game.RSE]: "红宝石 / 蓝宝石 / 绿宝石",
-            [Game.FireRed]: "火红",
-            [Game.LeafGreen]: "叶绿",
-            [Game.FRLG]: "火红 / 叶绿",
-            [Game.FRLG | Game.Emerald]: "火红 / 叶绿 / 绿宝石",
-            [Game.Gen3]: "第三世代",
+            [Game.None]: "\u65e0",
+            [Game.Ruby]: "\u7ea2\u5b9d\u77f3",
+            [Game.Sapphire]: "\u84dd\u5b9d\u77f3",
+            [Game.RS]: "\u7ea2\u5b9d\u77f3 / \u84dd\u5b9d\u77f3",
+            [Game.Emerald]: "\u7eff\u5b9d\u77f3",
+            [Game.Ruby | Game.Emerald]:
+                "\u7ea2\u5b9d\u77f3 / \u7eff\u5b9d\u77f3",
+            [Game.Sapphire | Game.Emerald]:
+                "\u84dd\u5b9d\u77f3 / \u7eff\u5b9d\u77f3",
+            [Game.RSE]:
+                "\u7ea2\u5b9d\u77f3 / \u84dd\u5b9d\u77f3 / \u7eff\u5b9d\u77f3",
+            [Game.FireRed]: "\u706b\u7ea2",
+            [Game.LeafGreen]: "\u53f6\u7eff",
+            [Game.FRLG]: "\u706b\u7ea2 / \u53f6\u7eff",
+            [Game.FRLG | Game.Emerald]:
+                "\u706b\u7ea2 / \u53f6\u7eff / \u7eff\u5b9d\u77f3",
+            [Game.Gen3]: "\u7b2c\u4e09\u4e16\u4ee3",
         },
     },
 };
@@ -170,7 +181,6 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             reset: "Reset",
             mono: "Mono",
             stereo: "Stereo",
-            yesNoSeparator: "/",
         },
         footer: {
             credit:
@@ -270,6 +280,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             matchingSynchronize: "Matching Synchronize",
             shinyLocked: "Shiny Locked",
             lockBreak: "Lock Break",
+            start: "Start",
+            select: "Select",
+            startup: "Startup",
+            blackout: "Blackout",
         },
         table: {
             seed: "Seed",
@@ -347,203 +361,221 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
     },
     zh: {
         tabs: {
-            searcher: "搜索器",
-            idCombo: "ID 组合",
-            initialSeed: "初始 Seed",
-            calibration: "校准",
-            bingo: "宾果",
+            searcher: "\u641c\u7d22\u5668",
+            idCombo: "ID \u7ec4\u5408",
+            initialSeed: "\u521d\u59cb Seed",
+            calibration: "\u6821\u51c6",
+            bingo: "\u5bbe\u679c",
         },
         language: {
-            chinese: "中文",
+            chinese: "\u4e2d\u6587",
             english: "English",
         },
         common: {
-            submit: "提交",
-            searching: "搜索中...",
-            any: "任意",
-            none: "无",
-            filter: "筛选",
-            showSeeds: "显示 Seed",
-            reset: "重置",
-            mono: "单声道",
-            stereo: "立体声",
-            yesNoSeparator: "/",
+            submit: "\u63d0\u4ea4",
+            searching: "\u641c\u7d22\u4e2d...",
+            any: "\u4efb\u610f",
+            none: "\u65e0",
+            filter: "\u7b5b\u9009",
+            showSeeds: "\u663e\u793a Seed",
+            reset: "\u91cd\u7f6e",
+            mono: "\u5355\u58f0\u9053",
+            stereo: "\u7acb\u4f53\u58f0",
         },
         footer: {
             credit:
-                '原始 "10 lines" 由 Shao 制作，FRLG seed 数据由 blisy、po、HunarPG、10Ben、Real96、Papa Jefé 与 銉堛儙 收集',
-            poweredBy: "技术支持",
-            seedDataAsOf: "FRLG seed 数据更新时间",
+                '\u539f\u59cb "10 lines" \u7531 Shao \u5236\u4f5c\uff0cFRLG seed \u6570\u636e\u7531 blisy\u3001po\u3001HunarPG\u300110Ben\u3001Real96\u3001Papa Jef\u00e9 \u4e0e \u9299\u5806\u5139 \u6536\u96c6',
+            poweredBy: "\u6280\u672f\u652f\u6301",
+            seedDataAsOf: "FRLG seed \u6570\u636e\u66f4\u65b0\u65f6\u95f4",
         },
         labels: {
-            minimum: "最小",
-            maximum: "最大",
-            game: "游戏",
-            sound: "声音",
-            buttonMode: "按键模式",
-            seedButton: "Seed 按键",
-            extraButton: "额外按键",
-            console: "设备",
-            targetSeed: "目标 Seed",
-            seedLeeway: "Seed 容差 +/-",
-            advances: "消耗帧",
-            finalAPressFrame: "最终 A 按下帧",
-            offset: "偏移",
-            teachyTvAdvances: "教学电视消耗帧",
-            requiredOverworldFrames: "所需大地图帧数",
-            teachyTvMode: "教学电视模式",
+            minimum: "\u6700\u5c0f",
+            maximum: "\u6700\u5927",
+            game: "\u6e38\u620f",
+            sound: "\u58f0\u97f3",
+            buttonMode: "\u6309\u952e\u6a21\u5f0f",
+            seedButton: "Seed \u6309\u952e",
+            extraButton: "\u989d\u5916\u6309\u952e",
+            console: "\u8bbe\u5907",
+            targetSeed: "\u76ee\u6807 Seed",
+            seedLeeway: "Seed \u5bb9\u5dee +/-",
+            advances: "\u6d88\u8017\u5e27",
+            finalAPressFrame: "\u6700\u7ec8 A \u6309\u4e0b\u5e27",
+            offset: "\u504f\u79fb",
+            teachyTvAdvances: "\u6559\u5b66\u7535\u89c6\u6d88\u8017\u5e27",
+            requiredOverworldFrames: "\u6240\u9700\u5927\u5730\u56fe\u5e27\u6570",
+            teachyTvMode: "\u6559\u5b66\u7535\u89c6\u6a21\u5f0f",
             trainerId: "Trainer ID",
             secretId: "Secret ID",
-            method: "方法",
-            shininess: "闪光",
-            nature: "性格",
-            gender: "性别",
-            hiddenPower: "觉醒力量",
-            category: "分类",
-            pokemon: "宝可梦",
-            location: "地点",
-            lead: "首发特性",
-            resultCount: "结果数量",
-            allowedAdvances: "允许的消耗帧范围",
-            maxResults: "最大结果数",
-            tidFilter: "TID 筛选",
-            sidFilter: "SID 筛选",
-            ivCalculator: "IV 计算器",
-            minimumAdvancesOutsideTeachyTv: "教学电视外的最少消耗帧",
+            method: "\u65b9\u6cd5",
+            shininess: "\u95ea\u5149",
+            nature: "\u6027\u683c",
+            gender: "\u6027\u522b",
+            hiddenPower: "\u89c9\u9192\u529b\u91cf",
+            category: "\u5206\u7c7b",
+            pokemon: "\u5b9d\u53ef\u68a6",
+            location: "\u5730\u70b9",
+            lead: "\u9996\u53d1\u7279\u6027",
+            resultCount: "\u7ed3\u679c\u6570\u91cf",
+            allowedAdvances: "\u5141\u8bb8\u7684\u6d88\u8017\u5e27\u8303\u56f4",
+            maxResults: "\u6700\u5927\u7ed3\u679c\u6570",
+            tidFilter: "TID \u7b5b\u9009",
+            sidFilter: "SID \u7b5b\u9009",
+            ivCalculator: "IV \u8ba1\u7b97\u5668",
+            minimumAdvancesOutsideTeachyTv:
+                "\u6559\u5b66\u7535\u89c6\u5916\u7684\u6700\u5c11\u6d88\u8017\u5e27",
         },
         options: {
-            rubyPaintingSeed: "红宝石绘画 Seed",
-            sapphirePaintingSeed: "蓝宝石绘画 Seed",
-            emeraldPaintingSeed: "绿宝石绘画 Seed",
-            emerald: "绿宝石",
-            fireRedEng: "火红（英文）",
-            fireRedEu: "火红（西/法/意/德）",
-            fireRedJpn10: "火红（日版）1.0",
-            fireRedJpn11: "火红（日版）1.1",
-            switchFireRed: "Switch 火红（英/西/法/意/德）",
-            fireRedMgba: "火红（英文）（mGBA 10.5）",
-            leafGreenEng: "叶绿（英文）",
-            leafGreenEu: "叶绿（西/法/意/德）",
-            leafGreenJpn: "叶绿（日版）",
-            switchLeafGreen: "Switch 叶绿（英/西/法/意/德）",
-            leafGreenMgba: "叶绿（英文）（mGBA 10.5）",
-            help: "帮助",
-            startupSelect: "启动时 Select",
-            startupA: "启动时 A",
-            blackoutR: "黑屏后 R",
-            blackoutA: "黑屏后 A",
-            blackoutL: "黑屏后 L",
-            blackoutAL: "黑屏后 A+L",
+            rubyPaintingSeed: "\u7ea2\u5b9d\u77f3\u7ed8\u753b Seed",
+            sapphirePaintingSeed: "\u84dd\u5b9d\u77f3\u7ed8\u753b Seed",
+            emeraldPaintingSeed: "\u7eff\u5b9d\u77f3\u7ed8\u753b Seed",
+            emerald: "\u7eff\u5b9d\u77f3",
+            fireRedEng: "\u706b\u7ea2\uff08\u82f1\u6587\uff09",
+            fireRedEu: "\u706b\u7ea2\uff08\u897f/\u6cd5/\u610f/\u5fb7\uff09",
+            fireRedJpn10: "\u706b\u7ea2\uff08\u65e5\u7248\uff091.0",
+            fireRedJpn11: "\u706b\u7ea2\uff08\u65e5\u7248\uff091.1",
+            switchFireRed:
+                "Switch \u706b\u7ea2\uff08\u82f1/\u897f/\u6cd5/\u610f/\u5fb7\uff09",
+            fireRedMgba:
+                "\u706b\u7ea2\uff08\u82f1\u6587\uff09\uff08mGBA 10.5\uff09",
+            leafGreenEng: "\u53f6\u7eff\uff08\u82f1\u6587\uff09",
+            leafGreenEu: "\u53f6\u7eff\uff08\u897f/\u6cd5/\u610f/\u5fb7\uff09",
+            leafGreenJpn: "\u53f6\u7eff\uff08\u65e5\u7248\uff09",
+            switchLeafGreen:
+                "Switch \u53f6\u7eff\uff08\u82f1/\u897f/\u6cd5/\u610f/\u5fb7\uff09",
+            leafGreenMgba:
+                "\u53f6\u7eff\uff08\u82f1\u6587\uff09\uff08mGBA 10.5\uff09",
+            help: "\u5e2e\u52a9",
+            startupSelect: "\u542f\u52a8\u65f6 Select",
+            startupA: "\u542f\u52a8\u65f6 A",
+            blackoutR: "\u9ed1\u5c4f\u540e R",
+            blackoutA: "\u9ed1\u5c4f\u540e A",
+            blackoutL: "\u9ed1\u5c4f\u540e L",
+            blackoutAL: "\u9ed1\u5c4f\u540e A+L",
             switch1: "Nintendo Switch 1",
             switch2: "Nintendo Switch 2",
             gba: "Game Boy Advance",
             gbp: "Game Boy Player",
             nds: "Nintendo DS",
-            firm3ds: "Nintendo 3DS（open_agb_firm）",
-            star: "星闪",
-            square: "方闪",
-            starSquare: "星闪/方闪",
-            starters: "御三家",
-            fossils: "化石",
-            gifts: "赠送",
-            gameCorner: "游戏角",
-            stationary: "定点",
-            legends: "传说",
-            events: "活动",
-            roamers: "游走",
-            blisyEvents: "Blisy 电子卡活动",
-            grass: "草丛",
-            rockSmash: "碎岩",
-            surfing: "冲浪",
-            oldRod: "破旧钓竿",
-            goodRod: "好钓竿",
-            superRod: "超级钓竿",
-            femaleCuteCharm: "迷人之躯（母）",
-            maleCuteCharm: "迷人之躯（公）",
-            magnetPull: "磁力",
-            static: "静电",
-            hustlePressureVitalSpirit: "活力/压迫感/干劲",
-            matchingSynchronize: "匹配同步",
-            shinyLocked: "锁闪",
-            lockBreak: "破锁",
+            firm3ds: "Nintendo 3DS\uff08open_agb_firm\uff09",
+            star: "\u661f\u95ea",
+            square: "\u65b9\u95ea",
+            starSquare: "\u661f\u95ea/\u65b9\u95ea",
+            starters: "\u5fa1\u4e09\u5bb6",
+            fossils: "\u5316\u77f3",
+            gifts: "\u8d60\u9001",
+            gameCorner: "\u6e38\u620f\u89d2",
+            stationary: "\u5b9a\u70b9",
+            legends: "\u4f20\u8bf4",
+            events: "\u6d3b\u52a8",
+            roamers: "\u6e38\u8d70",
+            blisyEvents: "Blisy \u7535\u5b50\u5361\u6d3b\u52a8",
+            grass: "\u8349\u4e1b",
+            rockSmash: "\u788e\u5ca9",
+            surfing: "\u51b2\u6d6a",
+            oldRod: "\u7834\u65e7\u9493\u7aff",
+            goodRod: "\u597d\u9493\u7aff",
+            superRod: "\u8d85\u7ea7\u9493\u7aff",
+            femaleCuteCharm: "\u8ff7\u4eba\u4e4b\u8eaf\uff08\u6bcd\uff09",
+            maleCuteCharm: "\u8ff7\u4eba\u4e4b\u8eaf\uff08\u516c\uff09",
+            magnetPull: "\u78c1\u529b",
+            static: "\u9759\u7535",
+            hustlePressureVitalSpirit:
+                "\u6d3b\u529b/\u538b\u8feb\u611f/\u5e72\u52b2",
+            matchingSynchronize: "\u5339\u914d\u540c\u6b65",
+            shinyLocked: "\u9501\u95ea",
+            lockBreak: "\u7834\u9501",
+            start: "\u5f00\u59cb",
+            select: "\u9009\u62e9",
+            startup: "\u542f\u52a8",
+            blackout: "\u9ed1\u5c4f",
         },
         table: {
             seed: "Seed",
-            advances: "消耗帧",
-            method: "方法",
-            finalAPressFrame: "最终 A 按下帧",
-            teachyTvAdvances: "教学电视消耗帧",
-            continueScreenFrames: "继续界面帧数",
-            slot: "槽位",
-            level: "等级",
+            advances: "\u6d88\u8017\u5e27",
+            method: "\u65b9\u6cd5",
+            finalAPressFrame: "\u6700\u7ec8 A \u6309\u4e0b\u5e27",
+            teachyTvAdvances: "\u6559\u5b66\u7535\u89c6\u6d88\u8017\u5e27",
+            continueScreenFrames: "\u7ee7\u7eed\u754c\u9762\u5e27\u6570",
+            slot: "\u69fd\u4f4d",
+            level: "\u7b49\u7ea7",
             pid: "PID",
-            shiny: "闪光",
-            nature: "性格",
-            ability: "特性",
+            shiny: "\u95ea\u5149",
+            nature: "\u6027\u683c",
+            ability: "\u7279\u6027",
             ivs: "IV",
-            hidden: "觉醒属性",
-            power: "威力",
-            gender: "性别",
-            minReachableAdvances: "最小可达消耗帧",
-            openInInitialSeed: "在初始 Seed 中打开",
-            openInCalibration: "在校准中打开",
-            matchingTargets: "匹配目标数",
-            exampleSeed: "示例 Seed",
-            examplePid: "示例 PID",
-            seedDec: "Seed（十进制）",
-            seedHex: "Seed（十六进制）",
-            estimatedTotalFrames: "估计总帧数",
-            estimatedTotalTime: "估计总时间",
-            seedTime: "Seed 时间",
-            settings: "设置",
-            calibration: "校准",
-            initialSeed: "初始 Seed",
+            hidden: "\u89c9\u9192\u5c5e\u6027",
+            power: "\u5a01\u529b",
+            gender: "\u6027\u522b",
+            minReachableAdvances: "\u6700\u5c0f\u53ef\u8fbe\u6d88\u8017\u5e27",
+            openInInitialSeed: "\u5728\u521d\u59cb Seed \u4e2d\u6253\u5f00",
+            openInCalibration: "\u5728\u6821\u51c6\u4e2d\u6253\u5f00",
+            matchingTargets: "\u5339\u914d\u76ee\u6807\u6570",
+            exampleSeed: "\u793a\u4f8b Seed",
+            examplePid: "\u793a\u4f8b PID",
+            seedDec: "Seed\uff08\u5341\u8fdb\u5236\uff09",
+            seedHex: "Seed\uff08\u5341\u516d\u8fdb\u5236\uff09",
+            estimatedTotalFrames: "\u4f30\u8ba1\u603b\u5e27\u6570",
+            estimatedTotalTime: "\u4f30\u8ba1\u603b\u65f6\u95f4",
+            seedTime: "Seed \u65f6\u95f4",
+            settings: "\u8bbe\u7f6e",
+            calibration: "\u6821\u51c6",
+            initialSeed: "\u521d\u59cb Seed",
         },
         messages: {
-            noKnownSeeds: "当前游戏和设置下没有已知 Seed",
-            requiredForIvCalculation: "进行 IV 计算时必填",
-            ivCalculationDisabled: "IV 计算已关闭，正在搜索全部性格。",
-            filterByReachableAdvances: "按可达消耗帧筛选",
-            idComboIntro: "搜索能让匹配静态目标变闪的 TID/SID 组合。",
-            noMatchingStaticTargets: "所选条件下没有匹配的静态目标。",
-            noMatchingAdvances: "没有目标落在所选消耗帧范围内。",
+            noKnownSeeds:
+                "\u5f53\u524d\u6e38\u620f\u548c\u8bbe\u7f6e\u4e0b\u6ca1\u6709\u5df2\u77e5 Seed",
+            requiredForIvCalculation:
+                "\u8fdb\u884c IV \u8ba1\u7b97\u65f6\u5fc5\u586b",
+            ivCalculationDisabled:
+                "IV \u8ba1\u7b97\u5df2\u5173\u95ed\uff0c\u6b63\u5728\u641c\u7d22\u5168\u90e8\u6027\u683c\u3002",
+            filterByReachableAdvances:
+                "\u6309\u53ef\u8fbe\u6d88\u8017\u5e27\u7b5b\u9009",
+            idComboIntro:
+                "\u641c\u7d22\u80fd\u8ba9\u5339\u914d\u9759\u6001\u76ee\u6807\u53d8\u95ea\u7684 TID/SID \u7ec4\u5408\u3002",
+            noMatchingStaticTargets:
+                "\u6240\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u7684\u9759\u6001\u76ee\u6807\u3002",
+            noMatchingAdvances:
+                "\u6ca1\u6709\u76ee\u6807\u843d\u5728\u6240\u9009\u6d88\u8017\u5e27\u8303\u56f4\u5185\u3002",
             exactIdSummary:
-                "找到 {candidateCount} 个匹配目标 Seed、{tsvCount} 个唯一 TSV，以及 {resultCount} 个符合所选 TID/SID 的匹配目标。",
+                "\u627e\u5230 {candidateCount} \u4e2a\u5339\u914d\u76ee\u6807 Seed\u3001{tsvCount} \u4e2a\u552f\u4e00 TSV\uff0c\u4ee5\u53ca {resultCount} \u4e2a\u7b26\u5408\u6240\u9009 TID/SID \u7684\u5339\u914d\u76ee\u6807\u3002",
             comboSummary:
-                "找到 {candidateCount} 个匹配目标 Seed、{tsvCount} 个唯一 TSV，以及 {resultCount} 个 TID/SID 组合。",
-            resultsCapHit: "结果已达到最大数量上限。",
-            optionalExactTidFilter: "可选的精确 TID 筛选",
-            optionalExactSidFilter: "可选的精确 SID 筛选",
-            leaveBlankOrEnterId: "留空或输入 0-65535",
-            findTidSidCombos: "查找 TID/SID 组合",
-            ms: "毫秒",
-            settingsSeedButton: "Seed 按键",
-            settingsExtraButton: "额外按键",
-            matchingSynchronizeSuffix: "同步",
+                "\u627e\u5230 {candidateCount} \u4e2a\u5339\u914d\u76ee\u6807 Seed\u3001{tsvCount} \u4e2a\u552f\u4e00 TSV\uff0c\u4ee5\u53ca {resultCount} \u4e2a TID/SID \u7ec4\u5408\u3002",
+            resultsCapHit:
+                "\u7ed3\u679c\u5df2\u8fbe\u5230\u6700\u5927\u6570\u91cf\u4e0a\u9650\u3002",
+            optionalExactTidFilter:
+                "\u53ef\u9009\u7684\u7cbe\u786e TID \u7b5b\u9009",
+            optionalExactSidFilter:
+                "\u53ef\u9009\u7684\u7cbe\u786e SID \u7b5b\u9009",
+            leaveBlankOrEnterId:
+                "\u7559\u7a7a\u6216\u8f93\u5165 0-65535",
+            findTidSidCombos: "\u67e5\u627e TID/SID \u7ec4\u5408",
+            ms: "\u6beb\u79d2",
+            settingsSeedButton: "Seed \u6309\u952e",
+            settingsExtraButton: "\u989d\u5916\u6309\u952e",
+            matchingSynchronizeSuffix: "\u540c\u6b65",
         },
         errors: {
-            invalidInput: "输入无效",
-            valueMustBeBetween: "值必须在 {min} 到 {max} 之间",
-            lineMissing: "第 {line} 行缺少 {field}",
-            lineInvalid: "第 {line} 行的 {field} 无效",
-            noPossibleIv: "{stat} 不存在可行 IV",
+            invalidInput: "\u8f93\u5165\u65e0\u6548",
+            valueMustBeBetween:
+                "\u503c\u5fc5\u987b\u5728 {min} \u5230 {max} \u4e4b\u95f4",
+            lineMissing: "\u7b2c {line} \u884c\u7f3a\u5c11 {field}",
+            lineInvalid: "\u7b2c {line} \u884c\u7684 {field} \u65e0\u6548",
+            noPossibleIv: "{stat} \u4e0d\u5b58\u5728\u53ef\u884c IV",
         },
         stats: {
             hp: "HP",
-            attack: "攻击",
-            defense: "防御",
-            specialAttack: "特攻",
-            specialDefense: "特防",
-            speed: "速度",
+            attack: "\u653b\u51fb",
+            defense: "\u9632\u5fa1",
+            specialAttack: "\u7279\u653b",
+            specialDefense: "\u7279\u9632",
+            speed: "\u901f\u5ea6",
         },
     },
 };
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-    const [localeValue, setLocaleValue] = useLocalStorage<Locale>(
-        "locale",
-        "zh"
-    );
+    const [localeValue, setLocaleValue] = useLocalStorage<Locale>("locale", "zh");
     const locale = localeValue === "en" ? "en" : "zh";
 
     return (
@@ -605,7 +637,7 @@ export function getName(
 ) {
     const speciesName =
         resources.species[
-            typeof species === "number" ? species : parseInt(species)
+            typeof species === "number" ? species : parseInt(species, 10)
         ];
     const formName = resources.forms[`${species}-${form}`];
 
@@ -632,13 +664,13 @@ export function getAllGameOptions(t: (key: string) => string) {
 }
 
 export function getIdComboGameOptions(t: (key: string) => string) {
-    return [
-        { value: "e_painting", label: t("options.emerald") },
-        ...getAllGameOptions(t).slice(3),
-    ];
+    return [{ value: "e_painting", label: t("options.emerald") }, ...getAllGameOptions(t).slice(3)];
 }
 
-export function getConsoleOptions(t: (key: string) => string, isSwitch: boolean) {
+export function getConsoleOptions(
+    t: (key: string) => string,
+    isSwitch: boolean
+) {
     return isSwitch
         ? [
               { value: "NX", label: t("options.switch1") },
