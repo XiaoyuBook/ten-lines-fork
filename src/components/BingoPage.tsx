@@ -1,6 +1,5 @@
 import { Box, Button } from "@mui/material";
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import type {
     ExtendedGeneratorState,
     ExtendedWildGeneratorState,
@@ -19,8 +18,7 @@ export function useBingoBoard() {
 }
 
 export function getBingoActive() {
-    const [searchParams] = useSearchParams();
-    return searchParams.get("bingo") === "true";
+    return true;
 }
 
 export async function fetchBingo(
@@ -169,6 +167,12 @@ export default function BingoPage({
     const width = bingoBoard[0]?.length ?? 0;
     const height = bingoBoard.length;
 
+    const getGenderColor = (gender: number) => {
+        if (gender === 0) return "#4dabf7";
+        if (gender === 1) return "#ff6b9a";
+        return "inherit";
+    };
+
     if (hidden) return null;
     return (
         <Box
@@ -252,7 +256,14 @@ export default function BingoPage({
                             />
                             <br />
                             <span>
-                                {resources.genders[entry.gender]}{" "}
+                                <span
+                                    style={{
+                                        color: getGenderColor(entry.gender),
+                                        fontWeight: 700,
+                                    }}
+                                >
+                                    {resources.genders[entry.gender]}
+                                </span>{" "}
                                 {resources.natures[entry.nature]}
                             </span>
                             <br />
