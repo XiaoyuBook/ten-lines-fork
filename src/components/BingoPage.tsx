@@ -167,10 +167,29 @@ export default function BingoPage({
     const width = bingoBoard[0]?.length ?? 0;
     const height = bingoBoard.length;
 
-    const getGenderColor = (gender: number) => {
-        if (gender === 0) return "#4dabf7";
-        if (gender === 1) return "#ff6b9a";
-        return "inherit";
+    const getGenderBadgeSx = (gender: number) => {
+        if (gender === 0) {
+            return {
+                color: "#dff1ff",
+                backgroundColor: "rgba(77, 171, 247, 0.22)",
+                border: "1px solid rgba(77, 171, 247, 0.55)",
+                boxShadow: "0 0 0 1px rgba(77, 171, 247, 0.1)",
+            };
+        }
+        if (gender === 1) {
+            return {
+                color: "#ffe4ef",
+                backgroundColor: "rgba(255, 107, 154, 0.2)",
+                border: "1px solid rgba(255, 107, 154, 0.5)",
+                boxShadow: "0 0 0 1px rgba(255, 107, 154, 0.1)",
+            };
+        }
+        return {
+            color: "rgba(255, 255, 255, 0.75)",
+            backgroundColor: "rgba(255, 255, 255, 0.08)",
+            border: "1px solid rgba(255, 255, 255, 0.18)",
+            boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.06)",
+        };
     };
 
     if (hidden) return null;
@@ -230,7 +249,12 @@ export default function BingoPage({
                             variant="contained"
                             color={counter > 0 ? "success" : "secondary"}
                             fullWidth
-                            sx={{ height: "100%" }}
+                            sx={{
+                                height: "100%",
+                                position: "relative",
+                                px: 1.5,
+                                py: 1.25,
+                            }}
                             style={{ display: "block", lineHeight: 1 }}
                             onClick={() => {
                                 const newCounters = [...(counters ?? [])];
@@ -248,6 +272,27 @@ export default function BingoPage({
                                 }
                             }}
                         >
+                            <Box
+                                component="span"
+                                sx={{
+                                    position: "absolute",
+                                    top: 10,
+                                    left: 10,
+                                    minWidth: 28,
+                                    height: 28,
+                                    px: 1,
+                                    borderRadius: "999px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "1.15rem",
+                                    fontWeight: 800,
+                                    lineHeight: 1,
+                                    ...getGenderBadgeSx(entry.gender),
+                                }}
+                            >
+                                {resources.genders[entry.gender]}
+                            </Box>
                             <SpriteImage
                                 species={entry.species}
                                 form={entry.form}
@@ -256,14 +301,6 @@ export default function BingoPage({
                             />
                             <br />
                             <span>
-                                <span
-                                    style={{
-                                        color: getGenderColor(entry.gender),
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    {resources.genders[entry.gender]}
-                                </span>{" "}
                                 {resources.natures[entry.nature]}
                             </span>
                             <br />
