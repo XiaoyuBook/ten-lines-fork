@@ -192,6 +192,36 @@ export default function BingoPage({
         };
     };
 
+    const getCardSx = (shiny: boolean, marked: boolean) => {
+        if (!shiny) {
+            return {};
+        }
+        if (marked) {
+            return {
+                color: "#2f2100",
+                background:
+                    "linear-gradient(180deg, #f4dd8c 0%, #d9c56a 100%)",
+                boxShadow:
+                    "inset 0 0 0 1px rgba(120, 92, 12, 0.28), 0 8px 16px rgba(120, 92, 12, 0.12)",
+                "&:hover": {
+                    background:
+                        "linear-gradient(180deg, #f6e39d 0%, #decb74 100%)",
+                },
+            };
+        }
+        return {
+            color: "#2f2100",
+            background:
+                "linear-gradient(180deg, #ffe89c 0%, #f0c44e 100%)",
+            boxShadow:
+                "inset 0 0 0 1px rgba(130, 96, 8, 0.3), 0 8px 18px rgba(184, 134, 11, 0.16)",
+            "&:hover": {
+                background:
+                    "linear-gradient(180deg, #ffedaa 0%, #f3cc60 100%)",
+            },
+        };
+    };
+
     if (hidden) return null;
     return (
         <Box
@@ -254,6 +284,7 @@ export default function BingoPage({
                                 position: "relative",
                                 px: 1.5,
                                 py: 1.25,
+                                ...getCardSx(entry.shiny !== 0, counter > 0),
                             }}
                             style={{ display: "block", lineHeight: 1 }}
                             onClick={() => {
