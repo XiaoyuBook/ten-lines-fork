@@ -1,3 +1,4 @@
+import { Button } from "@mui/material";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -8,10 +9,10 @@ import TableRow from "@mui/material/TableRow";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { memo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useI18n } from "../i18n";
 import { frameToMS, hexSeed, teachyTVConversion } from "../tenLines";
 import type { InitialSeedResult } from "../tenLines/generated";
-import { Button } from "@mui/material";
-import { useSearchParams } from "react-router-dom";
 
 dayjs.extend(duration);
 
@@ -28,53 +29,48 @@ const InitialSeedTable = memo(function InitialSeedTable({
     isTeachyTVMode: boolean;
     teachyTVRegularOut: number;
 }) {
-    const [_, setSearchParams] = useSearchParams();
+    const { t } = useI18n();
+    const [, setSearchParams] = useSearchParams();
+
     function humanizeSettings(settings: string | undefined) {
         if (!settings) return "";
-        const [
-            sound,
-            buttonMode,
-            active_button,
-            held_button_modifier,
-            held_button,
-        ] = settings.split("_");
+        const [sound, buttonMode, activeButton, heldButtonModifier, heldButton] =
+            settings.split("_");
         const humanizedTerms: Record<string, string> = {
-            stereo: "Stereo",
-            mono: "Mono",
-            start: "Start",
-            select: "Select",
+            stereo: t("common.stereo"),
+            mono: t("common.mono"),
+            start: t("options.start"),
+            select: t("options.select"),
             a: "A",
             l: "L",
             r: "R",
-            startup: "Startup",
-            blackout: "Blackout",
+            startup: t("options.startup"),
+            blackout: t("options.blackout"),
             al: "A+L",
-            none: "None",
+            none: t("common.none"),
             undefined: "",
         };
         const humanizedButtonModes: Record<string, string> = {
             a: "L=A",
-            h: "Help",
+            h: t("options.help"),
             r: "LR",
         };
-        return `${humanizedTerms[sound]} | ${humanizedButtonModes[buttonMode]} | Seed Button: ${humanizedTerms[active_button]} | Extra Button: ${humanizedTerms[held_button_modifier]} ${humanizedTerms[held_button]}`;
+        return `${humanizedTerms[sound]} | ${humanizedButtonModes[buttonMode]} | ${t(
+            "messages.settingsSeedButton"
+        )}: ${humanizedTerms[activeButton]} | ${t("messages.settingsExtraButton")}: ${
+            humanizedTerms[heldButtonModifier]
+        } ${humanizedTerms[heldButton]}`;
     }
 
     function openInCalibration(row: InitialSeedResult, isAuxClick: boolean) {
         setSearchParams((previous) => {
-            let params = new URLSearchParams(previous);
+            const params = new URLSearchParams(previous);
             params.set("targetInitialSeed", hexSeed(row.initialSeed, 16));
             if (isTeachyTVMode) {
-                const ttv = teachyTVConversion(
-                    row.advances,
-                    teachyTVRegularOut
-                );
+                const ttv = teachyTVConversion(row.advances, teachyTVRegularOut);
                 params.set(
                     "advancesMin",
-                    Math.max(
-                        0,
-                        ttv.regular_advances + ttv.ttv_advances - 15
-                    ).toString()
+                    Math.max(0, ttv.regular_advances + ttv.ttv_advances - 15).toString()
                 );
                 params.set(
                     "advancesMax",
@@ -84,33 +80,21 @@ const InitialSeedTable = memo(function InitialSeedTable({
                     "ttvAdvancesMin",
                     Math.max(0, ttv.ttv_advances - 15).toString()
                 );
-                params.set(
-                    "ttvAdvancesMax",
-                    (ttv.ttv_advances + 15).toString()
-                );
+                params.set("ttvAdvancesMax", (ttv.ttv_advances + 15).toString());
             } else {
-                params.set(
-                    "advancesMin",
-                    Math.max(0, row.advances - 1000).toString()
-                );
+                params.set("advancesMin", Math.max(0, row.advances - 1000).toString());
                 params.set("advancesMax", (row.advances + 1000).toString());
             }
             params.set("page", "1");
             if (isFRLG) {
-                const [
-                    sound,
-                    buttonMode,
-                    active_button,
-                    held_button_modifier,
-                    held_button,
-                ] = (row.settings as string).split("_");
+                const [sound, buttonMode, activeButton, heldButtonModifier, heldButton] =
+                    (row.settings as string).split("_");
                 params.set("sound", sound);
                 params.set("buttonMode", buttonMode);
-                params.set("button", active_button);
+                params.set("button", activeButton);
                 params.set(
                     "heldButton",
-                    held_button_modifier +
-                    (held_button ? "_" + held_button : "")
+                    heldButtonModifier + (heldButton ? "_" + heldButton : "")
                 );
             }
             if (isAuxClick) {
@@ -120,86 +104,71 @@ const InitialSeedTable = memo(function InitialSeedTable({
             return params;
         });
     }
+
     return (
         <TableContainer component={Paper}>
             <Table>
                 <TableHead>
                     <TableRow>
-                        {!isFRLG && <TableCell>Seed (dec)</TableCell>}
-                        <TableCell>Seed (hex)</TableCell>
-                        <TableCell>Advances</TableCell>
+                        {!isFRLG && <TableCell>{t("table.seedDec")}</TableCell>}
+                        <TableCell>{t("table.seedHex")}</TableCell>
+                        <TableCell>{t("table.advances")}</TableCell>
                         {isTeachyTVMode && (
-                            <TableCell>Final A Press Frame</TableCell>
+                            <TableCell>{t("table.finalAPressFrame")}</TableCell>
                         )}
                         {isTeachyTVMode && (
-                            <TableCell>TeachyTV Advances</TableCell>
+                            <TableCell>{t("table.teachyTvAdvances")}</TableCell>
                         )}
-                        <TableCell>Estimated Total Frames</TableCell>
-                        <TableCell>Estimated Total Time</TableCell>
-                        <TableCell>Seed Time</TableCell>
-                        {isFRLG && <TableCell>Settings</TableCell>}
-                        <TableCell>Open In Calibration</TableCell>
+                        <TableCell>{t("table.estimatedTotalFrames")}</TableCell>
+                        <TableCell>{t("table.estimatedTotalTime")}</TableCell>
+                        <TableCell>{t("table.seedTime")}</TableCell>
+                        {isFRLG && <TableCell>{t("table.settings")}</TableCell>}
+                        <TableCell>{t("table.openInCalibration")}</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {rows.map((row, index) => {
-                        let visual_frame = row.advances;
-                        let ttv_advances = 0;
+                        let visualFrame = row.advances;
+                        let ttvAdvances = 0;
                         if (isTeachyTVMode) {
-                            // TODO: TTV on switch
-                            const ttv = teachyTVConversion(
-                                row.advances,
-                                teachyTVRegularOut
-                            );
-                            ttv_advances = ttv.ttv_advances;
-                            visual_frame = ttv_advances + ttv.regular_advances;
+                            const ttv = teachyTVConversion(row.advances, teachyTVRegularOut);
+                            ttvAdvances = ttv.ttv_advances;
+                            visualFrame = ttvAdvances + ttv.regular_advances;
                         }
                         return (
                             <TableRow key={index}>
-                                {!isFRLG && (
-                                    <TableCell>{row.initialSeed}</TableCell>
-                                )}
-                                <TableCell>
-                                    {hexSeed(row.initialSeed, 16)}
-                                </TableCell>
+                                {!isFRLG && <TableCell>{row.initialSeed}</TableCell>}
+                                <TableCell>{hexSeed(row.initialSeed, 16)}</TableCell>
                                 <TableCell>{row.advances}</TableCell>
-                                {isTeachyTVMode && (
-                                    <TableCell>{visual_frame}</TableCell>
-                                )}
-                                {isTeachyTVMode && (
-                                    <TableCell>{ttv_advances}</TableCell>
-                                )}
+                                {isTeachyTVMode && <TableCell>{visualFrame}</TableCell>}
+                                {isTeachyTVMode && <TableCell>{ttvAdvances}</TableCell>}
                                 <TableCell>
-                                    {Math.round(row.seedTime / 16 + visual_frame)}
+                                    {Math.round(row.seedTime / 16 + visualFrame)}
                                 </TableCell>
                                 <TableCell>
                                     {(() => {
-                                        const duration = dayjs
-                                            .duration(
-                                                frameToMS(
-                                                    row.seedTime / 16 + visual_frame,
-                                                    gameConsole
-                                                )
+                                        const totalDuration = dayjs.duration(
+                                            frameToMS(
+                                                row.seedTime / 16 + visualFrame,
+                                                gameConsole
                                             )
-                                        if (duration.days() > 0) {
-                                            return `${Math.floor(duration.asHours())}:${duration.format("mm:ss.SSS")}`
+                                        );
+                                        if (totalDuration.days() > 0) {
+                                            return `${Math.floor(
+                                                totalDuration.asHours()
+                                            )}:${totalDuration.format("mm:ss.SSS")}`;
                                         }
-                                        return duration.format("HH:mm:ss.SSS")
+                                        return totalDuration.format("HH:mm:ss.SSS");
                                     })()}
                                 </TableCell>
                                 <TableCell>
-                                    {/* so only the actual number gets selected on double click */}
                                     <div style={{ float: "left" }}>
                                         {frameToMS(row.seedTime / 16, gameConsole)}
                                     </div>
-                                    <span>ms</span>
+                                    <span>{t("messages.ms")}</span>
                                 </TableCell>
                                 {isFRLG && (
-                                    <TableCell>
-                                        {humanizeSettings(
-                                            row.settings as string
-                                        )}
-                                    </TableCell>
+                                    <TableCell>{humanizeSettings(row.settings as string)}</TableCell>
                                 )}
                                 <TableCell>
                                     <Button
@@ -215,7 +184,7 @@ const InitialSeedTable = memo(function InitialSeedTable({
                                             }
                                         }}
                                     >
-                                        Calibration
+                                        {t("table.calibration")}
                                     </Button>
                                 </TableCell>
                             </TableRow>

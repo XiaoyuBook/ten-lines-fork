@@ -14,6 +14,9 @@ Original upstream project:
 - Searcher results are automatically checked against Initial Seed reachability logic
 - Results with no reachable Initial Seed route inside the allowed range are filtered out
 - Searcher can display **Min Reachable Advances** for each remaining target
+- The UI now supports **English / Chinese language switching**
+- Core in-game naming resources can now render in **Chinese**, including species, natures, abilities, types, and locations
+- Chinese UI terminology was cleaned up to better match common community naming and PokeWiki usage
 - Build flow supports **offline cached FRLG seed data**
 - Vite base path is configurable so the site can be deployed cleanly on a custom domain or subdomain
 
@@ -33,8 +36,17 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - Initial Seed lookup
 - Calibration tools
 - Reachable-advance prefiltering in Searcher
+- English / Chinese UI toggle
+- Chinese naming resources for Gen 3 data shown in the interface
 - Offline-friendly generated FRLG seed cache
 - Self-hostable Vite build output
+
+## Localization Notes
+
+- The site now includes a built-in language toggle in the top navigation bar
+- Language choice is stored locally in the browser and persists across reloads
+- Chinese text is intended to follow established Pokémon community terminology where practical
+- Imported game data names are sourced from bundled PokeFinder i18n resources, while UI copy is maintained in the web app layer
 
 ## Building Locally
 

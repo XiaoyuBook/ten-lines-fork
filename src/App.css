@@ -4,3 +4,15 @@
     padding: 2rem;
     text-align: center;
 }
+
+footer {
+    margin-top: 2rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+    #root {
+        padding: 1rem;
+    }
+}

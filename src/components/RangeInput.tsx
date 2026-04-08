@@ -1,5 +1,6 @@
 import { Box, Button } from "@mui/material";
 import { useState } from "react";
+import { useI18n } from "../i18n";
 import NumericalInput from "./NumericalInput";
 
 function RangeInput({
@@ -27,16 +28,18 @@ function RangeInput({
     resetButton?: boolean;
     [key: string]: any;
 }) {
+    const { t } = useI18n();
     const [minValid, setMinValid] = useState(true);
     const [maxValid, setMaxValid] = useState(true);
+
     const minChange = (
         event: React.ChangeEvent<HTMLInputElement>,
         { value: newMin, isValid: newMinValid }: { value: string; isValid: boolean }
     ) => {
         setMinValid(newMinValid);
-        // Re-evaluate max validity with the new min boundary
         const newMaxValid = newMinValid
-            ? parseInt(value[1]) >= parseInt(newMin) && parseInt(value[1]) <= maximumValue
+            ? parseInt(value[1]) >= parseInt(newMin) &&
+              parseInt(value[1]) <= maximumValue
             : maxValid;
         if (newMaxValid !== maxValid) setMaxValid(newMaxValid);
         onChange(event, {
@@ -44,14 +47,15 @@ function RangeInput({
             isValid: newMinValid && newMaxValid,
         });
     };
+
     const maxChange = (
         event: React.ChangeEvent<HTMLInputElement>,
         { value: newMax, isValid: newMaxValid }: { value: string; isValid: boolean }
     ) => {
         setMaxValid(newMaxValid);
-        // Re-evaluate min validity with the new max boundary
         const newMinValid = newMaxValid
-            ? parseInt(value[0]) >= minimumValue && parseInt(value[0]) <= parseInt(newMax)
+            ? parseInt(value[0]) >= minimumValue &&
+              parseInt(value[0]) <= parseInt(newMax)
             : minValid;
         if (newMinValid !== minValid) setMinValid(newMinValid);
         onChange(event, {
@@ -63,7 +67,7 @@ function RangeInput({
     return (
         <Box sx={{ display: "flex" }}>
             <NumericalInput
-                label={`Minimum ${label}`}
+                label={`${t("labels.minimum")} ${label}`}
                 name={name}
                 minimumValue={minimumValue}
                 maximumValue={maxValid ? parseInt(value[1]) : maximumValue}
@@ -80,7 +84,7 @@ function RangeInput({
                 -
             </span>
             <NumericalInput
-                label={`Maximum ${label}`}
+                label={`${t("labels.maximum")} ${label}`}
                 name={name}
                 minimumValue={minValid ? parseInt(value[0]) : minimumValue}
                 maximumValue={maximumValue}
@@ -93,7 +97,6 @@ function RangeInput({
                     onClick={(e) => {
                         setMinValid(true);
                         setMaxValid(true);
-                        // TODO: this is hacky but nothing currently actually cares about the event
                         onChange(e as any, {
                             value: [
                                 minimumValue.toString(),
@@ -104,11 +107,11 @@ function RangeInput({
                     }}
                     size="large"
                     sx={{
-                        maxWidth: "35px",
-                        minWidth: "35px",
+                        maxWidth: "60px",
+                        minWidth: "60px",
                     }}
                 >
-                    ↻
+                    {t("common.reset")}
                 </Button>
             )}
         </Box>

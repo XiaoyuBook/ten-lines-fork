@@ -1,8 +1,13 @@
 import { proxy } from "comlink";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Box, Button, MenuItem, TextField } from "@mui/material";
 
+import {
+    getAllGameOptions,
+    getConsoleOptions,
+    useI18n,
+} from "../i18n";
 import fetchTenLines, { fetchSeedData, fixGameConsole, hexSeed } from "../tenLines";
 import NumericalInput from "./NumericalInput";
 import InitialSeedTable from "./InitialSeedTable";
@@ -62,6 +67,7 @@ export default function TenLinesForm({
     sx?: any;
     hidden?: boolean;
 }) {
+    const { t } = useI18n();
     const [initialSeedFormState, setInitialSeedFormState] =
         useState<InitialSeedFormState>({
             targetSeedIsValid: true,
@@ -83,9 +89,12 @@ export default function TenLinesForm({
         !initialSeedFormState.targetSeedIsValid ||
         !initialSeedFormState.countIsValid ||
         !initialSeedFormState.offsetIsValid;
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (isNotSubmittable) return;
+
+    const runSearch = () => {
+        if (isNotSubmittable) {
+            setData([]);
+            return;
+        }
         fetchTenLines().then((lib) => {
             setData([]);
             if (!isFRLG) {
@@ -96,16 +105,14 @@ export default function TenLinesForm({
                     proxy(setData)
                 );
             } else {
-                fetchSeedData(game).then((data) => {
+                fetchSeedData(game).then((seedData) => {
                     lib.ten_lines_frlg(
                         parseInt(targetSeed, 16),
                         parseInt(count, 10),
                         parseInt(offset, 10),
                         game,
-                        isTeachyTVMode
-                            ? parseInt(teachyTVRegularOut, 10) ?? 0
-                            : 0,
-                        data,
+                        isTeachyTVMode ? parseInt(teachyTVRegularOut, 10) ?? 0 : 0,
+                        seedData,
                         proxy(setData)
                     );
                 });
@@ -113,9 +120,33 @@ export default function TenLinesForm({
         });
     };
 
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        runSearch();
+    };
+
     const isFRLG = !game.endsWith("painting");
     const isSwitch = game.endsWith("nx");
     const isTeachyTVMode = teachyTVMode === "true" && isFRLG;
+
+    useEffect(() => {
+        if (hidden) {
+            return;
+        }
+        runSearch();
+    }, [
+        hidden,
+        targetSeed,
+        count,
+        offset,
+        game,
+        gameConsole,
+        teachyTVMode,
+        teachyTVRegularOut,
+        initialSeedFormState.targetSeedIsValid,
+        initialSeedFormState.countIsValid,
+        initialSeedFormState.offsetIsValid,
+    ]);
 
     if (hidden) {
         return null;
@@ -124,7 +155,7 @@ export default function TenLinesForm({
     return (
         <Box component="form" onSubmit={handleSubmit} sx={{ sx }}>
             <NumericalInput
-                label="Target Seed"
+                label={t("labels.targetSeed")}
                 name="targetSeed"
                 minimumValue={0}
                 maximumValue={0xffffffff}
@@ -135,108 +166,96 @@ export default function TenLinesForm({
                             ? hexSeed(parseInt(value.value, 16), 32)
                             : value.value,
                     });
-                    setInitialSeedFormState((data) => ({
-                        ...data,
+                    setInitialSeedFormState((currentData) => ({
+                        ...currentData,
                         targetSeedIsValid: value.isValid,
                     }));
                 }}
                 value={targetSeed}
-            ></NumericalInput>
+            />
             <NumericalInput
-                label="Result Count"
+                label={t("labels.resultCount")}
                 name="resultCount"
                 minimumValue={0}
                 maximumValue={5000}
-                onChange={(_, value) => {
+                onChange={(_event, value) => {
                     setInitialSeedURLState({
                         count: value.value,
                     });
-                    setInitialSeedFormState((data) => ({
-                        ...data,
+                    setInitialSeedFormState((currentData) => ({
+                        ...currentData,
                         countIsValid: value.isValid,
                     }));
                 }}
                 value={count}
-            ></NumericalInput>
+            />
             <NumericalInput
-                label="Offset"
+                label={t("labels.offset")}
                 name="offset"
                 minimumValue={0}
                 maximumValue={4294967295}
-                onChange={(_, value) => {
+                onChange={(_event, value) => {
                     setInitialSeedURLState({
                         offset: value.value,
                     });
-                    setInitialSeedFormState((data) => ({
-                        ...data,
+                    setInitialSeedFormState((currentData) => ({
+                        ...currentData,
                         offsetIsValid: value.isValid,
                     }));
                 }}
                 value={offset}
-            ></NumericalInput>
+            />
             <TextField
-                label="Game"
+                label={t("labels.game")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
                     setInitialSeedURLState({ game: event.target.value });
                     setData([]);
-                    setInitialSeedURLState({ gameConsole: fixGameConsole(event.target.value, gameConsole) });
+                    setInitialSeedURLState({
+                        gameConsole: fixGameConsole(event.target.value, gameConsole),
+                    });
                 }}
                 value={game}
                 select
                 fullWidth
             >
-                <MenuItem value="r_painting">Ruby Painting Seed</MenuItem>
-                <MenuItem value="s_painting">Sapphire Painting Seed</MenuItem>
-                <MenuItem value="e_painting">Emerald Painting Seed</MenuItem>
-                <MenuItem value="fr">FireRed (ENG)</MenuItem>
-                <MenuItem value="fr_eu">FireRed (SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="fr_jpn_1_0">FireRed (JPN) (1.0)</MenuItem>
-                <MenuItem value="fr_jpn_1_1">FireRed (JPN) (1.1)</MenuItem>
-                <MenuItem value="fr_nx">Switch FireRed (ENG/SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="fr_mgba">FireRed (ENG) (MGBA 10.5)</MenuItem>
-                <MenuItem value="lg">LeafGreen (ENG)</MenuItem>
-                <MenuItem value="lg_eu">LeafGreen (SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="lg_jpn">LeafGreen (JPN)</MenuItem>
-                <MenuItem value="lg_nx">Switch LeafGreen (ENG/SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="lg_mgba">LeafGreen (ENG) (MGBA 10.5)</MenuItem>
+                {getAllGameOptions(t).map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                    </MenuItem>
+                ))}
             </TextField>
             <TextField
-                label="Console"
+                label={t("labels.console")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
-                    setInitialSeedURLState({ gameConsole: fixGameConsole(game, event.target.value) });
+                    setInitialSeedURLState({
+                        gameConsole: fixGameConsole(game, event.target.value),
+                    });
                 }}
                 value={gameConsole}
                 select
                 fullWidth
             >
-                {isSwitch ? [
-                    <MenuItem value="NX">Nintendo Switch 1</MenuItem>,
-                    <MenuItem value="NX2">Nintendo Switch 2</MenuItem>
-                ]
-                    :
-                    [
-                        <MenuItem value="GBA">Game Boy Advance</MenuItem>,
-                        <MenuItem value="GBP">Game Boy Player</MenuItem>,
-                        <MenuItem value="NDS">Nintendo DS</MenuItem>,
-                        <MenuItem value="3DS">Nintendo 3DS (open_agb_firm)</MenuItem>,
-                    ]
-                }
+                {getConsoleOptions(t, isSwitch).map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                    </MenuItem>
+                ))}
             </TextField>
             {isFRLG && (
                 <TeachyTVEntry
                     isTeachyTVMode={isTeachyTVMode}
                     teachyTVRegularOut={teachyTVRegularOut}
-                    onChange={(isTeachyTVMode, teachyTVRegularOut) => {
+                    onChange={(teachyMode, regularOut) => {
                         setInitialSeedURLState({
-                            teachyTVMode: isTeachyTVMode.toString(),
-                            teachyTVRegularOut: teachyTVRegularOut.value,
+                            teachyTVMode: teachyMode.toString(),
+                            teachyTVRegularOut: regularOut.value,
                         });
                     }}
-                ></TeachyTVEntry>
+                />
             )}
             <Button
                 variant="contained"
@@ -245,7 +264,7 @@ export default function TenLinesForm({
                 disabled={isNotSubmittable}
                 fullWidth
             >
-                Submit
+                {t("common.submit")}
             </Button>
             <InitialSeedTable
                 rows={data}

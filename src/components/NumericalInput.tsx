@@ -1,5 +1,6 @@
 import { InputAdornment, TextField } from "@mui/material";
 import { useMemo } from "react";
+import { useI18n } from "../i18n";
 
 function NumericalInput({
     label,
@@ -26,19 +27,19 @@ function NumericalInput({
     isHex?: boolean;
     [key: string]: any;
 }) {
+    const { t } = useI18n();
     const prefix = isHex ? "0x" : "";
 
     const getError = (value: string) => {
         const reg = new RegExp(isHex ? "[^0-9a-fA-F]+" : "[^0-9]+");
         const intValue = parseInt(value, isHex ? 16 : 10);
         if (reg.test(value)) {
-            return "Invalid input";
+            return t("errors.invalidInput");
         } else if (intValue < minimumValue || intValue > maximumValue) {
-            return `Value must be between ${
-                prefix + (isHex ? minimumValue.toString(16) : minimumValue)
-            } and ${
-                prefix + (isHex ? maximumValue.toString(16) : maximumValue)
-            }`;
+            return t("errors.valueMustBeBetween", {
+                min: prefix + (isHex ? minimumValue.toString(16) : minimumValue),
+                max: prefix + (isHex ? maximumValue.toString(16) : maximumValue),
+            });
         }
         return "";
     };

@@ -33,7 +33,11 @@ import {
     type FRLGContiguousSeedEntry,
 } from "../tenLines/generated";
 import React from "react";
-import { GENDERS_EN, METHODS_EN, NATURES_EN } from "../tenLines/resources";
+import {
+    getAllGameOptions,
+    getConsoleOptions,
+    useI18n,
+} from "../i18n";
 import IvEntry from "./IvEntry";
 import IvCalculator from "./IvCalculator";
 import StaticEncounterSelector from "./StaticEncounterSelector";
@@ -132,6 +136,7 @@ export default function CalibrationForm({
     sx?: any;
     hidden?: boolean;
 }) {
+    const { t, resources } = useI18n();
     const [calibrationFormState, setCalibrationFormState] =
         useState<CalibrationFormState>({
             seedLeewayString: "20",
@@ -298,7 +303,14 @@ export default function CalibrationForm({
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (isNotSubmittable) return;
+        runSearch();
+    };
+
+    const runSearch = () => {
+        if (isNotSubmittable) {
+            setRows([]);
+            return;
+        }
         const searchSeeds = seedList.slice(
             Math.max(0, targetSeedIndex - seedLeeway),
             Math.min(seedList.length, targetSeedIndex + seedLeeway + 1)
@@ -388,6 +400,50 @@ export default function CalibrationForm({
         setCalibrationFormState(calibrationFormState);
     }
 
+    useEffect(() => {
+        if (hidden) {
+            return;
+        }
+        runSearch();
+    }, [
+        hidden,
+        seedList,
+        targetSeedIndex,
+        seedLeeway,
+        advancesMin,
+        advancesMax,
+        ttvAdvancesMin,
+        ttvAdvancesMax,
+        offset,
+        game,
+        trainerID,
+        secretID,
+        calibrationFormState.staticCategory,
+        calibrationFormState.staticPokemon,
+        calibrationFormState.wildCategory,
+        calibrationFormState.wildLocation,
+        calibrationFormState.wildPokemon,
+        calibrationFormState.wildLead,
+        calibrationFormState.shouldFilterPokemon,
+        calibrationFormState.method,
+        calibrationFormState.shininess,
+        calibrationFormState.nature,
+        calibrationFormState.gender,
+        calibrationFormState.seedLeewayString,
+        calibrationFormState.ivRangeStrings,
+        calibrationFormState.ivCalculatorText,
+        teachyTVMode,
+        overworldFrames,
+        seedLeewayIsValid,
+        advancesRangeIsValid,
+        ttvAdvancesRangeIsValid,
+        ivRangesAreValid,
+        offsetIsValid,
+        overworldFramesIsValid,
+        trainerIDIsValid,
+        secretIDIsValid,
+    ]);
+
     if (hidden) {
         return null;
     }
@@ -395,7 +451,7 @@ export default function CalibrationForm({
     return (
         <Box component="form" onSubmit={handleSubmit} sx={{ sx }}>
             <TextField
-                label="Game"
+                label={t("labels.game")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) =>
@@ -407,25 +463,16 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                <MenuItem value="r_painting">Ruby Painting Seed</MenuItem>
-                <MenuItem value="s_painting">Sapphire Painting Seed</MenuItem>
-                <MenuItem value="e_painting">Emerald Painting Seed</MenuItem>
-                <MenuItem value="fr">FireRed (ENG)</MenuItem>
-                <MenuItem value="fr_eu">FireRed (SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="fr_jpn_1_0">FireRed (JPN) (1.0)</MenuItem>
-                <MenuItem value="fr_jpn_1_1">FireRed (JPN) (1.1)</MenuItem>
-                <MenuItem value="fr_nx">Switch FireRed (ENG/SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="fr_mgba">FireRed (ENG) (MGBA 10.5)</MenuItem>
-                <MenuItem value="lg">LeafGreen (ENG)</MenuItem>
-                <MenuItem value="lg_eu">LeafGreen (SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="lg_jpn">LeafGreen (JPN)</MenuItem>
-                <MenuItem value="lg_nx">Switch LeafGreen (ENG/SPA/FRE/ITA/GER)</MenuItem>
-                <MenuItem value="lg_mgba">LeafGreen (ENG) (MGBA 10.5)</MenuItem>
+                {getAllGameOptions(t).map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                    </MenuItem>
+                ))}
             </TextField>
             {isFRLG && (
                 <React.Fragment>
                     <TextField
-                        label="Sound"
+                        label={t("labels.sound")}
                         margin="normal"
                         style={{ textAlign: "left" }}
                         onChange={(event) =>
@@ -437,11 +484,11 @@ export default function CalibrationForm({
                         select
                         fullWidth
                     >
-                        <MenuItem value="mono">Mono</MenuItem>
-                        <MenuItem value="stereo">Stereo</MenuItem>
+                        <MenuItem value="mono">{t("common.mono")}</MenuItem>
+                        <MenuItem value="stereo">{t("common.stereo")}</MenuItem>
                     </TextField>
                     <TextField
-                        label="Button Mode"
+                        label={t("labels.buttonMode")}
                         margin="normal"
                         style={{ textAlign: "left" }}
                         onChange={(event) =>
@@ -454,11 +501,11 @@ export default function CalibrationForm({
                         fullWidth
                     >
                         <MenuItem value="a">L=A</MenuItem>
-                        <MenuItem value="h">Help</MenuItem>
+                        <MenuItem value="h">{t("options.help")}</MenuItem>
                         <MenuItem value="r">LR</MenuItem>
                     </TextField>
                     <TextField
-                        label="Seed Button"
+                        label={t("labels.seedButton")}
                         margin="normal"
                         style={{ textAlign: "left" }}
                         onChange={(event) =>
@@ -471,11 +518,11 @@ export default function CalibrationForm({
                         fullWidth
                     >
                         <MenuItem value="a">A</MenuItem>
-                        <MenuItem value="start">Start</MenuItem>
+                        <MenuItem value="start">{t("options.start")}</MenuItem>
                         <MenuItem value="l">L (L=A)</MenuItem>
                     </TextField>
                     <TextField
-                        label="Extra Button"
+                        label={t("labels.extraButton")}
                         margin="normal"
                         style={{ textAlign: "left" }}
                         onChange={(event) =>
@@ -487,21 +534,21 @@ export default function CalibrationForm({
                         select
                         fullWidth
                     >
-                        <MenuItem value="none">None</MenuItem>
+                        <MenuItem value="none">{t("common.none")}</MenuItem>
                         <MenuItem value="startup_select">
-                            Startup Select
+                            {t("options.startupSelect")}
                         </MenuItem>
-                        <MenuItem value="startup_a">Startup A</MenuItem>
-                        <MenuItem value="blackout_r">Blackout R</MenuItem>
-                        <MenuItem value="blackout_a">Blackout A</MenuItem>
-                        <MenuItem value="blackout_l">Blackout L</MenuItem>
-                        <MenuItem value="blackout_al">Blackout A+L</MenuItem>
+                        <MenuItem value="startup_a">{t("options.startupA")}</MenuItem>
+                        <MenuItem value="blackout_r">{t("options.blackoutR")}</MenuItem>
+                        <MenuItem value="blackout_a">{t("options.blackoutA")}</MenuItem>
+                        <MenuItem value="blackout_l">{t("options.blackoutL")}</MenuItem>
+                        <MenuItem value="blackout_al">{t("options.blackoutAL")}</MenuItem>
                     </TextField>
                 </React.Fragment>
             )}
 
             <TextField
-                label="Console"
+                label={t("labels.console")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) =>
@@ -513,18 +560,12 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                {isSwitch ? [
-                    <MenuItem value="NX">Nintendo Switch 1</MenuItem>,
-                    <MenuItem value="NX2">Nintendo Switch 2</MenuItem>
-                ]
-                    :
-                    [
-                        <MenuItem value="GBA">Game Boy Advance</MenuItem>,
-                        <MenuItem value="GBP">Game Boy Player</MenuItem>,
-                        <MenuItem value="NDS">Nintendo DS</MenuItem>,
-                        <MenuItem value="3DS">Nintendo 3DS (open_agb_firm)</MenuItem>,
-                    ]
-                }</TextField>
+                {getConsoleOptions(t, isSwitch).map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                    </MenuItem>
+                ))}
+            </TextField>
             <Autocomplete
                 options={seedList}
                 value={targetSeed}
@@ -544,12 +585,12 @@ export default function CalibrationForm({
                 renderInput={(params) => (
                     <TextField
                         {...params}
-                        label="Target Seed"
+                        label={t("labels.targetSeed")}
                         margin="normal"
                         error={seedList.length === 0}
                         helperText={
                             seedList.length === 0
-                                ? "No known seeds for this game & settings"
+                                ? t("messages.noKnownSeeds")
                                 : undefined
                         }
                     />
@@ -561,7 +602,7 @@ export default function CalibrationForm({
             />
             <Box sx={{ flexDirection: "row", display: "flex" }}>
                 <NumericalInput
-                    label="Seed +/-"
+                    label={t("labels.seedLeeway")}
                     margin="normal"
                     onChange={(_event, value) => {
                         setCalibrationFormState((data) => ({
@@ -585,7 +626,7 @@ export default function CalibrationForm({
                         setSeedDialogOpen(true);
                     }}
                 >
-                    Show Seeds
+                    {t("common.showSeeds")}
                 </Button>
                 <Dialog
                     open={seedDialogOpen}
@@ -613,7 +654,7 @@ export default function CalibrationForm({
                 </Dialog>
             </Box>
             <RangeInput
-                label={isTeachyTVMode ? "Final A Press Frame" : "Advances"}
+                label={isTeachyTVMode ? t("labels.finalAPressFrame") : t("labels.advances")}
                 name="advancesRange"
                 onChange={(_event, value) => {
                     setCalibrationURLState({
@@ -627,7 +668,7 @@ export default function CalibrationForm({
                 maximumValue={4294967295}
             />
             <NumericalInput
-                label="Offset"
+                label={t("labels.offset")}
                 name="offset"
                 minimumValue={0}
                 maximumValue={4294967295}
@@ -641,7 +682,7 @@ export default function CalibrationForm({
             ></NumericalInput>
             {isTeachyTVMode && (
                 <RangeInput
-                    label="TeachyTV Advances"
+                    label={t("labels.teachyTvAdvances")}
                     name="ttvRange"
                     onChange={(_event, value) => {
                         setCalibrationURLState({
@@ -656,7 +697,7 @@ export default function CalibrationForm({
                 />
             )}
             {isSwitch && (<NumericalInput
-                label="Required Overworld Frames"
+                label={t("labels.requiredOverworldFrames")}
                 name="overworldFrames"
                 minimumValue={0}
                 maximumValue={4294967295}
@@ -680,12 +721,12 @@ export default function CalibrationForm({
                             }}
                         />
                     }
-                    label="TeachyTV Mode"
+                    label={t("labels.teachyTvMode")}
                 />
             )}
             <Box sx={{ flexDirection: "row", display: "flex" }}>
                 <NumericalInput
-                    label="Trainer ID"
+                    label={t("labels.trainerId")}
                     margin="normal"
                     onChange={(_event, value) => {
                         setCalibrationURLState({ trainerID: value.value });
@@ -706,7 +747,7 @@ export default function CalibrationForm({
                     /
                 </span>
                 <NumericalInput
-                    label="Secret ID"
+                    label={t("labels.secretId")}
                     margin="normal"
                     onChange={(_event, value) => {
                         setCalibrationURLState({ secretID: value.value });
@@ -720,7 +761,7 @@ export default function CalibrationForm({
                 />
             </Box>
             <TextField
-                label="Method"
+                label={t("labels.method")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -733,7 +774,7 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                {Object.entries(METHODS_EN)
+                {Object.entries(resources.methods)
                     .filter(([value, _name]) => parseInt(value) != STATIC_2)
                     .map(([value, name], index) => (
                         <MenuItem key={index} value={parseInt(value)}>
@@ -784,7 +825,7 @@ export default function CalibrationForm({
                 />
             )}
             <TextField
-                label="Shininess"
+                label={t("labels.shininess")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -797,13 +838,13 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                <MenuItem value="255">Any</MenuItem>
-                <MenuItem value="1">Star</MenuItem>
-                <MenuItem value="2">Square</MenuItem>
-                <MenuItem value="3">Star/Square</MenuItem>
+                <MenuItem value="255">{t("common.any")}</MenuItem>
+                <MenuItem value="1">{t("options.star")}</MenuItem>
+                <MenuItem value="2">{t("options.square")}</MenuItem>
+                <MenuItem value="3">{t("options.starSquare")}</MenuItem>
             </TextField>
             <TextField
-                label="Nature"
+                label={t("labels.nature")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -813,19 +854,19 @@ export default function CalibrationForm({
                     }));
                 }}
                 value={calibrationFormState.nature}
-                helperText="Required for IV calculation"
+                helperText={t("messages.requiredForIvCalculation")}
                 select
                 fullWidth
             >
-                <MenuItem value="-1">Any</MenuItem>
-                {NATURES_EN.map((nature, index) => (
+                <MenuItem value="-1">{t("common.any")}</MenuItem>
+                {resources.natures.map((nature, index) => (
                     <MenuItem key={index} value={index}>
                         {nature}
                     </MenuItem>
                 ))}
             </TextField>
             <TextField
-                label="Gender"
+                label={t("labels.gender")}
                 margin="normal"
                 style={{ textAlign: "left" }}
                 onChange={(event) => {
@@ -838,8 +879,8 @@ export default function CalibrationForm({
                 select
                 fullWidth
             >
-                <MenuItem value="255">Any</MenuItem>
-                {GENDERS_EN.slice(0, 2).map((gender, index) => (
+                <MenuItem value="255">{t("common.any")}</MenuItem>
+                {resources.genders.slice(0, 2).map((gender, index) => (
                     <MenuItem key={index} value={index}>
                         {gender}
                     </MenuItem>
@@ -896,7 +937,7 @@ export default function CalibrationForm({
                     />
                 </React.Fragment>
             ) : (
-                <span>IV Calculation disabled. Searching all Natures.</span>
+                <span>{t("messages.ivCalculationDisabled")}</span>
             )}
             {bingoActive && (
                 <Button
@@ -939,7 +980,7 @@ export default function CalibrationForm({
                 sx={{ my: 0.5 }}
                 fullWidth
             >
-                {searching ? "Searching..." : "Submit"}
+                {searching ? t("common.searching") : t("common.submit")}
             </Button>
             <CalibrationTable
                 rows={rows}

@@ -1,15 +1,23 @@
 import "./App.css";
 
 import CssBaseline from "@mui/material/CssBaseline";
+import {
+    Box,
+    Button,
+    ButtonGroup,
+    Tab,
+    Tabs,
+} from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { BrowserRouter, useSearchParams } from "react-router-dom";
 
+import CalibrationForm from "./components/CalibrationForm";
+import BingoPage, { getBingoActive } from "./components/BingoPage";
+import IdComboForm from "./components/IdComboForm";
 import InitialSeedForm from "./components/InitialSeedForm";
 import SearcherForm from "./components/SearcherForm";
-import { Box, Tab, Tabs } from "@mui/material";
-import CalibrationForm from "./components/CalibrationForm";
+import { useI18n } from "./i18n";
 import FrLgSeedsTimestamp from "./wasm/src/generated/frlg_seeds_timestamp.txt?raw";
-import { BrowserRouter, useSearchParams } from "react-router-dom";
-import BingoPage, { getBingoActive } from "./components/BingoPage";
 
 const darkTheme = createTheme({
     palette: {
@@ -18,25 +26,32 @@ const darkTheme = createTheme({
 });
 
 function TenLinesPages() {
+    const { locale, setLocale, t } = useI18n();
     const [searchParams, setSearchParams] = useSearchParams();
     const currentPage = parseInt(searchParams.get("page") || "0") ?? 0;
     const bingoActive = getBingoActive();
+    const pageSx = { maxWidth: 1100, width: "100%", minWidth: 0 };
 
     const pages = [
         <InitialSeedForm
             key={0}
-            sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
+            sx={pageSx}
             hidden={currentPage != 0}
         />,
         <CalibrationForm
             key={1}
-            sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
+            sx={pageSx}
             hidden={currentPage != 1}
         />,
         <SearcherForm
             key={2}
-            sx={{ maxWidth: 1100, minWidth: 1100, width: 1100 }}
+            sx={pageSx}
             hidden={currentPage != 2}
+        />,
+        <IdComboForm
+            key={4}
+            sx={pageSx}
+            hidden={currentPage != 4}
         />,
         bingoActive && <BingoPage key={3} hidden={currentPage != 3} />,
     ];
@@ -45,34 +60,58 @@ function TenLinesPages() {
         <ThemeProvider theme={darkTheme}>
             <CssBaseline />
             <Box>
-                <Tabs
-                    value={currentPage}
-                    onChange={(_, newValue) => {
-                        setSearchParams((prev) => {
-                            prev.set("page", newValue);
-                            return prev;
-                        });
+                <Box
+                    sx={{
+                        display: "flex",
+                        gap: 2,
+                        alignItems: "center",
+                        flexWrap: "wrap",
                     }}
-                    variant="fullWidth"
                 >
-                    <Tab label="Searcher" value={2} />
-                    <Tab label="Initial Seed" value={0} />
-                    <Tab label="Calibration" value={1} />
-                    {bingoActive && <Tab label="Bingo" value={3} />}
-                </Tabs>
+                    <Tabs
+                        value={currentPage}
+                        onChange={(_, newValue) => {
+                            setSearchParams((prev) => {
+                                prev.set("page", newValue);
+                                return prev;
+                            });
+                        }}
+                        variant="fullWidth"
+                        sx={{ flex: 1, minWidth: 400 }}
+                    >
+                        <Tab label={t("tabs.searcher")} value={2} />
+                        <Tab label={t("tabs.idCombo")} value={4} />
+                        <Tab label={t("tabs.initialSeed")} value={0} />
+                        <Tab label={t("tabs.calibration")} value={1} />
+                        {bingoActive && <Tab label={t("tabs.bingo")} value={3} />}
+                    </Tabs>
+                    <ButtonGroup size="small" variant="outlined">
+                        <Button
+                            variant={locale === "zh" ? "contained" : "outlined"}
+                            onClick={() => setLocale("zh")}
+                        >
+                            {t("language.chinese")}
+                        </Button>
+                        <Button
+                            variant={locale === "en" ? "contained" : "outlined"}
+                            onClick={() => setLocale("en")}
+                        >
+                            {t("language.english")}
+                        </Button>
+                    </ButtonGroup>
+                </Box>
                 {pages}
             </Box>
 
             <footer>
-                Original "10 lines" was created by Shao, FRLG seeds farmed by
-                blisy, po, HunarPG, 10Ben, Real96, Papa Jef&eacute;, and トノ
+                {t("footer.credit")}
                 <br />
-                Powered by{" "}
+                {t("footer.poweredBy")}{" "}
                 <a href="https://github.com/Admiral-Fish/PokeFinder">
                     PokeFinderCore
                 </a>
                 <br />
-                FRLG seed data as of {FrLgSeedsTimestamp}
+                {t("footer.seedDataAsOf")} {FrLgSeedsTimestamp}
             </footer>
         </ThemeProvider>
     );
