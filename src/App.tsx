@@ -45,8 +45,12 @@ function TenLinesPages() {
                 const url = `${import.meta.env.BASE_URL}${sep}generated/frlg_seeds_timestamp.txt?ts=${Date.now()}`;
                 const response = await fetch(url, { cache: "no-store" });
                 if (!response.ok) return;
-                const timestamp = (await response.text()).trim();
-                if (!cancelled && timestamp.length > 0) {
+                const rawText = await response.text();
+                const timestampMatch = rawText.match(
+                    /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+/
+                );
+                if (!cancelled && timestampMatch) {
+                    const timestamp = timestampMatch[0].trim();
                     setFrlgSeedsTimestamp(timestamp);
                 }
             } catch {
