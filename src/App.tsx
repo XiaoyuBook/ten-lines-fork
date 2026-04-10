@@ -9,6 +9,7 @@ import {
     Tabs,
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { useEffect, useState } from "react";
 import { BrowserRouter, useSearchParams } from "react-router-dom";
 
 import CalibrationForm from "./components/CalibrationForm";
@@ -17,7 +18,7 @@ import IdComboForm from "./components/IdComboForm";
 import InitialSeedForm from "./components/InitialSeedForm";
 import SearcherForm from "./components/SearcherForm";
 import { useI18n } from "./i18n";
-import FrLgSeedsTimestamp from "./wasm/src/generated/frlg_seeds_timestamp.txt?raw";
+import EmbeddedFrLgSeedsTimestamp from "./wasm/src/generated/frlg_seeds_timestamp.txt?raw";
 
 const darkTheme = createTheme({
     palette: {
@@ -28,9 +29,37 @@ const darkTheme = createTheme({
 function TenLinesPages() {
     const { locale, setLocale, t } = useI18n();
     const [searchParams, setSearchParams] = useSearchParams();
+    const [frlgSeedsTimestamp, setFrlgSeedsTimestamp] = useState(
+        EmbeddedFrLgSeedsTimestamp.trim()
+    );
     const currentPage = parseInt(searchParams.get("page") || "0") ?? 0;
     const bingoActive = getBingoActive();
     const pageSx = { maxWidth: 1100, width: "100%", minWidth: 0 };
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadTimestamp = async () => {
+            try {
+                const sep = import.meta.env.BASE_URL.endsWith("/") ? "" : "/";
+                const url = `${import.meta.env.BASE_URL}${sep}generated/frlg_seeds_timestamp.txt?ts=${Date.now()}`;
+                const response = await fetch(url, { cache: "no-store" });
+                if (!response.ok) return;
+                const timestamp = (await response.text()).trim();
+                if (!cancelled && timestamp.length > 0) {
+                    setFrlgSeedsTimestamp(timestamp);
+                }
+            } catch {
+                // Keep embedded fallback timestamp when runtime fetch fails.
+            }
+        };
+
+        void loadTimestamp();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const pages = [
         <InitialSeedForm
@@ -111,7 +140,7 @@ function TenLinesPages() {
                     PokeFinderCore
                 </a>
                 <br />
-                {t("footer.seedDataAsOf")} {FrLgSeedsTimestamp}
+                {t("footer.seedDataAsOf")} {frlgSeedsTimestamp}
             </footer>
         </ThemeProvider>
     );
