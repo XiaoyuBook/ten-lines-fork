@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { startTransition, useMemo, useRef, useState } from "react";
 import React from "react";
 import {
     Autocomplete,
@@ -26,6 +26,7 @@ import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import IdComboTable, { type IDComboRow } from "./IdComboTable";
+import { flushSync } from "react-dom";
 
 const MAX_ID_ADVANCES_SEARCH = 65535;
 
@@ -148,7 +149,9 @@ export default function IdComboForm({
     const finishSearchSession = (searchSession: number) => {
         if (searchSessionRef.current === searchSession) {
             searchSessionRef.current = 0;
-            setSearching(false);
+            flushSync(() => {
+                setSearching(false);
+            });
         }
     };
 
@@ -205,9 +208,11 @@ export default function IdComboForm({
             searchSessionRef.current = searchSession;
             const isCurrentSearch = () =>
                 searchSessionRef.current === searchSession;
-            setSearching(true);
-            setRows([]);
-            setSummary("");
+            flushSync(() => {
+                setSearching(true);
+                setRows([]);
+                setSummary("");
+            });
             try {
                 const tenLines = await fetchTenLines();
                 if (!isCurrentSearch()) {
@@ -250,7 +255,9 @@ export default function IdComboForm({
                     return;
                 }
                 if (candidateResults.length === 0) {
-                    setSummary(t("messages.noMatchingStaticTargets"));
+                    startTransition(() => {
+                        setSummary(t("messages.noMatchingStaticTargets"));
+                    });
                     return;
                 }
 
@@ -273,7 +280,9 @@ export default function IdComboForm({
                     .filter(({ reachability }) => reachability.reachable);
 
                 if (eligibleCandidateResults.length === 0) {
-                    setSummary(t("messages.noMatchingAdvances"));
+                    startTransition(() => {
+                        setSummary(t("messages.noMatchingAdvances"));
+                    });
                     return;
                 }
 
@@ -303,14 +312,16 @@ export default function IdComboForm({
                         game,
                     }));
 
-                    setRows(exactRows);
-                    setSummary(
-                        t("messages.exactIdSummary", {
-                            candidateCount: `${candidateResults.length}`,
-                            tsvCount: `${tsvCounts.size}`,
-                            resultCount: `${exactRows.length}`,
-                        })
-                    );
+                    startTransition(() => {
+                        setRows(exactRows);
+                        setSummary(
+                            t("messages.exactIdSummary", {
+                                candidateCount: `${candidateResults.length}`,
+                                tsvCount: `${tsvCounts.size}`,
+                                resultCount: `${exactRows.length}`,
+                            })
+                        );
+                    });
                     return;
                 }
 
@@ -378,18 +389,20 @@ export default function IdComboForm({
                     ).values(),
                 ];
 
-                setRows(dedupedRows);
-                setSummary(
-                    `${t("messages.comboSummary", {
-                        candidateCount: `${candidateResults.length}`,
-                        tsvCount: `${tsvCounts.size}`,
-                        resultCount: `${dedupedRows.length}`,
-                    })}${
-                        dedupedRows.length === parseInt(maxResults, 10)
-                            ? ` ${t("messages.resultsCapHit")}`
-                            : ""
-                    }`
-                );
+                startTransition(() => {
+                    setRows(dedupedRows);
+                    setSummary(
+                        `${t("messages.comboSummary", {
+                            candidateCount: `${candidateResults.length}`,
+                            tsvCount: `${tsvCounts.size}`,
+                            resultCount: `${dedupedRows.length}`,
+                        })}${
+                            dedupedRows.length === parseInt(maxResults, 10)
+                                ? ` ${t("messages.resultsCapHit")}`
+                                : ""
+                        }`
+                    );
+                });
             } catch {
                 // Stopping a search terminates the worker and rejects the in-flight request.
             } finally {
@@ -404,8 +417,12 @@ export default function IdComboForm({
 
     const handleStopSearch = () => {
         searchSessionRef.current = 0;
-        resetTenLines();
-        setSearching(false);
+        flushSync(() => {
+            setSearching(false);
+        });
+        setTimeout(() => {
+            resetTenLines();
+        }, 0);
     };
 
     const isFRLGE = game.startsWith("fr") || game.startsWith("lg") || game.startsWith("e_");

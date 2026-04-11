@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { startTransition, useMemo, useRef, useState } from "react";
 
 import {
     Autocomplete,
@@ -28,6 +28,7 @@ import {
     type ExtendedWildSearcherState,
 } from "../tenLines/generated";
 import React from "react";
+import { flushSync } from "react-dom";
 import { getAllGameOptions, useI18n } from "../i18n";
 import IvEntry from "./IvEntry";
 import StaticEncounterSelector from "./StaticEncounterSelector";
@@ -145,7 +146,9 @@ export default function CalibrationForm({
     const finishSearchSession = (searchSession: number) => {
         if (searchSessionRef.current === searchSession) {
             searchSessionRef.current = 0;
-            setSearching(false);
+            flushSync(() => {
+                setSearching(false);
+            });
         }
     };
 
@@ -203,8 +206,10 @@ export default function CalibrationForm({
             searchSessionRef.current = searchSession;
             const isCurrentSearch = () =>
                 searchSessionRef.current === searchSession;
-            setRows([]);
-            setSearching(true);
+            flushSync(() => {
+                setRows([]);
+                setSearching(true);
+            });
             try {
                 const tenLines = await fetchTenLines();
                 if (!isCurrentSearch()) {
@@ -246,11 +251,13 @@ export default function CalibrationForm({
                     if (!isCurrentSearch()) {
                         return;
                     }
-                    setRows((rows) => {
-                        if (rows.length > 1000 || results.length === 0) {
-                            return rows;
-                        }
-                        return [...rows, ...results];
+                    startTransition(() => {
+                        setRows((rows) => {
+                            if (rows.length > 1000 || results.length === 0) {
+                                return rows;
+                            }
+                            return [...rows, ...results];
+                        });
                     });
                 };
                 const searchingCallback = proxy(() => {});
@@ -316,8 +323,12 @@ export default function CalibrationForm({
 
     const handleStopSearch = () => {
         searchSessionRef.current = 0;
-        resetTenLines();
-        setSearching(false);
+        flushSync(() => {
+            setSearching(false);
+        });
+        setTimeout(() => {
+            resetTenLines();
+        }, 0);
     };
 
     const isStatic = searcherFormState.method <= STATIC_4;
