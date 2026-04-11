@@ -142,12 +142,6 @@ export default function CalibrationForm({
     const [rows, setRows] = useState<SearcherRowWithAdvances[]>([]);
     const [searching, setSearching] = useState(false);
     const searchSessionRef = useRef(0);
-    const finishSearchSession = (searchSession: number) => {
-        if (searchSessionRef.current === searchSession) {
-            searchSessionRef.current = 0;
-            setSearching(false);
-        }
-    };
 
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
     const ivRanges = ivRangesAreValid
@@ -306,16 +300,20 @@ export default function CalibrationForm({
             } catch {
                 // Stopping a search terminates the worker and rejects the in-flight request.
             } finally {
-                finishSearchSession(searchSession);
+                if (isCurrentSearch()) {
+                    setSearching(false);
+                }
             }
         };
         submit().catch(() => {
-            finishSearchSession(searchSessionRef.current);
+            if (searchSessionRef.current > 0) {
+                setSearching(false);
+            }
         });
     };
 
     const handleStopSearch = () => {
-        searchSessionRef.current = 0;
+        searchSessionRef.current += 1;
         resetTenLines();
         setSearching(false);
     };
