@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import {
+    Autocomplete,
     Box,
     Button,
     Checkbox,
@@ -35,7 +36,7 @@ import SearcherTable from "./SearcherTable";
 
 export interface SearcherFormState {
     shininess: number;
-    nature: number;
+    natures: number[];
     gender: number;
     hiddenPower: number;
     ivRangeStrings: [string, string][];
@@ -106,7 +107,7 @@ export default function CalibrationForm({
     const [searcherFormState, setSearcherFormState] =
         useState<SearcherFormState>({
             shininess: 255,
-            nature: -1,
+            natures: [],
             gender: 255,
             hiddenPower: -1,
             ivRangeStrings: [
@@ -170,6 +171,22 @@ export default function CalibrationForm({
         !ivRangesAreValid ||
         (isReachableAdvancesFilterEnabled && !requiredAdvancesRangeIsValid);
 
+    const selectedNatureSet = useMemo(
+        () => new Set(searcherFormState.natures),
+        [searcherFormState.natures]
+    );
+    const visibleRows = useMemo(
+        () =>
+            searcherFormState.natures.length === 0
+                ? rows
+                : rows.filter((row) => selectedNatureSet.has(row.nature)),
+        [rows, searcherFormState.natures, selectedNatureSet]
+    );
+    const submittedNatureFilters =
+        searcherFormState.natures.length === 0
+            ? [-1]
+            : searcherFormState.natures;
+
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (isNotSubmittable) return;
@@ -177,87 +194,96 @@ export default function CalibrationForm({
             const tenLines = await fetchTenLines();
             setRows([]);
             setSearching(true);
-            const seedData = game.endsWith("painting")
-                ? new Uint8Array()
-                : await fetchSeedData(game);
-            const filterResultsByRequiredAdvances = async <
-                T extends ExtendedSearcherState | ExtendedWildSearcherState,
-            >(
-                results: T[]
-            ) => {
-                if (!isReachableAdvancesFilterEnabled) {
-                    return results as SearcherRowWithAdvances[];
-                }
-                const reachabilityResults =
-                    await tenLines.filter_reachable_target_seeds_with_sound(
-                        results.map((result) => result.seed),
-                        requiredAdvancesRange,
-                        game,
-                        0,
-                        isFRLG ? sound : "",
-                        seedData
-                    );
-                return results
-                    .map((result, index) => ({
-                        ...result,
-                        reachableAdvances: reachabilityResults[index].reachable
-                            ? reachabilityResults[index].advances
-                            : undefined,
-                    }))
-                    .filter(
-                        (_result, index) => reachabilityResults[index].reachable
-                    ) as SearcherRowWithAdvances[];
-            };
-            const appendResults = (results: SearcherRowWithAdvances[]) => {
-                setRows((rows) => {
-                    if (rows.length > 1000 || results.length === 0) {
-                        return rows;
+            try {
+                const seedData = game.endsWith("painting")
+                    ? new Uint8Array()
+                    : await fetchSeedData(game);
+                const filterResultsByRequiredAdvances = async <
+                    T extends ExtendedSearcherState | ExtendedWildSearcherState,
+                >(
+                    results: T[]
+                ) => {
+                    if (!isReachableAdvancesFilterEnabled) {
+                        return results as SearcherRowWithAdvances[];
                     }
-                    return [...rows, ...results];
-                });
-            };
-            if (isStatic) {
-                await tenLines.search_seeds_static(
-                    SEED_IDENTIFIER_TO_GAME[game],
-                    parseInt(trainerID),
-                    parseInt(secretID),
-                    searcherFormState.staticCategory,
-                    searcherFormState.staticPokemon,
-                    searcherFormState.method,
-                    searcherFormState.shininess,
-                    searcherFormState.nature,
-                    searcherFormState.gender,
-                    searcherFormState.hiddenPower,
-                    ivRanges,
-                    proxy(async (results: ExtendedSearcherState[]) => {
-                        appendResults(
-                            await filterResultsByRequiredAdvances(results)
+                    const reachabilityResults =
+                        await tenLines.filter_reachable_target_seeds_with_sound(
+                            results.map((result) => result.seed),
+                            requiredAdvancesRange,
+                            game,
+                            0,
+                            isFRLG ? sound : "",
+                            seedData
                         );
-                    }),
-                    proxy(setSearching)
-                );
-            } else {
-                await tenLines.search_seeds_wild(
-                    SEED_IDENTIFIER_TO_GAME[game],
-                    parseInt(trainerID),
-                    parseInt(secretID),
-                    searcherFormState.wildCategory,
-                    searcherFormState.wildLocation,
-                    searcherFormState.wildPokemon,
-                    searcherFormState.method,
-                    searcherFormState.wildLead,
-                    searcherFormState.shininess,
-                    searcherFormState.nature,
-                    searcherFormState.gender,
-                    searcherFormState.hiddenPower,
-                    ivRanges,
-                    proxy(async (results: ExtendedWildSearcherState[]) => {
-                        appendResults(
-                            await filterResultsByRequiredAdvances(results)
+                    return results
+                        .map((result, index) => ({
+                            ...result,
+                            reachableAdvances: reachabilityResults[index].reachable
+                                ? reachabilityResults[index].advances
+                                : undefined,
+                        }))
+                        .filter(
+                            (_result, index) =>
+                                reachabilityResults[index].reachable
+                        ) as SearcherRowWithAdvances[];
+                };
+                const appendResults = (results: SearcherRowWithAdvances[]) => {
+                    setRows((rows) => {
+                        if (rows.length > 1000 || results.length === 0) {
+                            return rows;
+                        }
+                        return [...rows, ...results];
+                    });
+                };
+                const searchingCallback = proxy(() => {});
+
+                for (const natureFilter of submittedNatureFilters) {
+                    if (isStatic) {
+                        await tenLines.search_seeds_static(
+                            SEED_IDENTIFIER_TO_GAME[game],
+                            parseInt(trainerID),
+                            parseInt(secretID),
+                            searcherFormState.staticCategory,
+                            searcherFormState.staticPokemon,
+                            searcherFormState.method,
+                            searcherFormState.shininess,
+                            natureFilter,
+                            searcherFormState.gender,
+                            searcherFormState.hiddenPower,
+                            ivRanges,
+                            proxy(async (results: ExtendedSearcherState[]) => {
+                                appendResults(
+                                    await filterResultsByRequiredAdvances(results)
+                                );
+                            }),
+                            searchingCallback
                         );
-                    }),
-                    proxy(setSearching)
-                );
+                    } else {
+                        await tenLines.search_seeds_wild(
+                            SEED_IDENTIFIER_TO_GAME[game],
+                            parseInt(trainerID),
+                            parseInt(secretID),
+                            searcherFormState.wildCategory,
+                            searcherFormState.wildLocation,
+                            searcherFormState.wildPokemon,
+                            searcherFormState.method,
+                            searcherFormState.wildLead,
+                            searcherFormState.shininess,
+                            natureFilter,
+                            searcherFormState.gender,
+                            searcherFormState.hiddenPower,
+                            ivRanges,
+                            proxy(async (results: ExtendedWildSearcherState[]) => {
+                                appendResults(
+                                    await filterResultsByRequiredAdvances(results)
+                                );
+                            }),
+                            searchingCallback
+                        );
+                    }
+                }
+            } finally {
+                setSearching(false);
             }
         };
         submit();
@@ -470,27 +496,61 @@ export default function CalibrationForm({
                 <MenuItem value="2">{t("options.square")}</MenuItem>
                 <MenuItem value="3">{t("options.starSquare")}</MenuItem>
             </TextField>
-            <TextField
-                label={t("labels.nature")}
-                margin="normal"
-                style={{ textAlign: "left" }}
-                onChange={(event) => {
+            <Autocomplete
+                multiple
+                disableCloseOnSelect
+                options={resources.natures.map((_nature, index) => index)}
+                value={searcherFormState.natures}
+                onChange={(_event, value) => {
                     setSearcherFormState((data) => ({
                         ...data,
-                        nature: parseInt(event.target.value),
+                        natures: value,
                     }));
                 }}
-                value={searcherFormState.nature}
-                select
+                getOptionLabel={(option) => resources.natures[option]}
+                renderOption={(props, option) => {
+                    const { key, ...optionProps } = props;
+                    const isSelected = selectedNatureSet.has(option);
+                    return (
+                        <Box
+                            component="li"
+                            key={key}
+                            {...optionProps}
+                            sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                width: "100%",
+                            }}
+                        >
+                            <span>{resources.natures[option]}</span>
+                            <span
+                                aria-hidden="true"
+                                style={{
+                                    visibility: isSelected ? "visible" : "hidden",
+                                    fontWeight: 700,
+                                }}
+                            >
+                                {"\u2713"}
+                            </span>
+                        </Box>
+                    );
+                }}
+                renderInput={(params) => (
+                    <TextField
+                        {...params}
+                        label={t("labels.nature")}
+                        margin="normal"
+                        style={{ textAlign: "left" }}
+                        placeholder={
+                            searcherFormState.natures.length === 0
+                                ? t("common.any")
+                                : undefined
+                        }
+                    />
+                )}
                 fullWidth
-            >
-                <MenuItem value="-1">{t("common.any")}</MenuItem>
-                {resources.natures.map((nature, index) => (
-                    <MenuItem key={index} value={index}>
-                        {nature}
-                    </MenuItem>
-                ))}
-            </TextField>
+            />
             <TextField
                 label={t("labels.gender")}
                 margin="normal"
@@ -553,7 +613,7 @@ export default function CalibrationForm({
                 {searching ? t("common.searching") : t("common.submit")}
             </Button>
             <SearcherTable
-                rows={rows}
+                rows={visibleRows}
                 isStatic={isStatic}
                 isMultiMethod={
                     searcherFormState.method === COMBINED_WILD_METHOD
