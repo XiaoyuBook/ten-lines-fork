@@ -145,6 +145,12 @@ export default function IdComboForm({
     const [searching, setSearching] = useState(false);
     const [summary, setSummary] = useState("");
     const searchSessionRef = useRef(0);
+    const finishSearchSession = (searchSession: number) => {
+        if (searchSessionRef.current === searchSession) {
+            searchSessionRef.current = 0;
+            setSearching(false);
+        }
+    };
 
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
     const [idRangeIsValid, setIdRangeIsValid] = useState(true);
@@ -387,21 +393,17 @@ export default function IdComboForm({
             } catch {
                 // Stopping a search terminates the worker and rejects the in-flight request.
             } finally {
-                if (isCurrentSearch()) {
-                    setSearching(false);
-                }
+                finishSearchSession(searchSession);
             }
         };
 
         submit().catch(() => {
-            if (searchSessionRef.current > 0) {
-                setSearching(false);
-            }
+            finishSearchSession(searchSessionRef.current);
         });
     };
 
     const handleStopSearch = () => {
-        searchSessionRef.current += 1;
+        searchSessionRef.current = 0;
         resetTenLines();
         setSearching(false);
     };
