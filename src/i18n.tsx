@@ -174,6 +174,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         common: {
             submit: "Submit",
             searching: "Searching...",
+            stopSearch: "Stop Search",
             any: "Any",
             none: "None",
             filter: "Filter",
@@ -374,6 +375,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         common: {
             submit: "\u63d0\u4ea4",
             searching: "\u641c\u7d22\u4e2d...",
+            stopSearch: "\u505c\u6b62\u641c\u7d22",
             any: "\u4efb\u610f",
             none: "\u65e0",
             filter: "\u7b5b\u9009",

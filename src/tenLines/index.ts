@@ -24,14 +24,19 @@ export const WILD_4 = STATIC_4 + 4;
 export const COMBINED_WILD_METHOD = (1 | 2 | 4) + 4;
 
 let TenLines: Remote<MainModule> | null = null;
+let TenLinesWorker: Worker | null = null;
+let TenLinesPromise: Promise<Remote<MainModule>> | null = null;
 
 const fetchTenLines: () => Promise<Remote<MainModule>> = async () => {
-    return await new Promise((resolve) => {
-        if (TenLines) {
-            resolve(TenLines);
-            return;
-        }
+    if (TenLines) {
+        return TenLines;
+    }
+    if (TenLinesPromise) {
+        return await TenLinesPromise;
+    }
+    TenLinesPromise = new Promise((resolve) => {
         const worker = new Worker();
+        TenLinesWorker = worker;
         worker.addEventListener("message", (message) => {
             if (message?.data?.ready == true) {
                 TenLines = wrap(worker);
@@ -39,7 +44,15 @@ const fetchTenLines: () => Promise<Remote<MainModule>> = async () => {
             }
         });
     });
+    return await TenLinesPromise;
 };
+
+export function resetTenLines() {
+    TenLinesWorker?.terminate();
+    TenLinesWorker = null;
+    TenLines = null;
+    TenLinesPromise = null;
+}
 
 export const SEED_IDENTIFIER_TO_GAME: Record<string, number> = {
     r_painting: Game.Ruby,
