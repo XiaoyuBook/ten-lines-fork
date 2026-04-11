@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
     Autocomplete,
@@ -15,7 +15,6 @@ import {
 import fetchTenLines, {
     COMBINED_WILD_METHOD,
     fetchSeedData,
-    resetTenLines,
     SEED_IDENTIFIER_TO_GAME,
     STATIC_2,
     STATIC_4,
@@ -141,7 +140,6 @@ export default function CalibrationForm({
 
     const [rows, setRows] = useState<SearcherRowWithAdvances[]>([]);
     const [searching, setSearching] = useState(false);
-    const searchSessionRef = useRef(0);
 
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
     const ivRanges = ivRangesAreValid
@@ -193,17 +191,10 @@ export default function CalibrationForm({
         event.preventDefault();
         if (isNotSubmittable) return;
         const submit = async () => {
-            const searchSession = searchSessionRef.current + 1;
-            searchSessionRef.current = searchSession;
-            const isCurrentSearch = () =>
-                searchSessionRef.current === searchSession;
+            const tenLines = await fetchTenLines();
             setRows([]);
             setSearching(true);
             try {
-                const tenLines = await fetchTenLines();
-                if (!isCurrentSearch()) {
-                    return;
-                }
                 const seedData = game.endsWith("painting")
                     ? new Uint8Array()
                     : await fetchSeedData(game);
@@ -237,9 +228,6 @@ export default function CalibrationForm({
                         ) as SearcherRowWithAdvances[];
                 };
                 const appendResults = (results: SearcherRowWithAdvances[]) => {
-                    if (!isCurrentSearch()) {
-                        return;
-                    }
                     setRows((rows) => {
                         if (rows.length > 1000 || results.length === 0) {
                             return rows;
@@ -250,9 +238,6 @@ export default function CalibrationForm({
                 const searchingCallback = proxy(() => {});
 
                 for (const natureFilter of submittedNatureFilters) {
-                    if (!isCurrentSearch()) {
-                        return;
-                    }
                     if (isStatic) {
                         await tenLines.search_seeds_static(
                             SEED_IDENTIFIER_TO_GAME[game],
@@ -297,25 +282,11 @@ export default function CalibrationForm({
                         );
                     }
                 }
-            } catch {
-                // Stopping a search terminates the worker and rejects the in-flight request.
             } finally {
-                if (isCurrentSearch()) {
-                    setSearching(false);
-                }
-            }
-        };
-        submit().catch(() => {
-            if (searchSessionRef.current > 0) {
                 setSearching(false);
             }
-        });
-    };
-
-    const handleStopSearch = () => {
-        searchSessionRef.current += 1;
-        resetTenLines();
-        setSearching(false);
+        };
+        submit();
     };
 
     const isStatic = searcherFormState.method <= STATIC_4;
@@ -634,13 +605,12 @@ export default function CalibrationForm({
             />
             <Button
                 variant="contained"
-                color={searching ? "error" : "primary"}
-                type={searching ? "button" : "submit"}
-                onClick={searching ? handleStopSearch : undefined}
-                disabled={!searching && isNotSubmittable}
+                color="primary"
+                type="submit"
+                disabled={isNotSubmittable}
                 fullWidth
             >
-                {searching ? t("common.stopSearch") : t("common.submit")}
+                {searching ? t("common.searching") : t("common.submit")}
             </Button>
             <SearcherTable
                 rows={visibleRows}

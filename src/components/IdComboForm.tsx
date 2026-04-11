@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import React from "react";
 import {
     Autocomplete,
@@ -14,7 +14,6 @@ import { useSearchParams } from "react-router-dom";
 
 import fetchTenLines, {
     fetchSeedData,
-    resetTenLines,
     SEED_IDENTIFIER_TO_GAME,
     STATIC_2,
     STATIC_4,
@@ -144,7 +143,6 @@ export default function IdComboForm({
     const [rows, setRows] = useState<IDComboRow[]>([]);
     const [searching, setSearching] = useState(false);
     const [summary, setSummary] = useState("");
-    const searchSessionRef = useRef(0);
 
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
     const [idRangeIsValid, setIdRangeIsValid] = useState(true);
@@ -195,215 +193,182 @@ export default function IdComboForm({
         }
 
         const submit = async () => {
-            const searchSession = searchSessionRef.current + 1;
-            searchSessionRef.current = searchSession;
-            const isCurrentSearch = () =>
-                searchSessionRef.current === searchSession;
+            const tenLines = await fetchTenLines();
             setSearching(true);
             setRows([]);
             setSummary("");
-            try {
-                const tenLines = await fetchTenLines();
-                if (!isCurrentSearch()) {
-                    return;
+            const seedData = game.endsWith("painting")
+                ? new Uint8Array()
+                : await fetchSeedData(game);
+            const hasExactIdPair = tid !== "" && sid !== "";
+            const candidateTid = hasExactIdPair ? parseInt(tid, 10) : 0;
+            const candidateSid = hasExactIdPair ? parseInt(sid, 10) : 0;
+            const candidateShininess = hasExactIdPair ? formState.shininess : 255;
+
+            const candidateResults: ExtendedSearcherState[] = [];
+
+            for (const natureFilter of submittedNatureFilters) {
+                await tenLines.search_seeds_static(
+                    SEED_IDENTIFIER_TO_GAME[game],
+                    candidateTid,
+                    candidateSid,
+                    formState.staticCategory,
+                    formState.staticPokemon,
+                    formState.method,
+                    candidateShininess,
+                    natureFilter,
+                    formState.gender,
+                    formState.hiddenPower,
+                    ivRanges,
+                    proxy((results: ExtendedSearcherState[]) => {
+                        candidateResults.push(...results);
+                    }),
+                    proxy(() => {})
+                );
+            }
+
+            if (candidateResults.length === 0) {
+                setSummary(t("messages.noMatchingStaticTargets"));
+                setSearching(false);
+                return;
+            }
+
+            const reachabilityResults =
+                await tenLines.filter_reachable_target_seeds(
+                    candidateResults.map((result) => result.seed),
+                    idRange,
+                    game,
+                    0,
+                    seedData
+                );
+            const eligibleCandidateResults = candidateResults
+                .map((result, index) => ({
+                    result,
+                    reachability: reachabilityResults[index],
+                }))
+                .filter(({ reachability }) => reachability.reachable);
+
+            if (eligibleCandidateResults.length === 0) {
+                setSummary(t("messages.noMatchingAdvances"));
+                setSearching(false);
+                return;
+            }
+
+            const tsvAdvances = new Map<number, number>();
+            const tsvCounts = new Map<number, number>();
+            const tsvExamples = new Map<number, ExtendedSearcherState>();
+            for (const { result, reachability } of eligibleCandidateResults) {
+                const tsv = pidToTSV(result.pid);
+                tsvCounts.set(tsv, (tsvCounts.get(tsv) ?? 0) + 1);
+                if (!tsvExamples.has(tsv)) {
+                    tsvExamples.set(tsv, result);
+                    tsvAdvances.set(tsv, reachability.advances);
                 }
-                const seedData = game.endsWith("painting")
-                    ? new Uint8Array()
-                    : await fetchSeedData(game);
-                const hasExactIdPair = tid !== "" && sid !== "";
-                const candidateTid = hasExactIdPair ? parseInt(tid, 10) : 0;
-                const candidateSid = hasExactIdPair ? parseInt(sid, 10) : 0;
-                const candidateShininess = hasExactIdPair ? formState.shininess : 255;
+            }
 
-                const candidateResults: ExtendedSearcherState[] = [];
+            if (hasExactIdPair) {
+                const exactRows = eligibleCandidateResults.map(({ result, reachability }) => ({
+                    advances: reachability.advances,
+                    tid: candidateTid,
+                    sid: candidateSid,
+                    tsv: pidToTSV(result.pid),
+                    shiny: getShinyType(result.pid, candidateTid, candidateSid),
+                    matchCount: 1,
+                    exampleIvs: result.ivs,
+                    examplePid: result.pid,
+                    exampleSeed: result.seed,
+                    game,
+                }));
 
-                for (const natureFilter of submittedNatureFilters) {
-                    if (!isCurrentSearch()) {
-                        return;
-                    }
-                    await tenLines.search_seeds_static(
-                        SEED_IDENTIFIER_TO_GAME[game],
-                        candidateTid,
-                        candidateSid,
-                        formState.staticCategory,
-                        formState.staticPokemon,
-                        formState.method,
-                        candidateShininess,
-                        natureFilter,
-                        formState.gender,
-                        formState.hiddenPower,
-                        ivRanges,
-                        proxy((results: ExtendedSearcherState[]) => {
-                            candidateResults.push(...results);
-                        }),
-                        proxy(() => {})
-                    );
-                }
-
-                if (!isCurrentSearch()) {
-                    return;
-                }
-                if (candidateResults.length === 0) {
-                    setSummary(t("messages.noMatchingStaticTargets"));
-                    return;
-                }
-
-                const reachabilityResults =
-                    await tenLines.filter_reachable_target_seeds(
-                        candidateResults.map((result) => result.seed),
-                        idRange,
-                        game,
-                        0,
-                        seedData
-                    );
-                if (!isCurrentSearch()) {
-                    return;
-                }
-                const eligibleCandidateResults = candidateResults
-                    .map((result, index) => ({
-                        result,
-                        reachability: reachabilityResults[index],
-                    }))
-                    .filter(({ reachability }) => reachability.reachable);
-
-                if (eligibleCandidateResults.length === 0) {
-                    setSummary(t("messages.noMatchingAdvances"));
-                    return;
-                }
-
-                const tsvAdvances = new Map<number, number>();
-                const tsvCounts = new Map<number, number>();
-                const tsvExamples = new Map<number, ExtendedSearcherState>();
-                for (const { result, reachability } of eligibleCandidateResults) {
-                    const tsv = pidToTSV(result.pid);
-                    tsvCounts.set(tsv, (tsvCounts.get(tsv) ?? 0) + 1);
-                    if (!tsvExamples.has(tsv)) {
-                        tsvExamples.set(tsv, result);
-                        tsvAdvances.set(tsv, reachability.advances);
-                    }
-                }
-
-                if (hasExactIdPair) {
-                    const exactRows = eligibleCandidateResults.map(({ result, reachability }) => ({
-                        advances: reachability.advances,
-                        tid: candidateTid,
-                        sid: candidateSid,
-                        tsv: pidToTSV(result.pid),
-                        shiny: getShinyType(result.pid, candidateTid, candidateSid),
-                        matchCount: 1,
-                        exampleIvs: result.ivs,
-                        examplePid: result.pid,
-                        exampleSeed: result.seed,
-                        game,
-                    }));
-
-                    setRows(exactRows);
-                    setSummary(
-                        t("messages.exactIdSummary", {
-                            candidateCount: `${candidateResults.length}`,
-                            tsvCount: `${tsvCounts.size}`,
-                            resultCount: `${exactRows.length}`,
-                        })
-                    );
-                    return;
-                }
-
-                const eligibleTSVs = [...tsvCounts.keys()];
-
-                const idResults: ExtendedIDState[] =
-                    await tenLines.search_frlge_id_combos(
-                        eligibleTSVs,
-                        0,
-                        MAX_ID_ADVANCES_SEARCH,
-                        parseOptionalId(tid),
-                        parseOptionalId(sid),
-                        parseInt(maxResults, 10)
-                    );
-                if (!isCurrentSearch()) {
-                    return;
-                }
-
-                const mappedRows = idResults.map((idState) => {
-                    const example = tsvExamples.get(idState.tsv)!;
-                    const shiny = getShinyType(
-                        example.pid,
-                        idState.tid,
-                        idState.sid
-                    );
-                    return {
-                        advances: tsvAdvances.get(idState.tsv) ?? 0,
-                        tid: idState.tid,
-                        sid: idState.sid,
-                        tsv: idState.tsv,
-                        shiny,
-                        matchCount: tsvCounts.get(idState.tsv) ?? 0,
-                        exampleIvs: example.ivs,
-                        examplePid: example.pid,
-                        exampleSeed: example.seed,
-                        game,
-                    };
-                }).filter((row) => {
-                    if (row.advances < idRange[0] || row.advances > idRange[1]) {
-                        return false;
-                    }
-                    if (formState.shininess === 3) {
-                        return row.shiny === 1 || row.shiny === 2;
-                    }
-                    return row.shiny === formState.shininess;
-                });
-
-                const dedupedRows = [
-                    ...new Map(
-                        mappedRows.map((row) => [
-                            [
-                                row.advances,
-                                row.tid,
-                                row.sid,
-                                row.tsv,
-                                row.shiny,
-                                row.matchCount,
-                                row.exampleIvs.join("/"),
-                                row.exampleSeed,
-                                row.examplePid,
-                                row.game,
-                            ].join(":"),
-                            row,
-                        ])
-                    ).values(),
-                ];
-
-                setRows(dedupedRows);
+                setRows(exactRows);
                 setSummary(
-                    `${t("messages.comboSummary", {
+                    t("messages.exactIdSummary", {
                         candidateCount: `${candidateResults.length}`,
                         tsvCount: `${tsvCounts.size}`,
-                        resultCount: `${dedupedRows.length}`,
-                    })}${
-                        dedupedRows.length === parseInt(maxResults, 10)
-                            ? ` ${t("messages.resultsCapHit")}`
-                            : ""
-                    }`
+                        resultCount: `${exactRows.length}`,
+                    })
                 );
-            } catch {
-                // Stopping a search terminates the worker and rejects the in-flight request.
-            } finally {
-                if (isCurrentSearch()) {
-                    setSearching(false);
-                }
+                setSearching(false);
+                return;
             }
+
+            const eligibleTSVs = [...tsvCounts.keys()];
+
+            const idResults: ExtendedIDState[] =
+                await tenLines.search_frlge_id_combos(
+                    eligibleTSVs,
+                    0,
+                    MAX_ID_ADVANCES_SEARCH,
+                    parseOptionalId(tid),
+                    parseOptionalId(sid),
+                    parseInt(maxResults, 10)
+                );
+
+            const mappedRows = idResults.map((idState) => {
+                const example = tsvExamples.get(idState.tsv)!;
+                const shiny = getShinyType(
+                    example.pid,
+                    idState.tid,
+                    idState.sid
+                );
+                return {
+                    advances: tsvAdvances.get(idState.tsv) ?? 0,
+                    tid: idState.tid,
+                    sid: idState.sid,
+                    tsv: idState.tsv,
+                    shiny,
+                    matchCount: tsvCounts.get(idState.tsv) ?? 0,
+                    exampleIvs: example.ivs,
+                    examplePid: example.pid,
+                    exampleSeed: example.seed,
+                    game,
+                };
+            }).filter((row) => {
+                if (row.advances < idRange[0] || row.advances > idRange[1]) {
+                    return false;
+                }
+                if (formState.shininess === 3) {
+                    return row.shiny === 1 || row.shiny === 2;
+                }
+                return row.shiny === formState.shininess;
+            });
+
+            const dedupedRows = [
+                ...new Map(
+                    mappedRows.map((row) => [
+                        [
+                            row.advances,
+                            row.tid,
+                            row.sid,
+                            row.tsv,
+                            row.shiny,
+                            row.matchCount,
+                            row.exampleIvs.join("/"),
+                            row.exampleSeed,
+                            row.examplePid,
+                            row.game,
+                        ].join(":"),
+                        row,
+                    ])
+                ).values(),
+            ];
+
+            setRows(dedupedRows);
+            setSummary(
+                `${t("messages.comboSummary", {
+                    candidateCount: `${candidateResults.length}`,
+                    tsvCount: `${tsvCounts.size}`,
+                    resultCount: `${dedupedRows.length}`,
+                })}${
+                    dedupedRows.length === parseInt(maxResults, 10)
+                        ? ` ${t("messages.resultsCapHit")}`
+                        : ""
+                }`
+            );
+            setSearching(false);
         };
 
-        submit().catch(() => {
-            if (searchSessionRef.current > 0) {
-                setSearching(false);
-            }
-        });
-    };
-
-    const handleStopSearch = () => {
-        searchSessionRef.current += 1;
-        resetTenLines();
-        setSearching(false);
+        submit();
     };
 
     const isFRLGE = game.startsWith("fr") || game.startsWith("lg") || game.startsWith("e_");
@@ -698,15 +663,12 @@ export default function IdComboForm({
             />
             <Button
                 variant="contained"
-                color={searching ? "error" : "primary"}
-                type={searching ? "button" : "submit"}
-                onClick={searching ? handleStopSearch : undefined}
-                disabled={!searching && isNotSubmittable}
+                color="primary"
+                type="submit"
+                disabled={isNotSubmittable}
                 fullWidth
             >
-                {searching
-                    ? t("common.stopSearch")
-                    : t("messages.findTidSidCombos")}
+                {searching ? t("common.searching") : t("messages.findTidSidCombos")}
             </Button>
             {summary && (
                 <Box sx={{ mt: 2, mb: 2, textAlign: "left" }}>
