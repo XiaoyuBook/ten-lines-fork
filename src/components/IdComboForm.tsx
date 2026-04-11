@@ -1,6 +1,14 @@
 import { useMemo, useState } from "react";
 import React from "react";
-import { Box, Button, MenuItem, TextField, type SxProps, type Theme } from "@mui/material";
+import {
+    Autocomplete,
+    Box,
+    Button,
+    MenuItem,
+    TextField,
+    type SxProps,
+    type Theme,
+} from "@mui/material";
 import { proxy } from "comlink";
 import { useSearchParams } from "react-router-dom";
 
@@ -22,7 +30,7 @@ const MAX_ID_ADVANCES_SEARCH = 65535;
 
 interface IdComboFormState {
     shininess: number;
-    nature: number;
+    natures: number[];
     gender: number;
     hiddenPower: number;
     ivRangeStrings: [string, string][];
@@ -106,7 +114,7 @@ export default function IdComboForm({
     const { t, resources } = useI18n();
     const [formState, setFormState] = useState<IdComboFormState>({
         shininess: 3,
-        nature: -1,
+        natures: [],
         gender: 255,
         hiddenPower: -1,
         ivRangeStrings: [
@@ -164,6 +172,12 @@ export default function IdComboForm({
         !maxResultsIsValid ||
         !tidIsValid ||
         !sidIsValid;
+    const selectedNatureSet = useMemo(
+        () => new Set(formState.natures),
+        [formState.natures]
+    );
+    const submittedNatureFilters =
+        formState.natures.length === 0 ? [-1] : formState.natures;
 
     const parseOptionalId = (value: string) => {
         if (value === "") {
@@ -193,23 +207,25 @@ export default function IdComboForm({
 
             const candidateResults: ExtendedSearcherState[] = [];
 
-            await tenLines.search_seeds_static(
-                SEED_IDENTIFIER_TO_GAME[game],
-                candidateTid,
-                candidateSid,
-                formState.staticCategory,
-                formState.staticPokemon,
-                formState.method,
-                candidateShininess,
-                formState.nature,
-                formState.gender,
-                formState.hiddenPower,
-                ivRanges,
-                proxy((results: ExtendedSearcherState[]) => {
-                    candidateResults.push(...results);
-                }),
-                proxy(() => {})
-            );
+            for (const natureFilter of submittedNatureFilters) {
+                await tenLines.search_seeds_static(
+                    SEED_IDENTIFIER_TO_GAME[game],
+                    candidateTid,
+                    candidateSid,
+                    formState.staticCategory,
+                    formState.staticPokemon,
+                    formState.method,
+                    candidateShininess,
+                    natureFilter,
+                    formState.gender,
+                    formState.hiddenPower,
+                    ivRanges,
+                    proxy((results: ExtendedSearcherState[]) => {
+                        candidateResults.push(...results);
+                    }),
+                    proxy(() => {})
+                );
+            }
 
             if (candidateResults.length === 0) {
                 setSummary(t("messages.noMatchingStaticTargets"));
@@ -535,27 +551,61 @@ export default function IdComboForm({
                     }));
                 }}
             />
-            <TextField
-                label={t("labels.nature")}
-                margin="normal"
-                style={{ textAlign: "left" }}
-                onChange={(event) => {
+            <Autocomplete
+                multiple
+                disableCloseOnSelect
+                options={resources.natures.map((_nature, index) => index)}
+                value={formState.natures}
+                onChange={(_event, value) => {
                     setFormState((data) => ({
                         ...data,
-                        nature: parseInt(event.target.value),
+                        natures: value,
                     }));
                 }}
-                value={formState.nature}
-                select
+                getOptionLabel={(option) => resources.natures[option]}
+                renderOption={(props, option) => {
+                    const { key, ...optionProps } = props;
+                    const isSelected = selectedNatureSet.has(option);
+                    return (
+                        <Box
+                            component="li"
+                            key={key}
+                            {...optionProps}
+                            sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                width: "100%",
+                            }}
+                        >
+                            <span>{resources.natures[option]}</span>
+                            <span
+                                aria-hidden="true"
+                                style={{
+                                    visibility: isSelected ? "visible" : "hidden",
+                                    fontWeight: 700,
+                                }}
+                            >
+                                {"\u2713"}
+                            </span>
+                        </Box>
+                    );
+                }}
+                renderInput={(params) => (
+                    <TextField
+                        {...params}
+                        label={t("labels.nature")}
+                        margin="normal"
+                        style={{ textAlign: "left" }}
+                        placeholder={
+                            formState.natures.length === 0
+                                ? t("common.any")
+                                : undefined
+                        }
+                    />
+                )}
                 fullWidth
-            >
-                <MenuItem value="-1">{t("common.any")}</MenuItem>
-                {resources.natures.map((nature, index) => (
-                    <MenuItem key={index} value={index}>
-                        {nature}
-                    </MenuItem>
-                ))}
-            </TextField>
+            />
             <TextField
                 label={t("labels.gender")}
                 margin="normal"
