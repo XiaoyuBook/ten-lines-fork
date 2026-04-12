@@ -21,8 +21,6 @@ const CalibrationTable = memo(function CalibrationTable({
     isStatic,
     isMultiMethod,
     isTeachyTVMode,
-    isSwitch,
-    overworldFrames,
 }: {
     rows: ExtendedGeneratorState[] | ExtendedWildGeneratorState[];
     target: FRLGContiguousSeedEntry;
@@ -30,8 +28,6 @@ const CalibrationTable = memo(function CalibrationTable({
     isStatic: boolean;
     isMultiMethod: boolean;
     isTeachyTVMode: boolean;
-    isSwitch: boolean;
-    overworldFrames: number;
 }) {
     const { t, resources } = useI18n();
 
@@ -48,9 +44,6 @@ const CalibrationTable = memo(function CalibrationTable({
                         )}
                         {isTeachyTVMode && (
                             <TableCell>{t("table.teachyTvAdvances")}</TableCell>
-                        )}
-                        {isSwitch && (
-                            <TableCell>{t("table.continueScreenFrames")}</TableCell>
                         )}
                         {!isStatic && <TableCell>{t("table.slot")}</TableCell>}
                         {!isStatic && <TableCell>{t("table.level")}</TableCell>}
@@ -103,11 +96,6 @@ const CalibrationTable = memo(function CalibrationTable({
                                 )}
                                 {isTeachyTVMode && (
                                     <TableCell>{row.ttvAdvances}</TableCell>
-                                )}
-                                {isSwitch && (
-                                    <TableCell>
-                                        {row.advances - overworldFrames * 2}
-                                    </TableCell>
                                 )}
                                 {!isStatic && (
                                     <TableCell>

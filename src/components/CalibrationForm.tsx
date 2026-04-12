@@ -988,8 +988,6 @@ export default function CalibrationForm({
                 gameConsole={gameConsole}
                 isStatic={isStatic}
                 isTeachyTVMode={isTeachyTVMode}
-                isSwitch={isSwitch}
-                overworldFrames={overworldFramesIsValid ? parseInt(overworldFrames) : 0}
                 isMultiMethod={
                     calibrationFormState.method == COMBINED_WILD_METHOD
                 }
