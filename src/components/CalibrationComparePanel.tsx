@@ -363,7 +363,6 @@ function CompareCalculator() {
                             handleEvaluate();
                         }
                     }}
-                    placeholder="(1000-997)*16"
                     variant="outlined"
                     inputProps={{
                         style: {
@@ -382,9 +381,11 @@ function CompareCalculator() {
                             liveResult === "ERR" ? "error.main" : "text.secondary",
                     }}
                 >
-                    <Typography variant="body2">
-                        = {expression ? liveResult || "0" : displayResult}
-                    </Typography>
+                    {expression && (
+                        <Typography variant="body2">
+                            = {liveResult || displayResult}
+                        </Typography>
+                    )}
                 </Box>
                 <Box
                     sx={{
