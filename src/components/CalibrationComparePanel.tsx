@@ -15,7 +15,7 @@ import {
     Tooltip,
     Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import { getName, useI18n } from "../i18n";
 import { frameToMS, hexSeed } from "../tenLines";
@@ -191,6 +191,7 @@ function TargetSummary({
     onDelete: () => void;
 }) {
     const { t, resources } = useI18n();
+    const isShiny = entry.row.shiny > 0;
 
     return (
         <Paper
@@ -198,9 +199,14 @@ function TargetSummary({
             sx={{
                 p: 2,
                 borderRadius: 3,
-                borderColor: "primary.main",
+                borderColor: isShiny ? "#d4af37" : "primary.main",
                 background:
-                    "linear-gradient(135deg, rgba(25,118,210,0.22), rgba(25,118,210,0.08))",
+                    isShiny
+                        ? "linear-gradient(135deg, rgba(212,175,55,0.30), rgba(212,175,55,0.10))"
+                        : "linear-gradient(135deg, rgba(25,118,210,0.22), rgba(25,118,210,0.08))",
+                boxShadow: isShiny
+                    ? "0 0 0 1px rgba(212,175,55,0.2), 0 12px 28px rgba(212,175,55,0.12)"
+                    : "none",
             }}
         >
             <Box
@@ -214,7 +220,7 @@ function TargetSummary({
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Chip
                         label={t("compare.target")}
-                        color="primary"
+                        color={isShiny ? "warning" : "primary"}
                         size="small"
                     />
                     {"species" in entry.row && (
@@ -448,7 +454,7 @@ function CompareCalculator() {
     );
 }
 
-export default function CalibrationComparePanel({
+const CalibrationComparePanel = memo(function CalibrationComparePanel({
     targetEntry,
     historyEntries,
     settings,
@@ -693,4 +699,6 @@ export default function CalibrationComparePanel({
             )}
         </Paper>
     );
-}
+});
+
+export default CalibrationComparePanel;

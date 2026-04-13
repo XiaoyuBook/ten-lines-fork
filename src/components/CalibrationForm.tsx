@@ -1,6 +1,7 @@
 import { proxy } from "comlink";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+    Alert,
     Autocomplete,
     Box,
     Button,
@@ -14,6 +15,7 @@ import {
     FormGroup,
     MenuItem,
     Paper,
+    Snackbar,
     TextField,
     Typography,
 } from "@mui/material";
@@ -251,6 +253,7 @@ export default function CalibrationForm({
         CalibrationCompareEntry[]
     >([]);
     const [compareSettingsOpen, setCompareSettingsOpen] = useState(false);
+    const [compareFeedback, setCompareFeedback] = useState("");
 
     const [seedLeewayIsValid, setSeedLeewayIsValid] = useState(true);
     const seedLeeway = seedLeewayIsValid
@@ -362,10 +365,23 @@ export default function CalibrationForm({
 
     const addCompareTarget = (row: CalibrationResultRow) => {
         setCompareTarget(createCompareEntry(row));
+        setCompareFeedback(t("compare.addedTarget"));
     };
 
     const addCompareHistory = (row: CalibrationResultRow) => {
         setCompareHistory((history) => [...history, createCompareEntry(row)]);
+        setCompareFeedback(t("compare.addedHistory"));
+    };
+
+    const handleQuickAdd = (
+        row: CalibrationResultRow,
+        destination: "target" | "history"
+    ) => {
+        if (destination === "target") {
+            addCompareTarget(row);
+            return;
+        }
+        addCompareHistory(row);
     };
 
     const deleteCompareTarget = () => {
@@ -1204,8 +1220,7 @@ export default function CalibrationForm({
                                 calibrationFormState.method == COMBINED_WILD_METHOD
                             }
                             hasTarget={Boolean(compareTarget)}
-                            onAddToTarget={addCompareTarget}
-                            onAddToHistory={addCompareHistory}
+                            onAdd={handleQuickAdd}
                         />
                     </Box>
                 </Paper>
@@ -1332,6 +1347,21 @@ export default function CalibrationForm({
                     </Button>
                 </DialogActions>
             </Dialog>
+            <Snackbar
+                open={Boolean(compareFeedback)}
+                autoHideDuration={1800}
+                onClose={() => setCompareFeedback("")}
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+            >
+                <Alert
+                    severity="success"
+                    variant="filled"
+                    onClose={() => setCompareFeedback("")}
+                    sx={{ width: "100%" }}
+                >
+                    {compareFeedback}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }

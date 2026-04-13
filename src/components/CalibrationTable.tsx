@@ -1,19 +1,17 @@
 import {
     Box,
-    Button,
     IconButton,
-    Menu,
-    MenuItem,
     Paper,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
+    TablePagination,
     TableRow,
     Tooltip,
 } from "@mui/material";
-import { memo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { getName, useI18n } from "../i18n";
 import { frameToMS, hexSeed } from "../tenLines";
@@ -33,8 +31,7 @@ const CalibrationTable = memo(function CalibrationTable({
     isMultiMethod,
     isTeachyTVMode,
     hasTarget,
-    onAddToTarget,
-    onAddToHistory,
+    onAdd,
 }: {
     rows: ExtendedGeneratorState[] | ExtendedWildGeneratorState[];
     target: FRLGContiguousSeedEntry;
@@ -43,31 +40,32 @@ const CalibrationTable = memo(function CalibrationTable({
     isMultiMethod: boolean;
     isTeachyTVMode: boolean;
     hasTarget: boolean;
-    onAddToTarget: (row: CalibrationResultRow) => void;
-    onAddToHistory: (row: CalibrationResultRow) => void;
+    onAdd: (row: CalibrationResultRow, destination: "target" | "history") => void;
 }) {
     const { t, resources } = useI18n();
-    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-    const [menuRow, setMenuRow] = useState<CalibrationResultRow | null>(null);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(50);
 
     const defaultAddToTarget = !hasTarget;
+    const cappedRows = useMemo(() => rows.slice(0, 1000), [rows]);
+    const paginatedRows = useMemo(
+        () =>
+            cappedRows.slice(
+                page * rowsPerPage,
+                page * rowsPerPage + rowsPerPage
+            ),
+        [cappedRows, page, rowsPerPage]
+    );
 
-    const closeMenu = () => {
-        setMenuAnchor(null);
-        setMenuRow(null);
-    };
-
-    const handleAdd = (
-        row: CalibrationResultRow,
-        destination: "target" | "history"
-    ) => {
-        if (destination === "target") {
-            onAddToTarget(row);
-        } else {
-            onAddToHistory(row);
+    useEffect(() => {
+        const maxPage = Math.max(
+            0,
+            Math.ceil(cappedRows.length / rowsPerPage) - 1
+        );
+        if (page > maxPage) {
+            setPage(maxPage);
         }
-        closeMenu();
-    };
+    }, [cappedRows.length, page, rowsPerPage]);
 
     return (
         <TableContainer component={Paper}>
@@ -99,18 +97,14 @@ const CalibrationTable = memo(function CalibrationTable({
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {rows.map((row, index) => {
-                        if (index === 1000) {
-                            return <TableRow key={index}>...</TableRow>;
-                        } else if (index > 1000) {
-                            return null;
-                        }
+                    {paginatedRows.map((row, index) => {
+                        const absoluteIndex = page * rowsPerPage + index;
                         const seedMS = frameToMS(row.seedTime / 16, gameConsole);
                         const offsetMS =
                             seedMS - frameToMS(target.seedTime / 16, gameConsole);
 
                         return (
-                            <TableRow key={index}>
+                            <TableRow key={absoluteIndex}>
                                 <TableCell align="center">
                                     <Box
                                         sx={{
@@ -151,7 +145,7 @@ const CalibrationTable = memo(function CalibrationTable({
                                                     },
                                                 }}
                                                 onClick={() =>
-                                                    handleAdd(
+                                                    onAdd(
                                                         row,
                                                         defaultAddToTarget
                                                             ? "target"
@@ -170,33 +164,6 @@ const CalibrationTable = memo(function CalibrationTable({
                                                     +
                                                 </Box>
                                             </IconButton>
-                                        </Tooltip>
-                                        <Tooltip title={t("compare.moreActions")}>
-                                            <Button
-                                                size="small"
-                                                variant="text"
-                                                color="primary"
-                                                aria-label={t("compare.moreActions")}
-                                                sx={{
-                                                    minWidth: 24,
-                                                    px: 0.5,
-                                                    borderRadius: 999,
-                                                }}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    setMenuAnchor(
-                                                        event.currentTarget
-                                                    );
-                                                    setMenuRow(row);
-                                                }}
-                                            >
-                                                <Box
-                                                    component="span"
-                                                    sx={{ fontSize: "0.75rem" }}
-                                                >
-                                                    v
-                                                </Box>
-                                            </Button>
                                         </Tooltip>
                                     </Box>
                                 </TableCell>
@@ -257,26 +224,21 @@ const CalibrationTable = memo(function CalibrationTable({
                     })}
                 </TableBody>
             </Table>
-            <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-                <MenuItem
-                    onClick={() => {
-                        if (menuRow) {
-                            handleAdd(menuRow, "target");
-                        }
-                    }}
-                >
-                    {t("compare.addToTarget")}
-                </MenuItem>
-                <MenuItem
-                    onClick={() => {
-                        if (menuRow) {
-                            handleAdd(menuRow, "history");
-                        }
-                    }}
-                >
-                    {t("compare.addToHistory")}
-                </MenuItem>
-            </Menu>
+            <TablePagination
+                component="div"
+                count={cappedRows.length}
+                page={page}
+                onPageChange={(_event, nextPage) => {
+                    setPage(nextPage);
+                }}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(event) => {
+                    setRowsPerPage(parseInt(event.target.value, 10));
+                    setPage(0);
+                }}
+                rowsPerPageOptions={[20, 50, 100]}
+                labelRowsPerPage={t("table.rowsPerPage")}
+            />
         </TableContainer>
     );
 });
