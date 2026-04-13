@@ -11,6 +11,7 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    TextField,
     Tooltip,
     Typography,
 } from "@mui/material";
@@ -300,12 +301,21 @@ function evaluateExpression(expression: string) {
 function CompareCalculator() {
     const { t } = useI18n();
     const [expression, setExpression] = useState("");
+    const [displayResult, setDisplayResult] = useState("0");
 
     const appendValue = (value: string) => {
         setExpression((current) => `${current}${value}`);
     };
 
-    const result = evaluateExpression(expression);
+    const handleEvaluate = () => {
+        const result = evaluateExpression(expression);
+        setDisplayResult(result || "0");
+        if (result && result !== "ERR") {
+            setExpression(result);
+        }
+    };
+
+    const liveResult = evaluateExpression(expression);
     const keypad = [
         "7",
         "8",
@@ -341,27 +351,44 @@ function CompareCalculator() {
                     backgroundColor: "rgba(255,255,255,0.02)",
                 }}
             >
+                <TextField
+                    fullWidth
+                    value={expression}
+                    onChange={(event) => {
+                        setExpression(event.target.value);
+                    }}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
+                            handleEvaluate();
+                        }
+                    }}
+                    placeholder="(1000-997)*16"
+                    variant="outlined"
+                    inputProps={{
+                        style: {
+                            textAlign: "right",
+                            fontSize: "1.2rem",
+                            fontWeight: 600,
+                        },
+                    }}
+                />
                 <Box
                     sx={{
-                        minHeight: 56,
-                        p: 1.25,
-                        borderRadius: 2,
-                        backgroundColor: "rgba(0,0,0,0.28)",
+                        mt: 1,
+                        minHeight: 28,
                         textAlign: "right",
+                        color:
+                            liveResult === "ERR" ? "error.main" : "text.secondary",
                     }}
                 >
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ minHeight: 22, overflowWrap: "anywhere" }}
-                    >
-                        {expression || "0"}
+                    <Typography variant="body2">
+                        = {expression ? liveResult || "0" : displayResult}
                     </Typography>
-                    <Typography variant="h6">{result || "0"}</Typography>
                 </Box>
                 <Box
                     sx={{
-                        mt: 1.5,
+                        mt: 1,
                         display: "grid",
                         gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
                         gap: 1,
@@ -369,8 +396,10 @@ function CompareCalculator() {
                 >
                     <Button
                         variant="outlined"
-                        onClick={() => setExpression("")}
-                        sx={{ gridColumn: "span 2" }}
+                        onClick={() => {
+                            setExpression("");
+                            setDisplayResult("0");
+                        }}
                     >
                         {t("compare.clearShort")}
                     </Button>
@@ -383,7 +412,12 @@ function CompareCalculator() {
                             setExpression((current) => current.slice(0, -1))
                         }
                     >
-                        ←
+                        <Box component="span" sx={{ lineHeight: 1 }}>
+                            ←
+                        </Box>
+                    </Button>
+                    <Button variant="contained" onClick={handleEvaluate}>
+                        =
                     </Button>
                     {keypad.map((key) => (
                         <Button
