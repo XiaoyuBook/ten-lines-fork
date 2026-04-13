@@ -548,29 +548,41 @@ export default function CalibrationForm({
     }
 
     return (
-        <Box sx={{ ...sx, width: "100%" }}>
+        <Box
+            sx={{
+                ...sx,
+                width: "100%",
+                position: "relative",
+                overflow: "visible",
+            }}
+        >
             <Box
                 sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                        xs: "minmax(0, 1fr)",
-                        lg: "minmax(280px, 390px) minmax(0, 1100px) minmax(280px, 390px)",
-                    },
-                    gap: 2,
-                    alignItems: "flex-start",
-                    justifyContent: "center",
+                    width: "100%",
                 }}
             >
                 <Box
                     sx={{
                         display: {
                             xs: compareSettings.enabled ? "block" : "none",
-                            lg:
-                                compareSettings.enabled &&
-                                compareSettings.position === "left"
-                                    ? "block"
-                                    : "none",
+                            lg: compareSettings.enabled ? "block" : "none",
                         },
+                        position: { xs: "static", lg: "absolute" },
+                        top: { lg: 0 },
+                        left: {
+                            lg:
+                                compareSettings.position === "left"
+                                    ? "calc(-390px - 24px)"
+                                    : "auto",
+                        },
+                        right: {
+                            lg:
+                                compareSettings.position === "right"
+                                    ? "calc(-390px - 24px)"
+                                    : "auto",
+                        },
+                        width: { xs: "100%", lg: 390 },
+                        mb: { xs: 2, lg: 0 },
                     }}
                 >
                     <CalibrationComparePanel
@@ -1204,37 +1216,6 @@ export default function CalibrationForm({
                         />
                     </Box>
                 </Paper>
-
-                <Box
-                    sx={{
-                        display: {
-                            xs: "none",
-                            lg:
-                                compareSettings.enabled &&
-                                compareSettings.position === "right"
-                                    ? "block"
-                                    : "none",
-                        },
-                    }}
-                >
-                    <CalibrationComparePanel
-                        targetEntry={compareTarget}
-                        historyEntries={compareHistory}
-                        settings={{
-                            ...compareSettings,
-                            visibleColumns: orderedVisibleColumns,
-                        }}
-                        gameConsole={gameConsole}
-                        onDeleteTarget={deleteCompareTarget}
-                        onDeleteHistoryEntry={(id) => {
-                            setCompareHistory((history) =>
-                                history.filter((entry) => entry.id !== id)
-                            );
-                        }}
-                        onClearAll={clearCompareEntries}
-                        onOpenSettings={() => setCompareSettingsOpen(true)}
-                    />
-                </Box>
             </Box>
 
             <Dialog

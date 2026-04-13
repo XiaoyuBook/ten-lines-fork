@@ -345,7 +345,12 @@ export default function CalibrationComparePanel({
                                 onClick={onOpenSettings}
                                 aria-label={t("compare.settings")}
                             >
-                                {t("compare.settingsShort")}
+                                <Box
+                                    component="span"
+                                    sx={{ fontSize: "1.05rem", lineHeight: 1 }}
+                                >
+                                    ⚙
+                                </Box>
                             </IconButton>
                         </Tooltip>
                         <Tooltip title={t("compare.clearAll")}>
@@ -355,7 +360,12 @@ export default function CalibrationComparePanel({
                                 aria-label={t("compare.clearAll")}
                                 disabled={!targetEntry && historyEntries.length === 0}
                             >
-                                {t("compare.clearShort")}
+                                <Box
+                                    component="span"
+                                    sx={{ fontSize: "1.05rem", lineHeight: 1 }}
+                                >
+                                    🧹
+                                </Box>
                             </IconButton>
                         </Tooltip>
                     </Box>
