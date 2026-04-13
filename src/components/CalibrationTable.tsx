@@ -1,11 +1,18 @@
-import Paper from "@mui/material/Paper";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import { memo } from "react";
+import {
+    Button,
+    ButtonGroup,
+    Menu,
+    MenuItem,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+} from "@mui/material";
+import { memo, useState } from "react";
+
 import { getName, useI18n } from "../i18n";
 import { frameToMS, hexSeed } from "../tenLines";
 import type {
@@ -14,6 +21,8 @@ import type {
     FRLGContiguousSeedEntry,
 } from "../tenLines/generated";
 
+import type { CalibrationResultRow } from "./CalibrationComparePanel";
+
 const CalibrationTable = memo(function CalibrationTable({
     rows,
     target,
@@ -21,6 +30,9 @@ const CalibrationTable = memo(function CalibrationTable({
     isStatic,
     isMultiMethod,
     isTeachyTVMode,
+    compareEntryCount,
+    onAddToTarget,
+    onAddToHistory,
 }: {
     rows: ExtendedGeneratorState[] | ExtendedWildGeneratorState[];
     target: FRLGContiguousSeedEntry;
@@ -28,14 +40,39 @@ const CalibrationTable = memo(function CalibrationTable({
     isStatic: boolean;
     isMultiMethod: boolean;
     isTeachyTVMode: boolean;
+    compareEntryCount: number;
+    onAddToTarget: (row: CalibrationResultRow) => void;
+    onAddToHistory: (row: CalibrationResultRow) => void;
 }) {
     const { t, resources } = useI18n();
+    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+    const [menuRow, setMenuRow] = useState<CalibrationResultRow | null>(null);
+
+    const defaultAddToTarget = compareEntryCount === 0;
+
+    const closeMenu = () => {
+        setMenuAnchor(null);
+        setMenuRow(null);
+    };
+
+    const handleAdd = (
+        row: CalibrationResultRow,
+        destination: "target" | "history"
+    ) => {
+        if (destination === "target") {
+            onAddToTarget(row);
+        } else {
+            onAddToHistory(row);
+        }
+        closeMenu();
+    };
 
     return (
         <TableContainer component={Paper}>
             <Table>
                 <TableHead>
                     <TableRow>
+                        <TableCell>{t("table.actions")}</TableCell>
                         <TableCell>{t("table.seed")}</TableCell>
                         <TableCell>{t("table.advances")}</TableCell>
                         {isMultiMethod && <TableCell>{t("table.method")}</TableCell>}
@@ -70,6 +107,35 @@ const CalibrationTable = memo(function CalibrationTable({
 
                         return (
                             <TableRow key={index}>
+                                <TableCell>
+                                    <ButtonGroup size="small" variant="outlined">
+                                        <Button
+                                            variant="contained"
+                                            onClick={() =>
+                                                handleAdd(
+                                                    row,
+                                                    defaultAddToTarget
+                                                        ? "target"
+                                                        : "history"
+                                                )
+                                            }
+                                        >
+                                            {t(
+                                                defaultAddToTarget
+                                                    ? "compare.addToTarget"
+                                                    : "compare.addToHistory"
+                                            )}
+                                        </Button>
+                                        <Button
+                                            onClick={(event) => {
+                                                setMenuAnchor(event.currentTarget);
+                                                setMenuRow(row);
+                                            }}
+                                        >
+                                            v
+                                        </Button>
+                                    </ButtonGroup>
+                                </TableCell>
                                 <TableCell>
                                     <div style={{ float: "left" }}>
                                         {hexSeed(row.initialSeed, 16)} | {seedMS}
@@ -127,6 +193,26 @@ const CalibrationTable = memo(function CalibrationTable({
                     })}
                 </TableBody>
             </Table>
+            <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+                <MenuItem
+                    onClick={() => {
+                        if (menuRow) {
+                            handleAdd(menuRow, "target");
+                        }
+                    }}
+                >
+                    {t("compare.addToTarget")}
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        if (menuRow) {
+                            handleAdd(menuRow, "history");
+                        }
+                    }}
+                >
+                    {t("compare.addToHistory")}
+                </MenuItem>
+            </Menu>
         </TableContainer>
     );
 });

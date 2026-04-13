@@ -1,0 +1,487 @@
+import {
+    Box,
+    Chip,
+    Divider,
+    IconButton,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Tooltip,
+    Typography,
+} from "@mui/material";
+
+import { getName, useI18n } from "../i18n";
+import { frameToMS, hexSeed } from "../tenLines";
+import type {
+    ExtendedGeneratorState,
+    ExtendedWildGeneratorState,
+} from "../tenLines/generated";
+
+export type CalibrationResultRow =
+    | ExtendedGeneratorState
+    | ExtendedWildGeneratorState;
+
+export type CalibrationCompareColumn =
+    | "seed"
+    | "advances"
+    | "pid"
+    | "shiny"
+    | "nature"
+    | "ability"
+    | "ivs"
+    | "hidden"
+    | "power"
+    | "gender";
+
+export type CalibrationCompareMode = "target" | "previous";
+export type CalibrationComparePosition = "left" | "right";
+
+export interface CalibrationCompareSettings {
+    enabled: boolean;
+    position: CalibrationComparePosition;
+    compareMode: CalibrationCompareMode;
+    visibleColumns: CalibrationCompareColumn[];
+}
+
+export interface CalibrationCompareEntry {
+    id: string;
+    row: CalibrationResultRow;
+}
+
+export const DEFAULT_COMPARE_COLUMNS: CalibrationCompareColumn[] = [
+    "seed",
+    "advances",
+    "pid",
+    "nature",
+    "ivs",
+    "hidden",
+    "power",
+];
+
+function formatSignedDelta(value: number) {
+    if (value === 0) {
+        return "0";
+    }
+    return `${value > 0 ? "+" : ""}${value}`;
+}
+
+function getDeltaColor(value: number) {
+    if (value > 0) {
+        return "success.main";
+    }
+    if (value < 0) {
+        return "error.main";
+    }
+    return "text.secondary";
+}
+
+function getAbilityText(
+    row: CalibrationResultRow,
+    resources: ReturnType<typeof useI18n>["resources"]
+) {
+    return `${row.ability}: ${resources.abilities[row.abilityIndex - 1]}`;
+}
+
+function getColumnValue(
+    column: CalibrationCompareColumn,
+    row: CalibrationResultRow,
+    resources: ReturnType<typeof useI18n>["resources"]
+) {
+    switch (column) {
+        case "seed":
+            return hexSeed(row.initialSeed, 16);
+        case "advances":
+            return String(row.advances);
+        case "pid":
+            return hexSeed(row.pid, 32);
+        case "shiny":
+            return resources.shininess[row.shiny];
+        case "nature":
+            return resources.natures[row.nature];
+        case "ability":
+            return getAbilityText(row, resources);
+        case "ivs":
+            return row.ivs.join("/");
+        case "hidden":
+            return resources.types[row.hiddenPower];
+        case "power":
+            return String(row.hiddenPowerStrength);
+        case "gender":
+            return resources.genders[row.gender];
+    }
+}
+
+function CompareCell({
+    column,
+    row,
+    baseline,
+    gameConsole,
+}: {
+    column: CalibrationCompareColumn;
+    row: CalibrationResultRow;
+    baseline: CalibrationResultRow | null;
+    gameConsole: string;
+}) {
+    const { t, resources } = useI18n();
+
+    if (column === "seed") {
+        const delta = baseline
+            ? frameToMS(row.seedTime / 16, gameConsole) -
+              frameToMS(baseline.seedTime / 16, gameConsole)
+            : null;
+
+        return (
+            <Box>
+                <Typography variant="body2" fontWeight={600}>
+                    {hexSeed(row.initialSeed, 16)}
+                </Typography>
+                {delta !== null && (
+                    <Typography
+                        variant="caption"
+                        sx={{ color: getDeltaColor(delta) }}
+                    >
+                        ({formatSignedDelta(delta)}
+                        {t("messages.ms")})
+                    </Typography>
+                )}
+            </Box>
+        );
+    }
+
+    if (column === "advances") {
+        const delta = baseline ? row.advances - baseline.advances : null;
+
+        return (
+            <Box>
+                <Typography variant="body2" fontWeight={600}>
+                    {row.advances}
+                </Typography>
+                {delta !== null && (
+                    <Typography
+                        variant="caption"
+                        sx={{ color: getDeltaColor(delta) }}
+                    >
+                        ({formatSignedDelta(delta)})
+                    </Typography>
+                )}
+            </Box>
+        );
+    }
+
+    return <>{getColumnValue(column, row, resources)}</>;
+}
+
+function TargetSummary({
+    entry,
+    visibleColumns,
+    gameConsole,
+    onDelete,
+}: {
+    entry: CalibrationCompareEntry;
+    visibleColumns: CalibrationCompareColumn[];
+    gameConsole: string;
+    onDelete: () => void;
+}) {
+    const { t, resources } = useI18n();
+
+    return (
+        <Paper
+            variant="outlined"
+            sx={{
+                p: 2,
+                borderRadius: 3,
+                borderColor: "primary.main",
+                background:
+                    "linear-gradient(135deg, rgba(25,118,210,0.22), rgba(25,118,210,0.08))",
+            }}
+        >
+            <Box
+                sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 1,
+                }}
+            >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Chip
+                        label={t("compare.target")}
+                        color="primary"
+                        size="small"
+                    />
+                    {"species" in entry.row && (
+                        <Typography variant="body2" color="text.secondary">
+                            {getName(
+                                resources,
+                                entry.row.species,
+                                entry.row.form
+                            )}
+                        </Typography>
+                    )}
+                </Box>
+                <Tooltip title={t("compare.deleteTarget")}>
+                    <IconButton
+                        size="small"
+                        color="inherit"
+                        onClick={onDelete}
+                        aria-label={t("compare.deleteTarget")}
+                    >
+                        x
+                    </IconButton>
+                </Tooltip>
+            </Box>
+            <Box
+                sx={{
+                    mt: 1.5,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                    gap: 1.25,
+                }}
+            >
+                {visibleColumns.map((column) => (
+                    <Box
+                        key={column}
+                        sx={{
+                            px: 1.25,
+                            py: 1,
+                            borderRadius: 2,
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                            textAlign: "left",
+                        }}
+                    >
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", mb: 0.5 }}
+                        >
+                            {t(`table.${column}`)}
+                        </Typography>
+                        <Box sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
+                            <CompareCell
+                                column={column}
+                                row={entry.row}
+                                baseline={null}
+                                gameConsole={gameConsole}
+                            />
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+        </Paper>
+    );
+}
+
+export default function CalibrationComparePanel({
+    targetEntry,
+    historyEntries,
+    settings,
+    gameConsole,
+    onDeleteTarget,
+    onDeleteHistoryEntry,
+    onClearAll,
+    onOpenSettings,
+}: {
+    targetEntry: CalibrationCompareEntry | null;
+    historyEntries: CalibrationCompareEntry[];
+    settings: CalibrationCompareSettings;
+    gameConsole: string;
+    onDeleteTarget: () => void;
+    onDeleteHistoryEntry: (id: string) => void;
+    onClearAll: () => void;
+    onOpenSettings: () => void;
+}) {
+    const { t } = useI18n();
+
+    if (!settings.enabled) {
+        return null;
+    }
+
+    return (
+        <Paper
+            variant="outlined"
+            sx={{
+                width: { xs: "100%", lg: 390 },
+                minWidth: 0,
+                borderRadius: 4,
+                overflow: "hidden",
+                background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+                borderColor: "rgba(255,255,255,0.12)",
+            }}
+        >
+            <Box sx={{ p: 2 }}>
+                <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 1,
+                    }}
+                >
+                    <Box>
+                        <Typography variant="h6" sx={{ textAlign: "left" }}>
+                            {t("compare.title")}
+                        </Typography>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", textAlign: "left" }}
+                        >
+                            {t(
+                                settings.compareMode === "target"
+                                    ? "compare.modeTarget"
+                                    : "compare.modePrevious"
+                            )}
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                        <Tooltip title={t("compare.settings")}>
+                            <IconButton
+                                size="small"
+                                onClick={onOpenSettings}
+                                aria-label={t("compare.settings")}
+                            >
+                                {t("compare.settingsShort")}
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t("compare.clearAll")}>
+                            <IconButton
+                                size="small"
+                                onClick={onClearAll}
+                                aria-label={t("compare.clearAll")}
+                                disabled={!targetEntry && historyEntries.length === 0}
+                            >
+                                {t("compare.clearShort")}
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                    {targetEntry ? (
+                        <TargetSummary
+                            entry={targetEntry}
+                            visibleColumns={settings.visibleColumns}
+                            gameConsole={gameConsole}
+                            onDelete={onDeleteTarget}
+                        />
+                    ) : (
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                p: 2,
+                                borderRadius: 3,
+                                textAlign: "left",
+                                borderStyle: "dashed",
+                                color: "text.secondary",
+                            }}
+                        >
+                            <Typography variant="body2">
+                                {t("compare.emptyTarget")}
+                            </Typography>
+                        </Paper>
+                    )}
+                </Box>
+            </Box>
+
+            <Divider />
+
+            <Box sx={{ p: 2 }}>
+                <Typography
+                    variant="subtitle2"
+                    sx={{ textAlign: "left", mb: 1.25 }}
+                >
+                    {t("compare.history")}
+                </Typography>
+                {historyEntries.length === 0 ? (
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ textAlign: "left" }}
+                    >
+                        {t("compare.emptyHistory")}
+                    </Typography>
+                ) : (
+                    <TableContainer
+                        component={Box}
+                        sx={{
+                            maxHeight: 520,
+                            overflow: "auto",
+                            borderRadius: 3,
+                            border: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                    >
+                        <Table stickyHeader size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell width={52}>
+                                        {t("compare.delete")}
+                                    </TableCell>
+                                    <TableCell width={76}>
+                                        {t("compare.record")}
+                                    </TableCell>
+                                    {settings.visibleColumns.map((column) => (
+                                        <TableCell key={column}>
+                                            {t(`table.${column}`)}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {historyEntries.map((entry, index) => {
+                                    const baseline =
+                                        settings.compareMode === "previous"
+                                            ? index === 0
+                                                ? targetEntry?.row ?? null
+                                                : historyEntries[index - 1].row
+                                            : targetEntry?.row ?? null;
+
+                                    return (
+                                        <TableRow key={entry.id} hover>
+                                            <TableCell>
+                                                <Tooltip title={t("compare.delete")}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() =>
+                                                            onDeleteHistoryEntry(entry.id)
+                                                        }
+                                                        aria-label={t("compare.delete")}
+                                                    >
+                                                        x
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={`#${index + 1}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
+                                            </TableCell>
+                                            {settings.visibleColumns.map((column) => (
+                                                <TableCell
+                                                    key={`${entry.id}-${column}`}
+                                                >
+                                                    <CompareCell
+                                                        column={column}
+                                                        row={entry.row}
+                                                        baseline={baseline}
+                                                        gameConsole={gameConsole}
+                                                    />
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
+            </Box>
+        </Paper>
+    );
+}
