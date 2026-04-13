@@ -369,12 +369,6 @@ export default function CalibrationForm({
     };
 
     const deleteCompareTarget = () => {
-        if (compareHistory.length > 0) {
-            const [nextTarget, ...remainingHistory] = compareHistory;
-            setCompareTarget(nextTarget);
-            setCompareHistory(remainingHistory);
-            return;
-        }
         setCompareTarget(null);
     };
 
@@ -1209,9 +1203,7 @@ export default function CalibrationForm({
                             isMultiMethod={
                                 calibrationFormState.method == COMBINED_WILD_METHOD
                             }
-                            compareEntryCount={
-                                (compareTarget ? 1 : 0) + compareHistory.length
-                            }
+                            hasTarget={Boolean(compareTarget)}
                             onAddToTarget={addCompareTarget}
                             onAddToHistory={addCompareHistory}
                         />

@@ -1,6 +1,7 @@
 import {
+    Box,
     Button,
-    ButtonGroup,
+    IconButton,
     Menu,
     MenuItem,
     Paper,
@@ -10,6 +11,7 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    Tooltip,
 } from "@mui/material";
 import { memo, useState } from "react";
 
@@ -30,7 +32,7 @@ const CalibrationTable = memo(function CalibrationTable({
     isStatic,
     isMultiMethod,
     isTeachyTVMode,
-    compareEntryCount,
+    hasTarget,
     onAddToTarget,
     onAddToHistory,
 }: {
@@ -40,7 +42,7 @@ const CalibrationTable = memo(function CalibrationTable({
     isStatic: boolean;
     isMultiMethod: boolean;
     isTeachyTVMode: boolean;
-    compareEntryCount: number;
+    hasTarget: boolean;
     onAddToTarget: (row: CalibrationResultRow) => void;
     onAddToHistory: (row: CalibrationResultRow) => void;
 }) {
@@ -48,7 +50,7 @@ const CalibrationTable = memo(function CalibrationTable({
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
     const [menuRow, setMenuRow] = useState<CalibrationResultRow | null>(null);
 
-    const defaultAddToTarget = compareEntryCount === 0;
+    const defaultAddToTarget = !hasTarget;
 
     const closeMenu = () => {
         setMenuAnchor(null);
@@ -72,7 +74,9 @@ const CalibrationTable = memo(function CalibrationTable({
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>{t("table.actions")}</TableCell>
+                        <TableCell width={72} align="center">
+                            {t("table.actions")}
+                        </TableCell>
                         <TableCell>{t("table.seed")}</TableCell>
                         <TableCell>{t("table.advances")}</TableCell>
                         {isMultiMethod && <TableCell>{t("table.method")}</TableCell>}
@@ -107,34 +111,94 @@ const CalibrationTable = memo(function CalibrationTable({
 
                         return (
                             <TableRow key={index}>
-                                <TableCell>
-                                    <ButtonGroup size="small" variant="outlined">
-                                        <Button
-                                            variant="contained"
-                                            onClick={() =>
-                                                handleAdd(
-                                                    row,
-                                                    defaultAddToTarget
-                                                        ? "target"
-                                                        : "history"
-                                                )
-                                            }
-                                        >
-                                            {t(
+                                <TableCell align="center">
+                                    <Box
+                                        sx={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 0.5,
+                                            p: 0.25,
+                                            borderRadius: 999,
+                                            border: "1px solid rgba(144,202,249,0.28)",
+                                            backgroundColor: "rgba(144,202,249,0.08)",
+                                        }}
+                                    >
+                                        <Tooltip
+                                            title={t(
                                                 defaultAddToTarget
                                                     ? "compare.addToTarget"
                                                     : "compare.addToHistory"
                                             )}
-                                        </Button>
-                                        <Button
-                                            onClick={(event) => {
-                                                setMenuAnchor(event.currentTarget);
-                                                setMenuRow(row);
-                                            }}
                                         >
-                                            v
-                                        </Button>
-                                    </ButtonGroup>
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
+                                                aria-label={t(
+                                                    defaultAddToTarget
+                                                        ? "compare.addToTarget"
+                                                        : "compare.addToHistory"
+                                                )}
+                                                sx={{
+                                                    width: 28,
+                                                    height: 28,
+                                                    borderRadius: 999,
+                                                    backgroundColor:
+                                                        "primary.main",
+                                                    color: "primary.contrastText",
+                                                    "&:hover": {
+                                                        backgroundColor:
+                                                            "primary.dark",
+                                                    },
+                                                }}
+                                                onClick={() =>
+                                                    handleAdd(
+                                                        row,
+                                                        defaultAddToTarget
+                                                            ? "target"
+                                                            : "history"
+                                                    )
+                                                }
+                                            >
+                                                <Box
+                                                    component="span"
+                                                    sx={{
+                                                        fontSize: "1.05rem",
+                                                        fontWeight: 700,
+                                                        lineHeight: 1,
+                                                    }}
+                                                >
+                                                    +
+                                                </Box>
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title={t("compare.moreActions")}>
+                                            <Button
+                                                size="small"
+                                                variant="text"
+                                                color="primary"
+                                                aria-label={t("compare.moreActions")}
+                                                sx={{
+                                                    minWidth: 24,
+                                                    px: 0.5,
+                                                    borderRadius: 999,
+                                                }}
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    setMenuAnchor(
+                                                        event.currentTarget
+                                                    );
+                                                    setMenuRow(row);
+                                                }}
+                                            >
+                                                <Box
+                                                    component="span"
+                                                    sx={{ fontSize: "0.75rem" }}
+                                                >
+                                                    v
+                                                </Box>
+                                            </Button>
+                                        </Tooltip>
+                                    </Box>
                                 </TableCell>
                                 <TableCell>
                                     <div style={{ float: "left" }}>

@@ -233,8 +233,21 @@ function TargetSummary({
                         color="inherit"
                         onClick={onDelete}
                         aria-label={t("compare.deleteTarget")}
+                        sx={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: 999,
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                            "&:hover": {
+                                backgroundColor: "rgba(244,67,54,0.16)",
+                                borderColor: "rgba(244,67,54,0.45)",
+                            },
+                        }}
                     >
-                        x
+                        <Box component="span" sx={{ fontSize: "0.95rem" }}>
+                            🗑
+                        </Box>
                     </IconButton>
                 </Tooltip>
             </Box>
@@ -588,9 +601,7 @@ export default function CalibrationComparePanel({
                         <Table stickyHeader size="small">
                             <TableHead>
                                 <TableRow>
-                                    <TableCell width={52}>
-                                        {t("compare.delete")}
-                                    </TableCell>
+                                    <TableCell width={52} align="center"></TableCell>
                                     <TableCell width={76}>
                                         {t("compare.record")}
                                     </TableCell>
@@ -620,8 +631,30 @@ export default function CalibrationComparePanel({
                                                             onDeleteHistoryEntry(entry.id)
                                                         }
                                                         aria-label={t("compare.delete")}
+                                                        sx={{
+                                                            width: 28,
+                                                            height: 28,
+                                                            borderRadius: 999,
+                                                            border:
+                                                                "1px solid rgba(255,255,255,0.12)",
+                                                            backgroundColor:
+                                                                "rgba(255,255,255,0.04)",
+                                                            "&:hover": {
+                                                                backgroundColor:
+                                                                    "rgba(244,67,54,0.16)",
+                                                                borderColor:
+                                                                    "rgba(244,67,54,0.45)",
+                                                            },
+                                                        }}
                                                     >
-                                                        x
+                                                        <Box
+                                                            component="span"
+                                                            sx={{
+                                                                fontSize: "0.9rem",
+                                                            }}
+                                                        >
+                                                            🗑
+                                                        </Box>
                                                     </IconButton>
                                                 </Tooltip>
                                             </TableCell>
