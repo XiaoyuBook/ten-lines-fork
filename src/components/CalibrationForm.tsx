@@ -74,6 +74,7 @@ const DEFAULT_COMPARE_SETTINGS: CalibrationCompareSettings = {
     position: "right",
     compareMode: "target",
     visibleColumns: DEFAULT_COMPARE_COLUMNS,
+    calculatorEnabled: false,
 };
 
 export interface CalibrationFormState {
@@ -1244,6 +1245,21 @@ export default function CalibrationForm({
                                     />
                                 }
                                 label={t("compare.enable")}
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={compareSettings.calculatorEnabled}
+                                        onChange={(event) =>
+                                            setCompareSettings((current: CalibrationCompareSettings) => ({
+                                                ...current,
+                                                calculatorEnabled:
+                                                    event.target.checked,
+                                            }))
+                                        }
+                                    />
+                                }
+                                label={t("compare.enableCalculator")}
                             />
                             <TextField
                                 label={t("compare.position")}

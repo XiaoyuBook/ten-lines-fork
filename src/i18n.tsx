@@ -334,6 +334,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             emptyHistory: "Historical results added later will appear here.",
             display: "Display",
             enable: "Enable compare table",
+            enableCalculator: "Enable calculator",
             position: "Panel Position",
             positionLeft: "Left",
             positionRight: "Right",
@@ -344,6 +345,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             addToTarget: "Add to Target",
             addToHistory: "Add to History",
             resultsTitle: "Calibration Results",
+            calculator: "Calculator",
         },
         messages: {
             noKnownSeeds: "No known seeds for this game & settings",
@@ -569,6 +571,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u540e\u7eed\u52a0\u5165\u7684\u5386\u53f2\u6570\u636e\u4f1a\u663e\u793a\u5728\u8fd9\u91cc\u3002",
             display: "\u663e\u793a",
             enable: "\u542f\u7528\u5bf9\u7167\u8868",
+            enableCalculator: "\u542f\u7528\u8ba1\u7b97\u5668",
             position: "\u8868\u683c\u4f4d\u7f6e",
             positionLeft: "\u5de6\u4fa7",
             positionRight: "\u53f3\u4fa7",
@@ -579,6 +582,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             addToTarget: "\u52a0\u5230\u76ee\u6807",
             addToHistory: "\u52a0\u5230\u5386\u53f2",
             resultsTitle: "\u6821\u51c6\u7ed3\u679c",
+            calculator: "\u8ba1\u7b97\u5668",
         },
         messages: {
             noKnownSeeds:

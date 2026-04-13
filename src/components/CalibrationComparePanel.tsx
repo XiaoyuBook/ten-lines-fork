@@ -1,5 +1,6 @@
 import {
     Box,
+    Button,
     Chip,
     Divider,
     IconButton,
@@ -13,6 +14,7 @@ import {
     Tooltip,
     Typography,
 } from "@mui/material";
+import { useState } from "react";
 
 import { getName, useI18n } from "../i18n";
 import { frameToMS, hexSeed } from "../tenLines";
@@ -45,6 +47,7 @@ export interface CalibrationCompareSettings {
     position: CalibrationComparePosition;
     compareMode: CalibrationCompareMode;
     visibleColumns: CalibrationCompareColumn[];
+    calculatorEnabled: boolean;
 }
 
 export interface CalibrationCompareEntry {
@@ -275,6 +278,128 @@ function TargetSummary({
     );
 }
 
+function evaluateExpression(expression: string) {
+    const sanitized = expression.replace(/\s+/g, "");
+    if (!sanitized) {
+        return "";
+    }
+    if (!/^[\d.+\-*/()]+$/.test(sanitized)) {
+        return "ERR";
+    }
+    try {
+        const result = Function(`"use strict"; return (${sanitized});`)();
+        if (typeof result !== "number" || !Number.isFinite(result)) {
+            return "ERR";
+        }
+        return Number.isInteger(result) ? String(result) : result.toFixed(4).replace(/\.?0+$/, "");
+    } catch {
+        return "ERR";
+    }
+}
+
+function CompareCalculator() {
+    const { t } = useI18n();
+    const [expression, setExpression] = useState("");
+
+    const appendValue = (value: string) => {
+        setExpression((current) => `${current}${value}`);
+    };
+
+    const result = evaluateExpression(expression);
+    const keypad = [
+        "7",
+        "8",
+        "9",
+        "/",
+        "4",
+        "5",
+        "6",
+        "*",
+        "1",
+        "2",
+        "3",
+        "-",
+        "0",
+        ".",
+        "(",
+        ")",
+    ];
+
+    return (
+        <Box sx={{ p: 2 }}>
+            <Typography
+                variant="subtitle2"
+                sx={{ textAlign: "left", mb: 1.25 }}
+            >
+                {t("compare.calculator")}
+            </Typography>
+            <Paper
+                variant="outlined"
+                sx={{
+                    p: 1.5,
+                    borderRadius: 3,
+                    backgroundColor: "rgba(255,255,255,0.02)",
+                }}
+            >
+                <Box
+                    sx={{
+                        minHeight: 56,
+                        p: 1.25,
+                        borderRadius: 2,
+                        backgroundColor: "rgba(0,0,0,0.28)",
+                        textAlign: "right",
+                    }}
+                >
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ minHeight: 22, overflowWrap: "anywhere" }}
+                    >
+                        {expression || "0"}
+                    </Typography>
+                    <Typography variant="h6">{result || "0"}</Typography>
+                </Box>
+                <Box
+                    sx={{
+                        mt: 1.5,
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                        gap: 1,
+                    }}
+                >
+                    <Button
+                        variant="outlined"
+                        onClick={() => setExpression("")}
+                        sx={{ gridColumn: "span 2" }}
+                    >
+                        {t("compare.clearShort")}
+                    </Button>
+                    <Button variant="outlined" onClick={() => appendValue("+")}>
+                        +
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        onClick={() =>
+                            setExpression((current) => current.slice(0, -1))
+                        }
+                    >
+                        ←
+                    </Button>
+                    {keypad.map((key) => (
+                        <Button
+                            key={key}
+                            variant="outlined"
+                            onClick={() => appendValue(key)}
+                        >
+                            {key}
+                        </Button>
+                    ))}
+                </Box>
+            </Paper>
+        </Box>
+    );
+}
+
 export default function CalibrationComparePanel({
     targetEntry,
     historyEntries,
@@ -364,7 +489,7 @@ export default function CalibrationComparePanel({
                                     component="span"
                                     sx={{ fontSize: "1.05rem", lineHeight: 1 }}
                                 >
-                                    🧹
+                                    🗑
                                 </Box>
                             </IconButton>
                         </Tooltip>
@@ -492,6 +617,12 @@ export default function CalibrationComparePanel({
                     </TableContainer>
                 )}
             </Box>
+            {settings.calculatorEnabled && (
+                <>
+                    <Divider />
+                    <CompareCalculator />
+                </>
+            )}
         </Paper>
     );
 }
