@@ -69,6 +69,12 @@ const parseMap = (text: string) =>
         })
     );
 
+const EN_NATURES = parseList(natures_en_txt);
+const ZH_NATURES = parseList(natures_zh_txt).map((nature, index) => {
+    const english = EN_NATURES[index];
+    return english ? `${nature} (${english})` : nature;
+});
+
 const RESOURCES: Record<Locale, ResourceBundle> = {
     en: {
         methods: {
@@ -123,7 +129,7 @@ const RESOURCES: Record<Locale, ResourceBundle> = {
         },
         genders: ["\u2642", "\u2640", "-"],
         shininess: ["\u5426", "\u661f\u95ea", "\u65b9\u95ea"],
-        natures: parseList(natures_zh_txt),
+        natures: ZH_NATURES,
         abilities: parseList(abilities_zh_txt),
         species: ["\u86cb", ...parseList(species_zh_txt)],
         forms: Object.fromEntries(

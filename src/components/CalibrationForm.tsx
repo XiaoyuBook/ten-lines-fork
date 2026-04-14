@@ -564,12 +564,17 @@ export default function CalibrationForm({
                 ...sx,
                 width: "100%",
                 position: "relative",
-                overflow: "visible",
+                overflowX: "auto",
+                overflowY: "visible",
             }}
         >
             <Box
                 sx={{
                     width: "100%",
+                    minWidth: {
+                        xs: "100%",
+                        lg: compareSettings.enabled ? 1120 : 0,
+                    },
                 }}
             >
                 <Box
@@ -583,13 +588,13 @@ export default function CalibrationForm({
                         left: {
                             lg:
                                 compareSettings.position === "left"
-                                    ? "calc(-390px - 24px)"
+                                    ? "max(calc(-390px - 24px), calc(940px - 100vw))"
                                     : "auto",
                         },
                         right: {
                             lg:
                                 compareSettings.position === "right"
-                                    ? "calc(-390px - 24px)"
+                                    ? "max(calc(-390px - 24px), calc(940px - 100vw))"
                                     : "auto",
                         },
                         width: { xs: "100%", lg: 390 },
@@ -618,8 +623,8 @@ export default function CalibrationForm({
                 <Paper
                     variant="outlined"
                     sx={{
-                        width: "100%",
-                        minWidth: 0,
+                        width: { xs: "100%", lg: "min(1100px, 100%)" },
+                        minWidth: { xs: 0, lg: 720 },
                         borderRadius: 4,
                         p: { xs: 1.5, sm: 2.5 },
                         background:
