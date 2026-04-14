@@ -17,6 +17,8 @@ Original upstream project:
 - The UI now supports **English / Chinese language switching**
 - Core in-game naming resources can now render in **Chinese**, including species, natures, abilities, types, and locations
 - Chinese UI terminology was cleaned up to better match common community naming and PokeWiki usage
+- Calibration now includes a **target / history comparison panel** with quick-add workflow, column visibility controls, delta display, floating window mode, and an optional calculator
+- Calibration search now runs **manually on submit**, avoiding repeated automatic reruns while users are still entering values
 - Build flow supports **offline cached FRLG seed data**
 - Vite base path is configurable so the site can be deployed cleanly on a custom domain or subdomain
 
@@ -35,6 +37,7 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - FRLG / RSE search tools
 - Initial Seed lookup
 - Calibration tools
+- Calibration compare panel with target/history tracking, delta readouts, floating mode, and optional calculator
 - Reachable-advance prefiltering in Searcher
 - English / Chinese UI toggle
 - Chinese naming resources for Gen 3 data shown in the interface
@@ -47,6 +50,15 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - Language choice is stored locally in the browser and persists across reloads
 - Chinese text is intended to follow established Pokémon community terminology where practical
 - Imported game data names are sourced from bundled PokeFinder i18n resources, while UI copy is maintained in the web app layer
+- In Chinese mode, natures are shown with their English counterpart in parentheses for easier cross-reference
+
+## Calibration Notes
+
+- Calibration results can be added directly into a compare panel as either a target or history entry
+- History rows can compare against either the target or the previous history row for Seed and advance deltas
+- Compare panel columns are configurable, and the panel can be docked or switched into a draggable floating window
+- The floating compare panel includes an optional built-in calculator for quick frame and timing math
+- Calibration searches now run only when you press submit, which helps avoid UI stalls while editing input values
 
 ## Building Locally
 
