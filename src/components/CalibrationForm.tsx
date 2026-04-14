@@ -1,5 +1,5 @@
 import { proxy } from "comlink";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Alert,
     Autocomplete,
@@ -77,6 +77,17 @@ const DEFAULT_COMPARE_SETTINGS: CalibrationCompareSettings = {
     compareMode: "target",
     visibleColumns: DEFAULT_COMPARE_COLUMNS,
     calculatorEnabled: false,
+};
+
+const FLOATING_COMPARE_DEFAULT_SIZE = {
+    width: 420,
+    height: 620,
+};
+
+const FLOATING_COMPARE_MIN_WIDTH = 360;
+const FLOATING_COMPARE_DEFAULT_POSITION = {
+    x: 24,
+    y: 88,
 };
 
 export interface CalibrationFormState {
@@ -255,6 +266,21 @@ export default function CalibrationForm({
     const [compareSettingsOpen, setCompareSettingsOpen] = useState(false);
     const [compareFeedback, setCompareFeedback] = useState("");
     const [compareFloating, setCompareFloating] = useState(false);
+    const [compareFloatingPosition, setCompareFloatingPosition] = useState(
+        FLOATING_COMPARE_DEFAULT_POSITION
+    );
+    const [compareFloatingSize, setCompareFloatingSize] = useState(
+        FLOATING_COMPARE_DEFAULT_SIZE
+    );
+    const compareFloatingFrameRef = useRef<{
+        mode: "drag" | "resize-right" | "resize-bottom" | "resize-corner";
+        pointerX: number;
+        pointerY: number;
+        startX: number;
+        startY: number;
+        startWidth: number;
+        startHeight: number;
+    } | null>(null);
 
     const [seedLeewayIsValid, setSeedLeewayIsValid] = useState(true);
     const seedLeeway = seedLeewayIsValid
@@ -363,6 +389,36 @@ export default function CalibrationForm({
     const orderedVisibleColumns = CALIBRATION_COMPARE_COLUMN_OPTIONS.filter(
         (column) => compareSettings.visibleColumns.includes(column)
     );
+    const compareFloatingMinHeight = compareSettings.calculatorEnabled
+        ? 520
+        : 400;
+
+    const clampFloatingPosition = (
+        x: number,
+        y: number,
+        width: number,
+        height: number
+    ) => ({
+        x: Math.min(
+            Math.max(12, x),
+            Math.max(12, window.innerWidth - width - 12)
+        ),
+        y: Math.min(
+            Math.max(12, y),
+            Math.max(12, window.innerHeight - height - 12)
+        ),
+    });
+
+    const clampFloatingSize = (width: number, height: number) => ({
+        width: Math.min(
+            Math.max(FLOATING_COMPARE_MIN_WIDTH, width),
+            Math.max(FLOATING_COMPARE_MIN_WIDTH, window.innerWidth - 24)
+        ),
+        height: Math.min(
+            Math.max(compareFloatingMinHeight, height),
+            Math.max(compareFloatingMinHeight, window.innerHeight - 24)
+        ),
+    });
 
     const addCompareTarget = (row: CalibrationResultRow) => {
         setCompareTarget(createCompareEntry(row));
@@ -392,6 +448,161 @@ export default function CalibrationForm({
     const clearCompareEntries = () => {
         setCompareTarget(null);
         setCompareHistory([]);
+    };
+
+    useEffect(() => {
+        if (!compareFloating) {
+            return undefined;
+        }
+
+        const handlePointerMove = (event: MouseEvent) => {
+            const frame = compareFloatingFrameRef.current;
+            if (!frame) {
+                return;
+            }
+
+            if (frame.mode === "drag") {
+                const nextPosition = clampFloatingPosition(
+                    frame.startX + (event.clientX - frame.pointerX),
+                    frame.startY + (event.clientY - frame.pointerY),
+                    compareFloatingSize.width,
+                    compareFloatingSize.height
+                );
+                setCompareFloatingPosition(nextPosition);
+                return;
+            }
+
+            const nextWidth =
+                frame.mode === "resize-bottom"
+                    ? frame.startWidth
+                    : frame.startWidth + (event.clientX - frame.pointerX);
+            const nextHeight =
+                frame.mode === "resize-right"
+                    ? frame.startHeight
+                    : frame.startHeight + (event.clientY - frame.pointerY);
+            const clampedSize = clampFloatingSize(nextWidth, nextHeight);
+
+            setCompareFloatingSize(clampedSize);
+            setCompareFloatingPosition((current) =>
+                clampFloatingPosition(
+                    current.x,
+                    current.y,
+                    clampedSize.width,
+                    clampedSize.height
+                )
+            );
+        };
+
+        const handlePointerUp = () => {
+            compareFloatingFrameRef.current = null;
+        };
+
+        window.addEventListener("mousemove", handlePointerMove);
+        window.addEventListener("mouseup", handlePointerUp);
+
+        return () => {
+            window.removeEventListener("mousemove", handlePointerMove);
+            window.removeEventListener("mouseup", handlePointerUp);
+        };
+    }, [compareFloating, compareFloatingMinHeight, compareFloatingSize.height, compareFloatingSize.width]);
+
+    useEffect(() => {
+        if (!compareFloating) {
+            return undefined;
+        }
+
+        const handleResize = () => {
+            setCompareFloatingSize((current) =>
+                clampFloatingSize(current.width, current.height)
+            );
+            setCompareFloatingPosition((current) =>
+                clampFloatingPosition(
+                    current.x,
+                    current.y,
+                    compareFloatingSize.width,
+                    compareFloatingSize.height
+                )
+            );
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
+    }, [compareFloating, compareFloatingMinHeight, compareFloatingSize.height, compareFloatingSize.width]);
+
+    useEffect(() => {
+        if (!compareFloating) {
+            return;
+        }
+        setCompareFloatingSize((current) =>
+            clampFloatingSize(current.width, current.height)
+        );
+    }, [compareFloating, compareFloatingMinHeight]);
+
+    const startCompareFloatingDrag = (
+        event: React.MouseEvent<HTMLDivElement>
+    ) => {
+        if (!compareFloating || event.button !== 0) {
+            return;
+        }
+        const target = event.target as HTMLElement;
+        if (target.closest("button")) {
+            return;
+        }
+        event.preventDefault();
+        compareFloatingFrameRef.current = {
+            mode: "drag",
+            pointerX: event.clientX,
+            pointerY: event.clientY,
+            startX: compareFloatingPosition.x,
+            startY: compareFloatingPosition.y,
+            startWidth: compareFloatingSize.width,
+            startHeight: compareFloatingSize.height,
+        };
+    };
+
+    const startCompareFloatingResize = (
+        mode: "resize-right" | "resize-bottom" | "resize-corner"
+    ) => (event: React.MouseEvent<HTMLDivElement>) => {
+        if (!compareFloating || event.button !== 0) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        compareFloatingFrameRef.current = {
+            mode,
+            pointerX: event.clientX,
+            pointerY: event.clientY,
+            startX: compareFloatingPosition.x,
+            startY: compareFloatingPosition.y,
+            startWidth: compareFloatingSize.width,
+            startHeight: compareFloatingSize.height,
+        };
+    };
+
+    const toggleCompareFloating = () => {
+        setCompareFloating((current) => {
+            const next = !current;
+            if (next) {
+                const clampedSize = clampFloatingSize(
+                    compareFloatingSize.width,
+                    compareFloatingSize.height
+                );
+                setCompareFloatingSize(clampedSize);
+                setCompareFloatingPosition((position) =>
+                    clampFloatingPosition(
+                        position.x,
+                        position.y,
+                        clampedSize.width,
+                        clampedSize.height
+                    )
+                );
+            } else {
+                compareFloatingFrameRef.current = null;
+            }
+            return next;
+        });
     };
 
     const toggleCompareColumn = (column: CalibrationCompareColumn) => {
@@ -583,11 +794,11 @@ export default function CalibrationForm({
                             xs: "static",
                             lg: compareFloating ? "fixed" : "absolute",
                         },
-                        top: { lg: compareFloating ? 88 : 0 },
+                        top: { lg: compareFloating ? compareFloatingPosition.y : 0 },
                         left: {
                             lg:
                                 compareFloating
-                                    ? "auto"
+                                    ? compareFloatingPosition.x
                                     : compareSettings.position === "left"
                                     ? "calc(-390px - 24px)"
                                     : "auto",
@@ -595,19 +806,23 @@ export default function CalibrationForm({
                         right: {
                             lg:
                                 compareFloating
-                                    ? 24
+                                    ? "auto"
                                     : compareSettings.position === "right"
                                     ? "calc(-390px - 24px)"
                                     : "auto",
                         },
-                        width: { xs: "100%", lg: compareFloating ? 420 : 390 },
-                        height: { lg: compareFloating ? 620 : "auto" },
-                        minWidth: { lg: compareFloating ? 320 : 0 },
-                        minHeight: { lg: compareFloating ? 280 : 0 },
-                        maxWidth: { lg: compareFloating ? "calc(100vw - 32px)" : "none" },
-                        maxHeight: { lg: compareFloating ? "calc(100vh - 112px)" : "none" },
-                        resize: { lg: compareFloating ? "both" : "none" },
-                        overflow: { lg: compareFloating ? "auto" : "visible" },
+                        width: {
+                            xs: "100%",
+                            lg: compareFloating ? compareFloatingSize.width : 390,
+                        },
+                        height: {
+                            lg: compareFloating ? compareFloatingSize.height : "auto",
+                        },
+                        minWidth: { lg: compareFloating ? FLOATING_COMPARE_MIN_WIDTH : 0 },
+                        minHeight: { lg: compareFloating ? compareFloatingMinHeight : 0 },
+                        maxWidth: { lg: compareFloating ? "calc(100vw - 24px)" : "none" },
+                        maxHeight: { lg: compareFloating ? "calc(100vh - 24px)" : "none" },
+                        overflow: { lg: compareFloating ? "hidden" : "visible" },
                         zIndex: { lg: compareFloating ? 1400 : "auto" },
                         boxShadow: {
                             lg: compareFloating
@@ -634,10 +849,59 @@ export default function CalibrationForm({
                         }}
                         onClearAll={clearCompareEntries}
                         onOpenSettings={() => setCompareSettingsOpen(true)}
-                        onToggleFloating={() =>
-                            setCompareFloating((current) => !current)
-                        }
+                        onToggleFloating={toggleCompareFloating}
+                        onHeaderMouseDown={startCompareFloatingDrag}
                     />
+                    {compareFloating && (
+                        <>
+                            <Box
+                                onMouseDown={startCompareFloatingResize("resize-right")}
+                                sx={{
+                                    position: "absolute",
+                                    top: 0,
+                                    right: 0,
+                                    width: 10,
+                                    height: "100%",
+                                    cursor: "ew-resize",
+                                    zIndex: 2,
+                                }}
+                            />
+                            <Box
+                                onMouseDown={startCompareFloatingResize("resize-bottom")}
+                                sx={{
+                                    position: "absolute",
+                                    left: 0,
+                                    bottom: 0,
+                                    width: "100%",
+                                    height: 10,
+                                    cursor: "ns-resize",
+                                    zIndex: 2,
+                                }}
+                            />
+                            <Box
+                                onMouseDown={startCompareFloatingResize("resize-corner")}
+                                sx={{
+                                    position: "absolute",
+                                    right: 0,
+                                    bottom: 0,
+                                    width: 18,
+                                    height: 18,
+                                    cursor: "nwse-resize",
+                                    zIndex: 3,
+                                    "&::after": {
+                                        content: '""',
+                                        position: "absolute",
+                                        right: 4,
+                                        bottom: 4,
+                                        width: 8,
+                                        height: 8,
+                                        borderRight: "2px solid rgba(255,255,255,0.45)",
+                                        borderBottom: "2px solid rgba(255,255,255,0.45)",
+                                    },
+                                }}
+                            />
+                        </>
+                    )}
                 </Box>
 
                 <Paper

@@ -15,7 +15,7 @@ import {
     Tooltip,
     Typography,
 } from "@mui/material";
-import { memo, useState } from "react";
+import { memo, useState, type MouseEvent as ReactMouseEvent } from "react";
 
 import { getName, useI18n } from "../i18n";
 import { frameToMS, hexSeed } from "../tenLines";
@@ -465,6 +465,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     onClearAll,
     onOpenSettings,
     onToggleFloating,
+    onHeaderMouseDown,
 }: {
     targetEntry: CalibrationCompareEntry | null;
     historyEntries: CalibrationCompareEntry[];
@@ -476,6 +477,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     onClearAll: () => void;
     onOpenSettings: () => void;
     onToggleFloating: () => void;
+    onHeaderMouseDown?: (event: ReactMouseEvent<HTMLDivElement>) => void;
 }) {
     const { t } = useI18n();
 
@@ -489,6 +491,8 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
             sx={{
                 width: "100%",
                 height: floating ? "100%" : "auto",
+                display: "flex",
+                flexDirection: "column",
                 minWidth: 0,
                 borderRadius: 4,
                 overflow: "hidden",
@@ -504,7 +508,10 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                         alignItems: "center",
                         justifyContent: "space-between",
                         gap: 1,
+                        cursor: floating ? "move" : "default",
+                        userSelect: "none",
                     }}
+                    onMouseDown={onHeaderMouseDown}
                 >
                     <Box>
                         <Typography variant="h6" sx={{ textAlign: "left" }}>
@@ -608,7 +615,16 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
 
             <Divider />
 
-            <Box sx={{ p: 2 }}>
+            <Box
+                sx={{
+                    p: 2,
+                    flex: floating ? 1 : "0 1 auto",
+                    minHeight: floating ? 170 : "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
+                }}
+            >
                 <Typography
                     variant="subtitle2"
                     sx={{ textAlign: "left", mb: 1.25 }}
@@ -627,7 +643,9 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                     <TableContainer
                         component={Box}
                         sx={{
-                            maxHeight: 520,
+                            flex: 1,
+                            minHeight: 108,
+                            maxHeight: floating ? "none" : 520,
                             overflow: "auto",
                             borderRadius: 3,
                             border: "1px solid rgba(255,255,255,0.08)",
