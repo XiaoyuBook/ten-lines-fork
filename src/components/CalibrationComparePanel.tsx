@@ -497,8 +497,16 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                 borderRadius: 4,
                 overflow: "hidden",
                 background:
-                    "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
-                borderColor: "rgba(255,255,255,0.12)",
+                    floating
+                        ? "linear-gradient(180deg, rgba(22,24,28,0.98), rgba(16,18,22,0.98))"
+                        : "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+                backdropFilter: floating ? "none" : "blur(14px)",
+                borderColor: floating
+                    ? "rgba(255,255,255,0.18)"
+                    : "rgba(255,255,255,0.12)",
+                boxShadow: floating
+                    ? "0 18px 48px rgba(0,0,0,0.55)"
+                    : "none",
             }}
         >
             <Box sx={{ p: 2 }}>
