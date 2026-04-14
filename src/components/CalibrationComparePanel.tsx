@@ -458,20 +458,24 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     targetEntry,
     historyEntries,
     settings,
+    floating,
     gameConsole,
     onDeleteTarget,
     onDeleteHistoryEntry,
     onClearAll,
     onOpenSettings,
+    onToggleFloating,
 }: {
     targetEntry: CalibrationCompareEntry | null;
     historyEntries: CalibrationCompareEntry[];
     settings: CalibrationCompareSettings;
+    floating: boolean;
     gameConsole: string;
     onDeleteTarget: () => void;
     onDeleteHistoryEntry: (id: string) => void;
     onClearAll: () => void;
     onOpenSettings: () => void;
+    onToggleFloating: () => void;
 }) {
     const { t } = useI18n();
 
@@ -483,7 +487,8 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
         <Paper
             variant="outlined"
             sx={{
-                width: { xs: "100%", lg: 390 },
+                width: "100%",
+                height: floating ? "100%" : "auto",
                 minWidth: 0,
                 borderRadius: 4,
                 overflow: "hidden",
@@ -518,6 +523,30 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                         </Typography>
                     </Box>
                     <Box sx={{ display: "flex", gap: 1 }}>
+                        <Tooltip
+                            title={t(
+                                floating
+                                    ? "compare.minimize"
+                                    : "compare.floatWindow"
+                            )}
+                        >
+                            <IconButton
+                                size="small"
+                                onClick={onToggleFloating}
+                                aria-label={t(
+                                    floating
+                                        ? "compare.minimize"
+                                        : "compare.floatWindow"
+                                )}
+                            >
+                                <Box
+                                    component="span"
+                                    sx={{ fontSize: "1rem", lineHeight: 1 }}
+                                >
+                                    {floating ? "—" : "⧉"}
+                                </Box>
+                            </IconButton>
+                        </Tooltip>
                         <Tooltip title={t("compare.settings")}>
                             <IconButton
                                 size="small"

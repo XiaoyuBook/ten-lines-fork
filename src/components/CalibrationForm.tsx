@@ -254,6 +254,7 @@ export default function CalibrationForm({
     >([]);
     const [compareSettingsOpen, setCompareSettingsOpen] = useState(false);
     const [compareFeedback, setCompareFeedback] = useState("");
+    const [compareFloating, setCompareFloating] = useState(false);
 
     const [seedLeewayIsValid, setSeedLeewayIsValid] = useState(true);
     const seedLeeway = seedLeewayIsValid
@@ -564,17 +565,12 @@ export default function CalibrationForm({
                 ...sx,
                 width: "100%",
                 position: "relative",
-                overflowX: "auto",
-                overflowY: "visible",
+                overflow: "visible",
             }}
         >
             <Box
                 sx={{
                     width: "100%",
-                    minWidth: {
-                        xs: "100%",
-                        lg: compareSettings.enabled ? 1120 : 0,
-                    },
                 }}
             >
                 <Box
@@ -583,21 +579,41 @@ export default function CalibrationForm({
                             xs: compareSettings.enabled ? "block" : "none",
                             lg: compareSettings.enabled ? "block" : "none",
                         },
-                        position: { xs: "static", lg: "absolute" },
-                        top: { lg: 0 },
+                        position: {
+                            xs: "static",
+                            lg: compareFloating ? "fixed" : "absolute",
+                        },
+                        top: { lg: compareFloating ? 88 : 0 },
                         left: {
                             lg:
-                                compareSettings.position === "left"
-                                    ? "max(calc(-390px - 24px), calc(940px - 100vw))"
+                                compareFloating
+                                    ? "auto"
+                                    : compareSettings.position === "left"
+                                    ? "calc(-390px - 24px)"
                                     : "auto",
                         },
                         right: {
                             lg:
-                                compareSettings.position === "right"
-                                    ? "max(calc(-390px - 24px), calc(940px - 100vw))"
+                                compareFloating
+                                    ? 24
+                                    : compareSettings.position === "right"
+                                    ? "calc(-390px - 24px)"
                                     : "auto",
                         },
-                        width: { xs: "100%", lg: 390 },
+                        width: { xs: "100%", lg: compareFloating ? 420 : 390 },
+                        height: { lg: compareFloating ? 620 : "auto" },
+                        minWidth: { lg: compareFloating ? 320 : 0 },
+                        minHeight: { lg: compareFloating ? 280 : 0 },
+                        maxWidth: { lg: compareFloating ? "calc(100vw - 32px)" : "none" },
+                        maxHeight: { lg: compareFloating ? "calc(100vh - 112px)" : "none" },
+                        resize: { lg: compareFloating ? "both" : "none" },
+                        overflow: { lg: compareFloating ? "auto" : "visible" },
+                        zIndex: { lg: compareFloating ? 1400 : "auto" },
+                        boxShadow: {
+                            lg: compareFloating
+                                ? "0 20px 60px rgba(0,0,0,0.45)"
+                                : "none",
+                        },
                         mb: { xs: 2, lg: 0 },
                     }}
                 >
@@ -608,6 +624,7 @@ export default function CalibrationForm({
                             ...compareSettings,
                             visibleColumns: orderedVisibleColumns,
                         }}
+                        floating={compareFloating}
                         gameConsole={gameConsole}
                         onDeleteTarget={deleteCompareTarget}
                         onDeleteHistoryEntry={(id) => {
@@ -617,14 +634,17 @@ export default function CalibrationForm({
                         }}
                         onClearAll={clearCompareEntries}
                         onOpenSettings={() => setCompareSettingsOpen(true)}
+                        onToggleFloating={() =>
+                            setCompareFloating((current) => !current)
+                        }
                     />
                 </Box>
 
                 <Paper
                     variant="outlined"
                     sx={{
-                        width: { xs: "100%", lg: "min(1100px, 100%)" },
-                        minWidth: { xs: 0, lg: 720 },
+                        width: "100%",
+                        minWidth: 0,
                         borderRadius: 4,
                         p: { xs: 1.5, sm: 2.5 },
                         background:
