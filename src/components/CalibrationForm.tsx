@@ -133,6 +133,12 @@ function createCompareEntry(row: CalibrationResultRow): CalibrationCompareEntry 
     };
 }
 
+export function createStoredCompareEntry(
+    row: CalibrationResultRow
+): CalibrationCompareEntry {
+    return createCompareEntry(row);
+}
+
 function useCalibrationURLState() {
     const [searchParams, setSearchParams] = useSearchParams();
     const game = searchParams.get("game") || "r_painting";
@@ -260,9 +266,9 @@ export default function CalibrationForm({
         );
     const [compareTarget, setCompareTarget] =
         useState<CalibrationCompareEntry | null>(null);
-    const [compareHistory, setCompareHistory] = useState<
+    const [compareHistory, setCompareHistory] = useLocalStorage<
         CalibrationCompareEntry[]
-    >([]);
+    >("calibration-compare-history", []);
     const [compareSettingsOpen, setCompareSettingsOpen] = useState(false);
     const [compareFeedback, setCompareFeedback] = useState("");
     const [compareFloating, setCompareFloating] = useState(false);
