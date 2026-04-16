@@ -18,7 +18,7 @@ export default function useLocalStorage<T>(key: string, defaultValue: T) {
     });
 
     const setStoredValue: typeof setValue = useCallback((nextValue) => {
-        setValue((currentValue) => {
+        setValue((currentValue: T) => {
             const resolvedValue =
                 typeof nextValue === "function"
                     ? (nextValue as (value: T) => T)(currentValue)

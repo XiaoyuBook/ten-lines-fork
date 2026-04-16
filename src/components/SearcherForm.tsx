@@ -67,7 +67,7 @@ function useSearcherURLState() {
     const game = searchParams.get("game") || "r_painting";
     const trainerID = searchParams.get("trainerID") || "0";
     const secretID = searchParams.get("secretID") || "0";
-    const sound = searchParams.get("sound") || "mono";
+    const sound = searchParams.get("sound") || "any";
     const reachableAdvancesFilter =
         searchParams.get("reachableAdvancesFilter") ||
         (searchParams.has("advancesMin") || searchParams.has("advancesMax")
@@ -131,6 +131,31 @@ function getPerfectIvRangeSets(perfectIvCount: number): [number, number][][] {
 
     buildCombinations(0);
     return rangeSets;
+}
+
+function mergeRowsBySeed(
+    rows: SearcherRowWithAdvances[]
+): SearcherRowWithAdvances[] {
+    const rowsBySeed = new Map<number, SearcherRowWithAdvances>();
+
+    for (const row of rows) {
+        const existingRow = rowsBySeed.get(row.seed);
+        if (!existingRow) {
+            rowsBySeed.set(row.seed, row);
+            continue;
+        }
+
+        const existingAdvances = existingRow.reachableAdvances;
+        const nextAdvances = row.reachableAdvances;
+        if (
+            existingAdvances === undefined ||
+            (nextAdvances !== undefined && nextAdvances < existingAdvances)
+        ) {
+            rowsBySeed.set(row.seed, row);
+        }
+    }
+
+    return Array.from(rowsBySeed.values());
 }
 
 export default function CalibrationForm({
@@ -241,33 +266,65 @@ export default function CalibrationForm({
                     if (!isReachableAdvancesFilterEnabled) {
                         return results as SearcherRowWithAdvances[];
                     }
-                    const reachabilityResults =
-                        await tenLines.filter_reachable_target_seeds_with_sound(
-                            results.map((result) => result.seed),
-                            requiredAdvancesRange,
-                            game,
-                            0,
-                            isFRLG ? sound : "",
-                            seedData
-                        );
-                    return results
-                        .map((result, index) => ({
-                            ...result,
-                            reachableAdvances: reachabilityResults[index].reachable
-                                ? reachabilityResults[index].advances
-                                : undefined,
-                        }))
-                        .filter(
-                            (_result, index) =>
-                                reachabilityResults[index].reachable
-                        ) as SearcherRowWithAdvances[];
+                    const targetSeeds = results.map((result) => result.seed);
+                    const soundFilters =
+                        isFRLG && sound === "any"
+                            ? ["mono", "stereo"]
+                            : [isFRLG ? sound : ""];
+                    const reachabilityResultsPerSound = await Promise.all(
+                        soundFilters.map((soundFilter) =>
+                            tenLines.filter_reachable_target_seeds_with_sound(
+                                targetSeeds,
+                                requiredAdvancesRange,
+                                game,
+                                0,
+                                soundFilter,
+                                seedData
+                            )
+                        )
+                    );
+
+                    return mergeRowsBySeed(
+                        results
+                            .map((result, index) => {
+                                const reachableResults =
+                                    reachabilityResultsPerSound
+                                        .map(
+                                            (reachabilityResults) =>
+                                                reachabilityResults[index]
+                                        )
+                                        .filter(
+                                            (reachabilityResult) =>
+                                                reachabilityResult.reachable
+                                        );
+                                const minimumReachableAdvances =
+                                    reachableResults.length === 0
+                                        ? undefined
+                                        : Math.min(
+                                            ...reachableResults.map(
+                                                (reachabilityResult) =>
+                                                    reachabilityResult.advances
+                                            )
+                                        );
+
+                                return {
+                                    ...result,
+                                    reachableAdvances:
+                                        minimumReachableAdvances,
+                                };
+                            })
+                            .filter(
+                                (result) =>
+                                    result.reachableAdvances !== undefined
+                            ) as SearcherRowWithAdvances[]
+                    );
                 };
                 const appendResults = (results: SearcherRowWithAdvances[]) => {
                     setRows((rows) => {
                         if (rows.length > 1000 || results.length === 0) {
                             return rows;
                         }
-                        return [...rows, ...results];
+                        return mergeRowsBySeed([...rows, ...results]);
                     });
                 };
                 const searchingCallback = proxy(() => {});
@@ -432,6 +489,7 @@ export default function CalibrationForm({
                     select
                     fullWidth
                 >
+                    <MenuItem value="any">{t("common.any")}</MenuItem>
                     <MenuItem value="mono">{t("common.mono")}</MenuItem>
                     <MenuItem value="stereo">{t("common.stereo")}</MenuItem>
                 </TextField>
