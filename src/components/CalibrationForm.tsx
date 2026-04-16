@@ -432,7 +432,10 @@ export default function CalibrationForm({
     };
 
     const addCompareHistory = (row: CalibrationResultRow) => {
-        setCompareHistory((history) => [...history, createCompareEntry(row)]);
+        setCompareHistory((history: CalibrationCompareEntry[]) => [
+            ...history,
+            createCompareEntry(row),
+        ]);
         setCompareFeedback(t("compare.addedHistory"));
     };
 
@@ -805,8 +808,11 @@ export default function CalibrationForm({
                         gameConsole={gameConsole}
                         onDeleteTarget={deleteCompareTarget}
                         onDeleteHistoryEntry={(id) => {
-                            setCompareHistory((history) =>
-                                history.filter((entry) => entry.id !== id)
+                            setCompareHistory((history: CalibrationCompareEntry[]) =>
+                                history.filter(
+                                    (entry: CalibrationCompareEntry) =>
+                                        entry.id !== id
+                                )
                             );
                         }}
                         onClearAll={clearCompareEntries}
