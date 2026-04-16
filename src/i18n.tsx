@@ -219,6 +219,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             nature: "Nature",
             gender: "Gender",
             hiddenPower: "Hidden Power",
+            perfectIvCount: "Perfect IV Count",
             category: "Category",
             pokemon: "Pokemon",
             location: "Location",
@@ -285,6 +286,12 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             static: "Static",
             hustlePressureVitalSpirit: "Hustle/Pressure/Vital Spirit",
             matchingSynchronize: "Matching Synchronize",
+            perfect1v: "1V",
+            perfect2v: "2V",
+            perfect3v: "3V",
+            perfect4v: "4V",
+            perfect5v: "5V",
+            perfect6v: "6V",
             shinyLocked: "Shiny Locked",
             lockBreak: "Lock Break",
             start: "Start",
@@ -364,6 +371,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             ivCalculationDisabled:
                 "IV calculation disabled. Searching all Natures.",
             filterByReachableAdvances: "Filter by reachable advances",
+            usePerfectIvFilter: "Use perfect IV filter",
             idComboIntro:
                 "Search for TID/SID combinations whose TSV makes the matching static target shiny.",
             noMatchingStaticTargets:
@@ -454,6 +462,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             nature: "\u6027\u683c",
             gender: "\u6027\u522b",
             hiddenPower: "\u89c9\u9192\u529b\u91cf",
+            perfectIvCount: "\u6ee1\u80fd\u529b\u6570\u91cf",
             category: "\u5206\u7c7b",
             pokemon: "\u5b9d\u53ef\u68a6",
             location: "\u5730\u70b9",
@@ -525,6 +534,12 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             hustlePressureVitalSpirit:
                 "\u6d3b\u529b/\u538b\u8feb\u611f/\u5e72\u52b2",
             matchingSynchronize: "\u5339\u914d\u540c\u6b65",
+            perfect1v: "1V",
+            perfect2v: "2V",
+            perfect3v: "3V",
+            perfect4v: "4V",
+            perfect5v: "5V",
+            perfect6v: "6V",
             shinyLocked: "\u5f02\u8272\u9501\u5b9a",
             lockBreak: "\u7834\u9501",
             start: "\u5f00\u59cb",
@@ -609,6 +624,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "IV \u8ba1\u7b97\u5df2\u5173\u95ed\uff0c\u6b63\u5728\u641c\u7d22\u5168\u90e8\u6027\u683c\u3002",
             filterByReachableAdvances:
                 "\u6309\u53ef\u8fbe\u6d88\u8017\u5e27\u7b5b\u9009",
+            usePerfectIvFilter:
+                "\u6ee1\u80fd\u529b\u7b5b\u9009",
             idComboIntro:
                 "\u641c\u7d22\u80fd\u8ba9\u5339\u914d\u9759\u6001\u76ee\u6807\u53d8\u95ea\u7684 TID/SID \u7ec4\u5408\u3002",
             noMatchingStaticTargets:

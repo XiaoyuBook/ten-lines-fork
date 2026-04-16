@@ -7,6 +7,7 @@ import {
     Checkbox,
     FormControlLabel,
     MenuItem,
+    Switch,
     type SxProps,
     TextField,
     type Theme,
@@ -40,6 +41,8 @@ export interface SearcherFormState {
     gender: number;
     hiddenPower: number;
     ivRangeStrings: [string, string][];
+    usePerfectIvFilter: boolean;
+    perfectIvCount: number;
     staticCategory: number;
     staticPokemon: number;
     wildCategory: number;
@@ -96,6 +99,40 @@ type SearcherRowWithAdvances =
     | (ExtendedSearcherState & { reachableAdvances?: number })
     | (ExtendedWildSearcherState & { reachableAdvances?: number });
 
+const DEFAULT_IV_RANGE_STRINGS: [string, string][] = [
+    ["0", "31"],
+    ["0", "31"],
+    ["0", "31"],
+    ["0", "31"],
+    ["0", "31"],
+    ["0", "31"],
+];
+
+function getPerfectIvRangeSets(perfectIvCount: number): [number, number][][] {
+    const rangeSets: [number, number][][] = [];
+    const currentSelection: number[] = [];
+
+    const buildCombinations = (start: number) => {
+        if (currentSelection.length === perfectIvCount) {
+            rangeSets.push(
+                Array.from({ length: 6 }, (_, statIndex) =>
+                    currentSelection.includes(statIndex) ? [31, 31] : [0, 30]
+                )
+            );
+            return;
+        }
+
+        for (let statIndex = start; statIndex < 6; statIndex += 1) {
+            currentSelection.push(statIndex);
+            buildCombinations(statIndex + 1);
+            currentSelection.pop();
+        }
+    };
+
+    buildCombinations(0);
+    return rangeSets;
+}
+
 export default function CalibrationForm({
     sx,
     hidden,
@@ -110,14 +147,9 @@ export default function CalibrationForm({
             natures: [],
             gender: 255,
             hiddenPower: -1,
-            ivRangeStrings: [
-                ["0", "31"],
-                ["0", "31"],
-                ["0", "31"],
-                ["0", "31"],
-                ["0", "31"],
-                ["0", "31"],
-            ],
+            ivRangeStrings: DEFAULT_IV_RANGE_STRINGS,
+            usePerfectIvFilter: false,
+            perfectIvCount: 1,
             staticCategory: 0,
             staticPokemon: 0,
             wildCategory: 0,
@@ -148,6 +180,9 @@ export default function CalibrationForm({
             parseInt(range[1], 10),
         ])
         : [];
+    const submittedIvRanges = searcherFormState.usePerfectIvFilter
+        ? getPerfectIvRangeSets(searcherFormState.perfectIvCount)
+        : [ivRanges];
 
     const [trainerIDIsValid, setTrainerIDIsValid] = useState(true);
     const [secretIDIsValid, setSecretIDIsValid] = useState(true);
@@ -238,48 +273,50 @@ export default function CalibrationForm({
                 const searchingCallback = proxy(() => {});
 
                 for (const natureFilter of submittedNatureFilters) {
-                    if (isStatic) {
-                        await tenLines.search_seeds_static(
-                            SEED_IDENTIFIER_TO_GAME[game],
-                            parseInt(trainerID),
-                            parseInt(secretID),
-                            searcherFormState.staticCategory,
-                            searcherFormState.staticPokemon,
-                            searcherFormState.method,
-                            searcherFormState.shininess,
-                            natureFilter,
-                            searcherFormState.gender,
-                            searcherFormState.hiddenPower,
-                            ivRanges,
-                            proxy(async (results: ExtendedSearcherState[]) => {
-                                appendResults(
-                                    await filterResultsByRequiredAdvances(results)
-                                );
-                            }),
-                            searchingCallback
-                        );
-                    } else {
-                        await tenLines.search_seeds_wild(
-                            SEED_IDENTIFIER_TO_GAME[game],
-                            parseInt(trainerID),
-                            parseInt(secretID),
-                            searcherFormState.wildCategory,
-                            searcherFormState.wildLocation,
-                            searcherFormState.wildPokemon,
-                            searcherFormState.method,
-                            searcherFormState.wildLead,
-                            searcherFormState.shininess,
-                            natureFilter,
-                            searcherFormState.gender,
-                            searcherFormState.hiddenPower,
-                            ivRanges,
-                            proxy(async (results: ExtendedWildSearcherState[]) => {
-                                appendResults(
-                                    await filterResultsByRequiredAdvances(results)
-                                );
-                            }),
-                            searchingCallback
-                        );
+                    for (const currentIvRanges of submittedIvRanges) {
+                        if (isStatic) {
+                            await tenLines.search_seeds_static(
+                                SEED_IDENTIFIER_TO_GAME[game],
+                                parseInt(trainerID),
+                                parseInt(secretID),
+                                searcherFormState.staticCategory,
+                                searcherFormState.staticPokemon,
+                                searcherFormState.method,
+                                searcherFormState.shininess,
+                                natureFilter,
+                                searcherFormState.gender,
+                                searcherFormState.hiddenPower,
+                                currentIvRanges,
+                                proxy(async (results: ExtendedSearcherState[]) => {
+                                    appendResults(
+                                        await filterResultsByRequiredAdvances(results)
+                                    );
+                                }),
+                                searchingCallback
+                            );
+                        } else {
+                            await tenLines.search_seeds_wild(
+                                SEED_IDENTIFIER_TO_GAME[game],
+                                parseInt(trainerID),
+                                parseInt(secretID),
+                                searcherFormState.wildCategory,
+                                searcherFormState.wildLocation,
+                                searcherFormState.wildPokemon,
+                                searcherFormState.method,
+                                searcherFormState.wildLead,
+                                searcherFormState.shininess,
+                                natureFilter,
+                                searcherFormState.gender,
+                                searcherFormState.hiddenPower,
+                                currentIvRanges,
+                                proxy(async (results: ExtendedWildSearcherState[]) => {
+                                    appendResults(
+                                        await filterResultsByRequiredAdvances(results)
+                                    );
+                                }),
+                                searchingCallback
+                            );
+                        }
                     }
                 }
             } finally {
@@ -593,16 +630,55 @@ export default function CalibrationForm({
                     </MenuItem>
                 ))}
             </TextField>
-            <IvEntry
-                onChange={(_event, value) => {
-                    setIvRangesAreValid(value.isValid);
-                    setSearcherFormState((data) => ({
-                        ...data,
-                        ivRangeStrings: value.value,
-                    }));
-                }}
-                value={searcherFormState.ivRangeStrings}
+            <FormControlLabel
+                control={
+                    <Switch
+                        checked={searcherFormState.usePerfectIvFilter}
+                        onChange={(event) => {
+                            setSearcherFormState((data) => ({
+                                ...data,
+                                usePerfectIvFilter: event.target.checked,
+                            }));
+                        }}
+                    />
+                }
+                label={t("messages.usePerfectIvFilter")}
             />
+            {searcherFormState.usePerfectIvFilter ? (
+                <TextField
+                    label={t("labels.perfectIvCount")}
+                    margin="normal"
+                    style={{ textAlign: "left" }}
+                    onChange={(event) => {
+                        setSearcherFormState((data) => ({
+                            ...data,
+                            perfectIvCount: parseInt(event.target.value, 10),
+                        }));
+                    }}
+                    value={searcherFormState.perfectIvCount}
+                    select
+                    fullWidth
+                >
+                    {Array.from({ length: 6 }, (_, index) => index + 1).map(
+                        (count) => (
+                            <MenuItem key={count} value={count}>
+                                {t(`options.perfect${count}v`)}
+                            </MenuItem>
+                        )
+                    )}
+                </TextField>
+            ) : (
+                <IvEntry
+                    onChange={(_event, value) => {
+                        setIvRangesAreValid(value.isValid);
+                        setSearcherFormState((data) => ({
+                            ...data,
+                            ivRangeStrings: value.value,
+                        }));
+                    }}
+                    value={searcherFormState.ivRangeStrings}
+                />
+            )}
             <Button
                 variant="contained"
                 color="primary"
