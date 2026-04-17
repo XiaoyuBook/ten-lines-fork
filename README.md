@@ -1,5 +1,7 @@
 [![](public/icon-180x180.png)](https://tenlines.skrxiaoyu.com)
 
+[English](./README.md) | [简体中文](./README.zh-CN.md)
+
 ## Ten Lines Fork
 
 This repository is a personal fork of Lincoln-LM's **Ten Lines**, focused on practical FRLG target filtering and easier self-hosted deployment.
