@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 
-const LOCAL_STORAGE_SYNC_EVENT = "codex-local-storage-sync";
+export const LOCAL_STORAGE_SYNC_EVENT = "codex-local-storage-sync";
+
+export function setLocalStorageValue<T>(key: string, value: T) {
+    localStorage.setItem(key, JSON.stringify(value));
+    window.dispatchEvent(
+        new CustomEvent(LOCAL_STORAGE_SYNC_EVENT, {
+            detail: { key },
+        })
+    );
+}
 
 export default function useLocalStorage<T>(key: string, defaultValue: T) {
     const readStoredValue = useCallback(() => {
@@ -25,12 +34,7 @@ export default function useLocalStorage<T>(key: string, defaultValue: T) {
                     : nextValue;
 
             try {
-                localStorage.setItem(key, JSON.stringify(resolvedValue));
-                window.dispatchEvent(
-                    new CustomEvent(LOCAL_STORAGE_SYNC_EVENT, {
-                        detail: { key },
-                    })
-                );
+                setLocalStorageValue(key, resolvedValue);
             } catch (error) {
                 console.error(error);
             }

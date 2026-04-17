@@ -13,6 +13,13 @@ import { useSearchParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { frameToMS, hexSeed, teachyTVConversion } from "../tenLines";
 import type { InitialSeedResult } from "../tenLines/generated";
+import { setLocalStorageValue } from "../hooks/useLocalStorage";
+import {
+    COMPARE_TARGET_STORAGE_KEY,
+    createStoredCompareEntry,
+    SEARCHER_COMPARE_TARGET_KEY,
+} from "./CalibrationForm";
+import type { CalibrationCompareSettings, CalibrationStoredTarget } from "./CalibrationComparePanel";
 
 dayjs.extend(duration);
 
@@ -31,6 +38,63 @@ const InitialSeedTable = memo(function InitialSeedTable({
 }) {
     const { t } = useI18n();
     const [, setSearchParams] = useSearchParams();
+
+    function shouldAutoAddCompareTarget() {
+        try {
+            const storedSettings = localStorage.getItem(
+                "calibration-compare-settings"
+            );
+            if (!storedSettings) {
+                return true;
+            }
+            const parsedSettings = JSON.parse(storedSettings) as
+                Partial<CalibrationCompareSettings>;
+            return parsedSettings.autoAddTarget ?? true;
+        } catch {
+            return true;
+        }
+    }
+
+    function getStoredSearcherTarget() {
+        try {
+            const storedTarget = localStorage.getItem(
+                SEARCHER_COMPARE_TARGET_KEY
+            );
+            return storedTarget
+                ? (JSON.parse(storedTarget) as Omit<
+                    CalibrationStoredTarget,
+                    "initialSeed" | "seedTime" | "advances"
+                >)
+                : null;
+        } catch {
+            return null;
+        }
+    }
+
+    function setCompareTargetFromInitialSeed(row: InitialSeedResult) {
+        if (!shouldAutoAddCompareTarget()) {
+            return;
+        }
+
+        const storedSearcherTarget = getStoredSearcherTarget();
+        const compareTarget = storedSearcherTarget
+            ? ({
+                initialSeed: row.initialSeed,
+                seedTime: row.seedTime,
+                advances: row.advances,
+                ...storedSearcherTarget,
+            } satisfies CalibrationStoredTarget)
+            : {
+                initialSeed: row.initialSeed,
+                seedTime: row.seedTime,
+                advances: row.advances,
+            };
+
+        setLocalStorageValue(
+            COMPARE_TARGET_STORAGE_KEY,
+            createStoredCompareEntry(compareTarget)
+        );
+    }
 
     function humanizeSettings(settings: string | undefined) {
         if (!settings) return "";
@@ -63,6 +127,7 @@ const InitialSeedTable = memo(function InitialSeedTable({
     }
 
     function openInCalibration(row: InitialSeedResult, isAuxClick: boolean) {
+        setCompareTargetFromInitialSeed(row);
         setSearchParams((previous) => {
             const params = new URLSearchParams(previous);
             params.set("targetInitialSeed", hexSeed(row.initialSeed, 16));
@@ -86,8 +151,6 @@ const InitialSeedTable = memo(function InitialSeedTable({
                 params.set("advancesMax", (row.advances + 1000).toString());
             }
             params.set("page", "1");
-            params.set("autoAddCompareTarget", "true");
-            params.set("compareTargetAdvances", row.advances.toString());
             if (isFRLG) {
                 const [sound, buttonMode, activeButton, heldButtonModifier, heldButton] =
                     (row.settings as string).split("_");

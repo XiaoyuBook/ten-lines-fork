@@ -92,6 +92,9 @@ const FLOATING_COMPARE_DEFAULT_POSITION = {
     y: 88,
 };
 
+export const COMPARE_TARGET_STORAGE_KEY = "calibration-compare-target";
+export const SEARCHER_COMPARE_TARGET_KEY = "searcher-compare-target";
+
 export interface CalibrationFormState {
     seedLeewayString: string;
     shininess: number;
@@ -126,8 +129,6 @@ export interface CalibrationURLState {
     trainerID: string;
     secretID: string;
     teachyTVMode: string;
-    autoAddCompareTarget: string;
-    compareTargetAdvances: string;
 }
 
 function createCompareEntry(row: CalibrationCompareRow): CalibrationCompareEntry {
@@ -167,10 +168,6 @@ function useCalibrationURLState() {
     const teachyTVMode = !gameConsole.startsWith("NX")
         ? searchParams.get("teachyTVMode") || "false"
         : "false";
-    const autoAddCompareTarget =
-        searchParams.get("autoAddCompareTarget") || "false";
-    const compareTargetAdvances =
-        searchParams.get("compareTargetAdvances") || "";
     const targetSeedValue =
         parseInt(searchParams.get("targetInitialSeed") || "DEAD", 16) ?? 0xdead;
     const setCalibrationURLState = (state: Partial<CalibrationURLState>) => {
@@ -198,8 +195,6 @@ function useCalibrationURLState() {
         trainerID,
         secretID,
         teachyTVMode,
-        autoAddCompareTarget,
-        compareTargetAdvances,
         setCalibrationURLState,
     };
 }
@@ -253,8 +248,6 @@ export default function CalibrationForm({
         trainerID,
         secretID,
         teachyTVMode,
-        autoAddCompareTarget,
-        compareTargetAdvances,
         setCalibrationURLState,
     } = useCalibrationURLState();
 
@@ -281,7 +274,10 @@ export default function CalibrationForm({
         ...storedCompareSettings,
     };
     const [compareTarget, setCompareTarget] =
-        useState<CalibrationCompareEntry | null>(null);
+        useLocalStorage<CalibrationCompareEntry | null>(
+            COMPARE_TARGET_STORAGE_KEY,
+            null
+        );
     const [compareHistory, setCompareHistory] = useLocalStorage<
         CalibrationCompareEntry[]
     >("calibration-compare-history", []);
@@ -474,45 +470,6 @@ export default function CalibrationForm({
         setCompareTarget(null);
         setCompareHistory([]);
     };
-
-    useEffect(() => {
-        if (autoAddCompareTarget !== "true") {
-            return;
-        }
-
-        if (!compareSettings.autoAddTarget) {
-            setCalibrationURLState({
-                autoAddCompareTarget: "false",
-                compareTargetAdvances: "",
-            });
-            return;
-        }
-
-        if (targetSeed.initialSeed !== targetSeedValue) {
-            return;
-        }
-
-        const desiredAdvances = parseInt(compareTargetAdvances, 10);
-        addCompareTarget({
-            initialSeed: targetSeed.initialSeed,
-            seedTime: targetSeed.seedTime,
-            advances: Number.isNaN(desiredAdvances)
-                ? advancesRange[0]
-                : desiredAdvances,
-        });
-        setCalibrationURLState({
-            autoAddCompareTarget: "false",
-            compareTargetAdvances: "",
-        });
-    }, [
-        autoAddCompareTarget,
-        advancesRange,
-        compareSettings.autoAddTarget,
-        compareTargetAdvances,
-        setCalibrationURLState,
-        targetSeed,
-        targetSeedValue,
-    ]);
 
     useEffect(() => {
         if (!compareFloating) {
@@ -766,26 +723,6 @@ export default function CalibrationForm({
         };
         void submit();
     };
-
-    useEffect(() => {
-        if (autoAddCompareTarget !== "true") {
-            return;
-        }
-        if (!compareSettings.autoAddTarget) {
-            return;
-        }
-        if (searching || rows.length > 0 || isNotSubmittable) {
-            return;
-        }
-
-        runSearch();
-    }, [
-        autoAddCompareTarget,
-        compareSettings.autoAddTarget,
-        isNotSubmittable,
-        rows.length,
-        searching,
-    ]);
 
     const targetSeedFilterOptions = createFilterOptions({
         limit: 100,

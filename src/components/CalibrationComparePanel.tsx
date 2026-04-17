@@ -34,9 +34,24 @@ export interface CalibrationInitialSeedTarget {
     advances: number;
 }
 
+export interface CalibrationStoredTarget extends CalibrationInitialSeedTarget {
+    pid: number;
+    shiny: number;
+    nature: number;
+    ability: number;
+    abilityIndex: number;
+    ivs: number[];
+    hiddenPower: number;
+    hiddenPowerStrength: number;
+    gender: number;
+    species?: number;
+    form?: number;
+}
+
 export type CalibrationCompareRow =
     | CalibrationResultRow
-    | CalibrationInitialSeedTarget;
+    | CalibrationInitialSeedTarget
+    | CalibrationStoredTarget;
 
 export type CalibrationCompareColumn =
     | "seed"
