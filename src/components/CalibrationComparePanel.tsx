@@ -110,7 +110,7 @@ function getDeltaColor(value: number) {
 }
 
 function getAbilityText(
-    row: CalibrationResultRow,
+    row: Pick<CalibrationStoredTarget, "ability" | "abilityIndex">,
     resources: ReturnType<typeof useI18n>["resources"]
 ) {
     return `${row.ability}: ${resources.abilities[row.abilityIndex - 1]}`;
@@ -252,12 +252,13 @@ function TargetSummary({
                         color={isShiny ? "warning" : "primary"}
                         size="small"
                     />
-                    {"species" in entry.row && (
+                    {"species" in entry.row &&
+                        entry.row.species !== undefined && (
                         <Typography variant="body2" color="text.secondary">
                             {getName(
                                 resources,
                                 entry.row.species,
-                                entry.row.form
+                                entry.row.form ?? 0
                             )}
                         </Typography>
                     )}
