@@ -100,6 +100,11 @@ type SearcherRowWithAdvances =
     | (ExtendedSearcherState & { reachableAdvances?: number })
     | (ExtendedWildSearcherState & { reachableAdvances?: number });
 
+type ReachabilityResult = {
+    reachable: boolean;
+    advances: number;
+};
+
 const DEFAULT_IV_RANGE_STRINGS: [string, string][] = [
     ["0", "31"],
     ["0", "31"],
@@ -233,6 +238,9 @@ export default function CalibrationForm({
         !secretIDIsValid ||
         !ivRangesAreValid ||
         (isReachableAdvancesFilterEnabled && !requiredAdvancesRangeIsValid);
+    const isStatic = searcherFormState.method <= STATIC_4;
+    const isFRLG = game.startsWith("fr") || game.startsWith("lg");
+    const isFRLGE = isFRLG || game.startsWith("e_");
 
     const selectedNatureSet = useMemo(
         () => new Set(searcherFormState.natures),
@@ -348,11 +356,15 @@ export default function CalibrationForm({
                                 const reachableResults =
                                     reachabilityResultsPerSound
                                         .map(
-                                            (reachabilityResults) =>
+                                            (
+                                                reachabilityResults: ReachabilityResult[]
+                                            ) =>
                                                 reachabilityResults[index]
                                         )
                                         .filter(
-                                            (reachabilityResult) =>
+                                            (
+                                                reachabilityResult: ReachabilityResult
+                                            ) =>
                                                 reachabilityResult.reachable
                                         );
                                 const minimumReachableAdvances =
@@ -360,7 +372,9 @@ export default function CalibrationForm({
                                         ? undefined
                                         : Math.min(
                                             ...reachableResults.map(
-                                                (reachabilityResult) =>
+                                                (
+                                                    reachabilityResult: ReachabilityResult
+                                                ) =>
                                                     reachabilityResult.advances
                                             )
                                         );
@@ -440,10 +454,6 @@ export default function CalibrationForm({
         };
         submit();
     };
-
-    const isStatic = searcherFormState.method <= STATIC_4;
-    const isFRLG = game.startsWith("fr") || game.startsWith("lg");
-    const isFRLGE = isFRLG || game.startsWith("e_");
 
     if (searcherFormState.staticCategory == 3 && !isFRLG) {
         searcherFormState.staticCategory = 0;

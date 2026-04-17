@@ -298,14 +298,12 @@ export default function BingoPage({
                                 const nextCounter = counter + 1;
                                 newCounters[y - 1][x - 1] = nextCounter;
                                 setCounters(newCounters);
-                                if (counter === 0) {
-                                    setCompareHistory(
-                                        (history: CalibrationCompareEntry[]) => [
-                                            ...history,
-                                            createStoredCompareEntry(entry),
-                                        ]
-                                    );
-                                }
+                                setCompareHistory(
+                                    (history: CalibrationCompareEntry[]) => [
+                                        ...history,
+                                        createStoredCompareEntry(entry),
+                                    ]
+                                );
                             }}
                             onMouseDown={(e) => {
                                 if (e.button === 1) {
