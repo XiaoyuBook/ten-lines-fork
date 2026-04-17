@@ -86,6 +86,8 @@ const InitialSeedTable = memo(function InitialSeedTable({
                 params.set("advancesMax", (row.advances + 1000).toString());
             }
             params.set("page", "1");
+            params.set("autoAddCompareTarget", "true");
+            params.set("compareTargetAdvances", row.advances.toString());
             if (isFRLG) {
                 const [sound, buttonMode, activeButton, heldButtonModifier, heldButton] =
                     (row.settings as string).split("_");

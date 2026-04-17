@@ -49,6 +49,7 @@ export interface CalibrationCompareSettings {
     compareMode: CalibrationCompareMode;
     visibleColumns: CalibrationCompareColumn[];
     calculatorEnabled: boolean;
+    autoAddTarget: boolean;
 }
 
 export interface CalibrationCompareEntry {
@@ -133,15 +134,16 @@ function CompareCell({
     const { t, resources } = useI18n();
 
     if (column === "seed") {
+        const seedTimeMs = frameToMS(row.seedTime / 16, gameConsole);
         const delta = baseline
-            ? frameToMS(row.seedTime / 16, gameConsole) -
-              frameToMS(baseline.seedTime / 16, gameConsole)
+            ? seedTimeMs - frameToMS(baseline.seedTime / 16, gameConsole)
             : null;
 
         return (
             <Box>
                 <Typography variant="body2" fontWeight={600}>
-                    {hexSeed(row.initialSeed, 16)}
+                    {hexSeed(row.initialSeed, 16)} ({seedTimeMs}
+                    {t("messages.ms")})
                 </Typography>
                 {delta !== null && (
                     <Typography

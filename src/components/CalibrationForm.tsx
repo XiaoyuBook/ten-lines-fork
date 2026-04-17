@@ -77,6 +77,7 @@ const DEFAULT_COMPARE_SETTINGS: CalibrationCompareSettings = {
     compareMode: "target",
     visibleColumns: DEFAULT_COMPARE_COLUMNS,
     calculatorEnabled: false,
+    autoAddTarget: true,
 };
 
 const FLOATING_COMPARE_DEFAULT_SIZE = {
@@ -124,6 +125,8 @@ export interface CalibrationURLState {
     trainerID: string;
     secretID: string;
     teachyTVMode: string;
+    autoAddCompareTarget: string;
+    compareTargetAdvances: string;
 }
 
 function createCompareEntry(row: CalibrationResultRow): CalibrationCompareEntry {
@@ -163,6 +166,10 @@ function useCalibrationURLState() {
     const teachyTVMode = !gameConsole.startsWith("NX")
         ? searchParams.get("teachyTVMode") || "false"
         : "false";
+    const autoAddCompareTarget =
+        searchParams.get("autoAddCompareTarget") || "false";
+    const compareTargetAdvances =
+        searchParams.get("compareTargetAdvances") || "";
     const targetSeedValue =
         parseInt(searchParams.get("targetInitialSeed") || "DEAD", 16) ?? 0xdead;
     const setCalibrationURLState = (state: Partial<CalibrationURLState>) => {
@@ -190,6 +197,8 @@ function useCalibrationURLState() {
         trainerID,
         secretID,
         teachyTVMode,
+        autoAddCompareTarget,
+        compareTargetAdvances,
         setCalibrationURLState,
     };
 }
@@ -243,6 +252,8 @@ export default function CalibrationForm({
         trainerID,
         secretID,
         teachyTVMode,
+        autoAddCompareTarget,
+        compareTargetAdvances,
         setCalibrationURLState,
     } = useCalibrationURLState();
 
@@ -259,11 +270,15 @@ export default function CalibrationForm({
         ExtendedGeneratorState[] | ExtendedWildGeneratorState[]
     >([]);
     const [searching, setSearching] = useState(false);
-    const [compareSettings, setCompareSettings] =
+    const [storedCompareSettings, setCompareSettings] =
         useLocalStorage<CalibrationCompareSettings>(
             "calibration-compare-settings",
             DEFAULT_COMPARE_SETTINGS
         );
+    const compareSettings: CalibrationCompareSettings = {
+        ...DEFAULT_COMPARE_SETTINGS,
+        ...storedCompareSettings,
+    };
     const [compareTarget, setCompareTarget] =
         useState<CalibrationCompareEntry | null>(null);
     const [compareHistory, setCompareHistory] = useLocalStorage<
@@ -458,6 +473,61 @@ export default function CalibrationForm({
         setCompareTarget(null);
         setCompareHistory([]);
     };
+
+    useEffect(() => {
+        if (autoAddCompareTarget !== "true") {
+            return;
+        }
+
+        if (!compareSettings.autoAddTarget) {
+            setCalibrationURLState({
+                autoAddCompareTarget: "false",
+                compareTargetAdvances: "",
+            });
+            return;
+        }
+
+        const matchingRows = rows.filter(
+            (row) => row.initialSeed === targetSeedValue
+        );
+        if (matchingRows.length === 0) {
+            return;
+        }
+
+        const desiredAdvances = parseInt(compareTargetAdvances, 10);
+        const targetRow = matchingRows.reduce((bestRow, currentRow) => {
+            const currentDistance = Number.isNaN(desiredAdvances)
+                ? currentRow.advances
+                : Math.abs(currentRow.advances - desiredAdvances);
+            const bestDistance = Number.isNaN(desiredAdvances)
+                ? bestRow.advances
+                : Math.abs(bestRow.advances - desiredAdvances);
+
+            if (currentDistance < bestDistance) {
+                return currentRow;
+            }
+            if (
+                currentDistance === bestDistance &&
+                currentRow.advances < bestRow.advances
+            ) {
+                return currentRow;
+            }
+            return bestRow;
+        }, matchingRows[0]);
+
+        addCompareTarget(targetRow);
+        setCalibrationURLState({
+            autoAddCompareTarget: "false",
+            compareTargetAdvances: "",
+        });
+    }, [
+        autoAddCompareTarget,
+        compareSettings.autoAddTarget,
+        compareTargetAdvances,
+        rows,
+        setCalibrationURLState,
+        targetSeedValue,
+    ]);
 
     useEffect(() => {
         if (!compareFloating) {
@@ -1524,6 +1594,21 @@ export default function CalibrationForm({
                                     />
                                 }
                                 label={t("compare.enableCalculator")}
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={compareSettings.autoAddTarget}
+                                        onChange={(event) =>
+                                            setCompareSettings((current: CalibrationCompareSettings) => ({
+                                                ...current,
+                                                autoAddTarget:
+                                                    event.target.checked,
+                                            }))
+                                        }
+                                    />
+                                }
+                                label={t("compare.autoAddTarget")}
                             />
                             <TextField
                                 label={t("compare.position")}
