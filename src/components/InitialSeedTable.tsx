@@ -94,6 +94,7 @@ const InitialSeedTable = memo(function InitialSeedTable({
             COMPARE_TARGET_STORAGE_KEY,
             createStoredCompareEntry(compareTarget)
         );
+        localStorage.removeItem(SEARCHER_COMPARE_TARGET_KEY);
     }
 
     function humanizeSettings(settings: string | undefined) {
