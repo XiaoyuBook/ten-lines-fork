@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
+    Autocomplete,
     Box,
     Button,
     Checkbox,
     FormControlLabel,
     MenuItem,
+    Switch,
     type SxProps,
     TextField,
     type Theme,
@@ -22,11 +24,12 @@ import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 import { proxy } from "comlink";
 import {
+    type EnumeratedStaticTemplate3,
     type ExtendedSearcherState,
     type ExtendedWildSearcherState,
 } from "../tenLines/generated";
 import React from "react";
-import { getAllGameOptions, useI18n } from "../i18n";
+import { getAllGameOptions, getName, useI18n } from "../i18n";
 import IvEntry from "./IvEntry";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import { useSearchParams } from "react-router-dom";
@@ -35,10 +38,12 @@ import SearcherTable from "./SearcherTable";
 
 export interface SearcherFormState {
     shininess: number;
-    nature: number;
+    natures: number[];
     gender: number;
     hiddenPower: number;
     ivRangeStrings: [string, string][];
+    usePerfectIvFilter: boolean;
+    perfectIvCount: number;
     staticCategory: number;
     staticPokemon: number;
     wildCategory: number;
@@ -63,7 +68,7 @@ function useSearcherURLState() {
     const game = searchParams.get("game") || "r_painting";
     const trainerID = searchParams.get("trainerID") || "0";
     const secretID = searchParams.get("secretID") || "0";
-    const sound = searchParams.get("sound") || "mono";
+    const sound = searchParams.get("sound") || "any";
     const reachableAdvancesFilter =
         searchParams.get("reachableAdvancesFilter") ||
         (searchParams.has("advancesMin") || searchParams.has("advancesMax")
@@ -95,6 +100,70 @@ type SearcherRowWithAdvances =
     | (ExtendedSearcherState & { reachableAdvances?: number })
     | (ExtendedWildSearcherState & { reachableAdvances?: number });
 
+type ReachabilityResult = {
+    reachable: boolean;
+    advances: number;
+};
+
+const DEFAULT_IV_RANGE_STRINGS: [string, string][] = [
+    ["0", "31"],
+    ["0", "31"],
+    ["0", "31"],
+    ["0", "31"],
+    ["0", "31"],
+    ["0", "31"],
+];
+
+function getPerfectIvRangeSets(perfectIvCount: number): [number, number][][] {
+    const rangeSets: [number, number][][] = [];
+    const currentSelection: number[] = [];
+
+    const buildCombinations = (start: number) => {
+        if (currentSelection.length === perfectIvCount) {
+            rangeSets.push(
+                Array.from({ length: 6 }, (_, statIndex) =>
+                    currentSelection.includes(statIndex) ? [31, 31] : [0, 30]
+                )
+            );
+            return;
+        }
+
+        for (let statIndex = start; statIndex < 6; statIndex += 1) {
+            currentSelection.push(statIndex);
+            buildCombinations(statIndex + 1);
+            currentSelection.pop();
+        }
+    };
+
+    buildCombinations(0);
+    return rangeSets;
+}
+
+function mergeRowsBySeed(
+    rows: SearcherRowWithAdvances[]
+): SearcherRowWithAdvances[] {
+    const rowsBySeed = new Map<number, SearcherRowWithAdvances>();
+
+    for (const row of rows) {
+        const existingRow = rowsBySeed.get(row.seed);
+        if (!existingRow) {
+            rowsBySeed.set(row.seed, row);
+            continue;
+        }
+
+        const existingAdvances = existingRow.reachableAdvances;
+        const nextAdvances = row.reachableAdvances;
+        if (
+            existingAdvances === undefined ||
+            (nextAdvances !== undefined && nextAdvances < existingAdvances)
+        ) {
+            rowsBySeed.set(row.seed, row);
+        }
+    }
+
+    return Array.from(rowsBySeed.values());
+}
+
 export default function CalibrationForm({
     sx,
     hidden,
@@ -106,17 +175,12 @@ export default function CalibrationForm({
     const [searcherFormState, setSearcherFormState] =
         useState<SearcherFormState>({
             shininess: 255,
-            nature: -1,
+            natures: [],
             gender: 255,
             hiddenPower: -1,
-            ivRangeStrings: [
-                ["0", "31"],
-                ["0", "31"],
-                ["0", "31"],
-                ["0", "31"],
-                ["0", "31"],
-                ["0", "31"],
-            ],
+            ivRangeStrings: DEFAULT_IV_RANGE_STRINGS,
+            usePerfectIvFilter: false,
+            perfectIvCount: 1,
             staticCategory: 0,
             staticPokemon: 0,
             wildCategory: 0,
@@ -139,6 +203,8 @@ export default function CalibrationForm({
 
     const [rows, setRows] = useState<SearcherRowWithAdvances[]>([]);
     const [searching, setSearching] = useState(false);
+    const [selectedStaticTargetName, setSelectedStaticTargetName] =
+        useState<string>();
 
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
     const ivRanges = ivRangesAreValid
@@ -147,6 +213,9 @@ export default function CalibrationForm({
             parseInt(range[1], 10),
         ])
         : [];
+    const submittedIvRanges = searcherFormState.usePerfectIvFilter
+        ? getPerfectIvRangeSets(searcherFormState.perfectIvCount)
+        : [ivRanges];
 
     const [trainerIDIsValid, setTrainerIDIsValid] = useState(true);
     const [secretIDIsValid, setSecretIDIsValid] = useState(true);
@@ -169,6 +238,80 @@ export default function CalibrationForm({
         !secretIDIsValid ||
         !ivRangesAreValid ||
         (isReachableAdvancesFilterEnabled && !requiredAdvancesRangeIsValid);
+    const isStatic = searcherFormState.method <= STATIC_4;
+    const isFRLG = game.startsWith("fr") || game.startsWith("lg");
+    const isFRLGE = isFRLG || game.startsWith("e_");
+
+    const selectedNatureSet = useMemo(
+        () => new Set(searcherFormState.natures),
+        [searcherFormState.natures]
+    );
+    const compareTargetName = useMemo(() => {
+        if (!isStatic && searcherFormState.wildPokemon >= 0) {
+            return getName(
+                resources,
+                searcherFormState.wildPokemon & 0x7ff,
+                searcherFormState.wildPokemon >> 11
+            );
+        }
+        return selectedStaticTargetName;
+    }, [
+        isStatic,
+        resources,
+        searcherFormState.wildPokemon,
+        selectedStaticTargetName,
+    ]);
+    const visibleRows = useMemo(
+        () =>
+            searcherFormState.natures.length === 0
+                ? rows
+                : rows.filter((row) => selectedNatureSet.has(row.nature)),
+        [rows, searcherFormState.natures, selectedNatureSet]
+    );
+    const submittedNatureFilters =
+        searcherFormState.natures.length === 0
+            ? [-1]
+            : searcherFormState.natures;
+
+    useEffect(() => {
+        if (!isStatic) {
+            setSelectedStaticTargetName(undefined);
+            return;
+        }
+
+        let cancelled = false;
+        const loadStaticTargetName = async () => {
+            const tenLines = await fetchTenLines();
+            const templates = await tenLines.get_static_template_info(
+                searcherFormState.staticCategory
+            );
+            const matchingTemplate = templates.find(
+                (template: EnumeratedStaticTemplate3) =>
+                    template.index === searcherFormState.staticPokemon
+            );
+            if (!cancelled) {
+                setSelectedStaticTargetName(
+                    matchingTemplate
+                        ? getName(
+                            resources,
+                            matchingTemplate.species,
+                            matchingTemplate.form
+                        )
+                        : undefined
+                );
+            }
+        };
+
+        void loadStaticTargetName();
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        isStatic,
+        resources,
+        searcherFormState.staticCategory,
+        searcherFormState.staticPokemon,
+    ]);
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -177,95 +320,140 @@ export default function CalibrationForm({
             const tenLines = await fetchTenLines();
             setRows([]);
             setSearching(true);
-            const seedData = game.endsWith("painting")
-                ? new Uint8Array()
-                : await fetchSeedData(game);
-            const filterResultsByRequiredAdvances = async <
-                T extends ExtendedSearcherState | ExtendedWildSearcherState,
-            >(
-                results: T[]
-            ) => {
-                if (!isReachableAdvancesFilterEnabled) {
-                    return results as SearcherRowWithAdvances[];
-                }
-                const reachabilityResults =
-                    await tenLines.filter_reachable_target_seeds_with_sound(
-                        results.map((result) => result.seed),
-                        requiredAdvancesRange,
-                        game,
-                        0,
-                        isFRLG ? sound : "",
-                        seedData
-                    );
-                return results
-                    .map((result, index) => ({
-                        ...result,
-                        reachableAdvances: reachabilityResults[index].reachable
-                            ? reachabilityResults[index].advances
-                            : undefined,
-                    }))
-                    .filter(
-                        (_result, index) => reachabilityResults[index].reachable
-                    ) as SearcherRowWithAdvances[];
-            };
-            const appendResults = (results: SearcherRowWithAdvances[]) => {
-                setRows((rows) => {
-                    if (rows.length > 1000 || results.length === 0) {
-                        return rows;
+            try {
+                const seedData = game.endsWith("painting")
+                    ? new Uint8Array()
+                    : await fetchSeedData(game);
+                const filterResultsByRequiredAdvances = async <
+                    T extends ExtendedSearcherState | ExtendedWildSearcherState,
+                >(
+                    results: T[]
+                ) => {
+                    if (!isReachableAdvancesFilterEnabled) {
+                        return results as SearcherRowWithAdvances[];
                     }
-                    return [...rows, ...results];
-                });
-            };
-            if (isStatic) {
-                await tenLines.search_seeds_static(
-                    SEED_IDENTIFIER_TO_GAME[game],
-                    parseInt(trainerID),
-                    parseInt(secretID),
-                    searcherFormState.staticCategory,
-                    searcherFormState.staticPokemon,
-                    searcherFormState.method,
-                    searcherFormState.shininess,
-                    searcherFormState.nature,
-                    searcherFormState.gender,
-                    searcherFormState.hiddenPower,
-                    ivRanges,
-                    proxy(async (results: ExtendedSearcherState[]) => {
-                        appendResults(
-                            await filterResultsByRequiredAdvances(results)
-                        );
-                    }),
-                    proxy(setSearching)
-                );
-            } else {
-                await tenLines.search_seeds_wild(
-                    SEED_IDENTIFIER_TO_GAME[game],
-                    parseInt(trainerID),
-                    parseInt(secretID),
-                    searcherFormState.wildCategory,
-                    searcherFormState.wildLocation,
-                    searcherFormState.wildPokemon,
-                    searcherFormState.method,
-                    searcherFormState.wildLead,
-                    searcherFormState.shininess,
-                    searcherFormState.nature,
-                    searcherFormState.gender,
-                    searcherFormState.hiddenPower,
-                    ivRanges,
-                    proxy(async (results: ExtendedWildSearcherState[]) => {
-                        appendResults(
-                            await filterResultsByRequiredAdvances(results)
-                        );
-                    }),
-                    proxy(setSearching)
-                );
+                    const targetSeeds = results.map((result) => result.seed);
+                    const soundFilters =
+                        isFRLG && sound === "any"
+                            ? ["mono", "stereo"]
+                            : [isFRLG ? sound : ""];
+                    const reachabilityResultsPerSound = await Promise.all(
+                        soundFilters.map((soundFilter) =>
+                            tenLines.filter_reachable_target_seeds_with_sound(
+                                targetSeeds,
+                                requiredAdvancesRange,
+                                game,
+                                0,
+                                soundFilter,
+                                seedData
+                            )
+                        )
+                    );
+
+                    return mergeRowsBySeed(
+                        results
+                            .map((result, index) => {
+                                const reachableResults =
+                                    reachabilityResultsPerSound
+                                        .map(
+                                            (
+                                                reachabilityResults: ReachabilityResult[]
+                                            ) =>
+                                                reachabilityResults[index]
+                                        )
+                                        .filter(
+                                            (
+                                                reachabilityResult: ReachabilityResult
+                                            ) =>
+                                                reachabilityResult.reachable
+                                        );
+                                const minimumReachableAdvances =
+                                    reachableResults.length === 0
+                                        ? undefined
+                                        : Math.min(
+                                            ...reachableResults.map(
+                                                (
+                                                    reachabilityResult: ReachabilityResult
+                                                ) =>
+                                                    reachabilityResult.advances
+                                            )
+                                        );
+
+                                return {
+                                    ...result,
+                                    reachableAdvances:
+                                        minimumReachableAdvances,
+                                };
+                            })
+                            .filter(
+                                (result) =>
+                                    result.reachableAdvances !== undefined
+                            ) as SearcherRowWithAdvances[]
+                    );
+                };
+                const appendResults = (results: SearcherRowWithAdvances[]) => {
+                    setRows((rows) => {
+                        if (rows.length > 1000 || results.length === 0) {
+                            return rows;
+                        }
+                        return mergeRowsBySeed([...rows, ...results]);
+                    });
+                };
+                const searchingCallback = proxy(() => {});
+
+                for (const natureFilter of submittedNatureFilters) {
+                    for (const currentIvRanges of submittedIvRanges) {
+                        if (isStatic) {
+                            await tenLines.search_seeds_static(
+                                SEED_IDENTIFIER_TO_GAME[game],
+                                parseInt(trainerID),
+                                parseInt(secretID),
+                                searcherFormState.staticCategory,
+                                searcherFormState.staticPokemon,
+                                searcherFormState.method,
+                                searcherFormState.shininess,
+                                natureFilter,
+                                searcherFormState.gender,
+                                searcherFormState.hiddenPower,
+                                currentIvRanges,
+                                proxy(async (results: ExtendedSearcherState[]) => {
+                                    appendResults(
+                                        await filterResultsByRequiredAdvances(results)
+                                    );
+                                }),
+                                searchingCallback
+                            );
+                        } else {
+                            await tenLines.search_seeds_wild(
+                                SEED_IDENTIFIER_TO_GAME[game],
+                                parseInt(trainerID),
+                                parseInt(secretID),
+                                searcherFormState.wildCategory,
+                                searcherFormState.wildLocation,
+                                searcherFormState.wildPokemon,
+                                searcherFormState.method,
+                                searcherFormState.wildLead,
+                                searcherFormState.shininess,
+                                natureFilter,
+                                searcherFormState.gender,
+                                searcherFormState.hiddenPower,
+                                currentIvRanges,
+                                proxy(async (results: ExtendedWildSearcherState[]) => {
+                                    appendResults(
+                                        await filterResultsByRequiredAdvances(results)
+                                    );
+                                }),
+                                searchingCallback
+                            );
+                        }
+                    }
+                }
+            } finally {
+                setSearching(false);
             }
         };
         submit();
     };
-
-    const isStatic = searcherFormState.method <= STATIC_4;
-    const isFRLG = game.startsWith("fr") || game.startsWith("lg");
-    const isFRLGE = isFRLG || game.startsWith("e_");
 
     if (searcherFormState.staticCategory == 3 && !isFRLG) {
         searcherFormState.staticCategory = 0;
@@ -369,6 +557,7 @@ export default function CalibrationForm({
                     select
                     fullWidth
                 >
+                    <MenuItem value="any">{t("common.any")}</MenuItem>
                     <MenuItem value="mono">{t("common.mono")}</MenuItem>
                     <MenuItem value="stereo">{t("common.stereo")}</MenuItem>
                 </TextField>
@@ -470,27 +659,61 @@ export default function CalibrationForm({
                 <MenuItem value="2">{t("options.square")}</MenuItem>
                 <MenuItem value="3">{t("options.starSquare")}</MenuItem>
             </TextField>
-            <TextField
-                label={t("labels.nature")}
-                margin="normal"
-                style={{ textAlign: "left" }}
-                onChange={(event) => {
+            <Autocomplete
+                multiple
+                disableCloseOnSelect
+                options={resources.natures.map((_nature, index) => index)}
+                value={searcherFormState.natures}
+                onChange={(_event, value) => {
                     setSearcherFormState((data) => ({
                         ...data,
-                        nature: parseInt(event.target.value),
+                        natures: value,
                     }));
                 }}
-                value={searcherFormState.nature}
-                select
+                getOptionLabel={(option) => resources.natures[option]}
+                renderOption={(props, option) => {
+                    const { key, ...optionProps } = props;
+                    const isSelected = selectedNatureSet.has(option);
+                    return (
+                        <Box
+                            component="li"
+                            key={key}
+                            {...optionProps}
+                            sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                width: "100%",
+                            }}
+                        >
+                            <span>{resources.natures[option]}</span>
+                            <span
+                                aria-hidden="true"
+                                style={{
+                                    visibility: isSelected ? "visible" : "hidden",
+                                    fontWeight: 700,
+                                }}
+                            >
+                                {"\u2713"}
+                            </span>
+                        </Box>
+                    );
+                }}
+                renderInput={(params) => (
+                    <TextField
+                        {...params}
+                        label={t("labels.nature")}
+                        margin="normal"
+                        style={{ textAlign: "left" }}
+                        placeholder={
+                            searcherFormState.natures.length === 0
+                                ? t("common.any")
+                                : undefined
+                        }
+                    />
+                )}
                 fullWidth
-            >
-                <MenuItem value="-1">{t("common.any")}</MenuItem>
-                {resources.natures.map((nature, index) => (
-                    <MenuItem key={index} value={index}>
-                        {nature}
-                    </MenuItem>
-                ))}
-            </TextField>
+            />
             <TextField
                 label={t("labels.gender")}
                 margin="normal"
@@ -533,16 +756,55 @@ export default function CalibrationForm({
                     </MenuItem>
                 ))}
             </TextField>
-            <IvEntry
-                onChange={(_event, value) => {
-                    setIvRangesAreValid(value.isValid);
-                    setSearcherFormState((data) => ({
-                        ...data,
-                        ivRangeStrings: value.value,
-                    }));
-                }}
-                value={searcherFormState.ivRangeStrings}
+            <FormControlLabel
+                control={
+                    <Switch
+                        checked={searcherFormState.usePerfectIvFilter}
+                        onChange={(event) => {
+                            setSearcherFormState((data) => ({
+                                ...data,
+                                usePerfectIvFilter: event.target.checked,
+                            }));
+                        }}
+                    />
+                }
+                label={t("messages.usePerfectIvFilter")}
             />
+            {searcherFormState.usePerfectIvFilter ? (
+                <TextField
+                    label={t("labels.perfectIvCount")}
+                    margin="normal"
+                    style={{ textAlign: "left" }}
+                    onChange={(event) => {
+                        setSearcherFormState((data) => ({
+                            ...data,
+                            perfectIvCount: parseInt(event.target.value, 10),
+                        }));
+                    }}
+                    value={searcherFormState.perfectIvCount}
+                    select
+                    fullWidth
+                >
+                    {Array.from({ length: 6 }, (_, index) => index + 1).map(
+                        (count) => (
+                            <MenuItem key={count} value={count}>
+                                {t(`options.perfect${count}v`)}
+                            </MenuItem>
+                        )
+                    )}
+                </TextField>
+            ) : (
+                <IvEntry
+                    onChange={(_event, value) => {
+                        setIvRangesAreValid(value.isValid);
+                        setSearcherFormState((data) => ({
+                            ...data,
+                            ivRangeStrings: value.value,
+                        }));
+                    }}
+                    value={searcherFormState.ivRangeStrings}
+                />
+            )}
             <Button
                 variant="contained"
                 color="primary"
@@ -553,12 +815,13 @@ export default function CalibrationForm({
                 {searching ? t("common.searching") : t("common.submit")}
             </Button>
             <SearcherTable
-                rows={rows}
+                rows={visibleRows}
                 isStatic={isStatic}
                 isMultiMethod={
                     searcherFormState.method === COMBINED_WILD_METHOD
                 }
                 showRequiredAdvances={isReachableAdvancesFilterEnabled}
+                compareTargetName={compareTargetName}
             />
         </Box>
     );

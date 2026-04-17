@@ -1,11 +1,18 @@
-import Paper from "@mui/material/Paper";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import { memo } from "react";
+import {
+    Box,
+    IconButton,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TablePagination,
+    TableRow,
+    Tooltip,
+} from "@mui/material";
+import { memo, useEffect, useMemo, useState } from "react";
+
 import { getName, useI18n } from "../i18n";
 import { frameToMS, hexSeed } from "../tenLines";
 import type {
@@ -14,6 +21,8 @@ import type {
     FRLGContiguousSeedEntry,
 } from "../tenLines/generated";
 
+import type { CalibrationResultRow } from "./CalibrationComparePanel";
+
 const CalibrationTable = memo(function CalibrationTable({
     rows,
     target,
@@ -21,8 +30,8 @@ const CalibrationTable = memo(function CalibrationTable({
     isStatic,
     isMultiMethod,
     isTeachyTVMode,
-    isSwitch,
-    overworldFrames,
+    hasTarget,
+    onAdd,
 }: {
     rows: ExtendedGeneratorState[] | ExtendedWildGeneratorState[];
     target: FRLGContiguousSeedEntry;
@@ -30,16 +39,42 @@ const CalibrationTable = memo(function CalibrationTable({
     isStatic: boolean;
     isMultiMethod: boolean;
     isTeachyTVMode: boolean;
-    isSwitch: boolean;
-    overworldFrames: number;
+    hasTarget: boolean;
+    onAdd: (row: CalibrationResultRow, destination: "target" | "history") => void;
 }) {
     const { t, resources } = useI18n();
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(50);
+
+    const defaultAddToTarget = !hasTarget;
+    const cappedRows = useMemo(() => rows.slice(0, 1000), [rows]);
+    const paginatedRows = useMemo(
+        () =>
+            cappedRows.slice(
+                page * rowsPerPage,
+                page * rowsPerPage + rowsPerPage
+            ),
+        [cappedRows, page, rowsPerPage]
+    );
+
+    useEffect(() => {
+        const maxPage = Math.max(
+            0,
+            Math.ceil(cappedRows.length / rowsPerPage) - 1
+        );
+        if (page > maxPage) {
+            setPage(maxPage);
+        }
+    }, [cappedRows.length, page, rowsPerPage]);
 
     return (
         <TableContainer component={Paper}>
             <Table>
                 <TableHead>
                     <TableRow>
+                        <TableCell width={72} align="center">
+                            {t("table.actions")}
+                        </TableCell>
                         <TableCell>{t("table.seed")}</TableCell>
                         <TableCell>{t("table.advances")}</TableCell>
                         {isMultiMethod && <TableCell>{t("table.method")}</TableCell>}
@@ -48,9 +83,6 @@ const CalibrationTable = memo(function CalibrationTable({
                         )}
                         {isTeachyTVMode && (
                             <TableCell>{t("table.teachyTvAdvances")}</TableCell>
-                        )}
-                        {isSwitch && (
-                            <TableCell>{t("table.continueScreenFrames")}</TableCell>
                         )}
                         {!isStatic && <TableCell>{t("table.slot")}</TableCell>}
                         {!isStatic && <TableCell>{t("table.level")}</TableCell>}
@@ -65,18 +97,76 @@ const CalibrationTable = memo(function CalibrationTable({
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {rows.map((row, index) => {
-                        if (index === 1000) {
-                            return <TableRow key={index}>...</TableRow>;
-                        } else if (index > 1000) {
-                            return null;
-                        }
+                    {paginatedRows.map((row, index) => {
+                        const absoluteIndex = page * rowsPerPage + index;
                         const seedMS = frameToMS(row.seedTime / 16, gameConsole);
                         const offsetMS =
                             seedMS - frameToMS(target.seedTime / 16, gameConsole);
 
                         return (
-                            <TableRow key={index}>
+                            <TableRow key={absoluteIndex}>
+                                <TableCell align="center">
+                                    <Box
+                                        sx={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 0.5,
+                                            p: 0.25,
+                                            borderRadius: 999,
+                                            border: "1px solid rgba(144,202,249,0.28)",
+                                            backgroundColor: "rgba(144,202,249,0.08)",
+                                        }}
+                                    >
+                                        <Tooltip
+                                            title={t(
+                                                defaultAddToTarget
+                                                    ? "compare.addToTarget"
+                                                    : "compare.addToHistory"
+                                            )}
+                                        >
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
+                                                aria-label={t(
+                                                    defaultAddToTarget
+                                                        ? "compare.addToTarget"
+                                                        : "compare.addToHistory"
+                                                )}
+                                                sx={{
+                                                    width: 28,
+                                                    height: 28,
+                                                    borderRadius: 999,
+                                                    backgroundColor:
+                                                        "primary.main",
+                                                    color: "primary.contrastText",
+                                                    "&:hover": {
+                                                        backgroundColor:
+                                                            "primary.dark",
+                                                    },
+                                                }}
+                                                onClick={() =>
+                                                    onAdd(
+                                                        row,
+                                                        defaultAddToTarget
+                                                            ? "target"
+                                                            : "history"
+                                                    )
+                                                }
+                                            >
+                                                <Box
+                                                    component="span"
+                                                    sx={{
+                                                        fontSize: "1.05rem",
+                                                        fontWeight: 700,
+                                                        lineHeight: 1,
+                                                    }}
+                                                >
+                                                    +
+                                                </Box>
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
+                                </TableCell>
                                 <TableCell>
                                     <div style={{ float: "left" }}>
                                         {hexSeed(row.initialSeed, 16)} | {seedMS}
@@ -103,11 +193,6 @@ const CalibrationTable = memo(function CalibrationTable({
                                 )}
                                 {isTeachyTVMode && (
                                     <TableCell>{row.ttvAdvances}</TableCell>
-                                )}
-                                {isSwitch && (
-                                    <TableCell>
-                                        {row.advances - overworldFrames * 2}
-                                    </TableCell>
                                 )}
                                 {!isStatic && (
                                     <TableCell>
@@ -139,6 +224,21 @@ const CalibrationTable = memo(function CalibrationTable({
                     })}
                 </TableBody>
             </Table>
+            <TablePagination
+                component="div"
+                count={cappedRows.length}
+                page={page}
+                onPageChange={(_event, nextPage) => {
+                    setPage(nextPage);
+                }}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(event) => {
+                    setRowsPerPage(parseInt(event.target.value, 10));
+                    setPage(0);
+                }}
+                rowsPerPageOptions={[20, 50, 100]}
+                labelRowsPerPage={t("table.rowsPerPage")}
+            />
         </TableContainer>
     );
 });

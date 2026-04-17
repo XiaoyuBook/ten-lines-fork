@@ -14,9 +14,18 @@ Original upstream project:
 - Searcher results are automatically checked against Initial Seed reachability logic
 - Results with no reachable Initial Seed route inside the allowed range are filtered out
 - Searcher can display **Min Reachable Advances** for each remaining target
+- FRLG Searcher reachability filtering now includes a **Sound** selector with `Any`, `Mono`, and `Stereo`
+- Searcher now supports a **perfect IV count filter** so you can search for `1V` through `6V` targets by enumerating all valid 31-IV combinations automatically
 - The UI now supports **English / Chinese language switching**
 - Core in-game naming resources can now render in **Chinese**, including species, natures, abilities, types, and locations
 - Chinese UI terminology was cleaned up to better match common community naming and PokeWiki usage
+- ID Combo search now supports **multi-select nature filters** and shows **example IV spreads** in the result table
+- Calibration now includes a **target / history comparison panel** with quick-add workflow, column visibility controls, delta display, floating window mode, and an optional calculator
+- Calibration search now runs **manually on submit**, avoiding repeated automatic reruns while users are still entering values
+- Searcher and Initial Seed can now **carry a chosen target forward into Calibration compare automatically**
+- Calibration compare settings now include an **auto-add target** toggle, enabled by default
+- Bingo confirmations can now **append directly into calibration history**, and repeated confirmations of the same result are recorded repeatedly
+- Compare target seed display now includes both **hex seed and timing in milliseconds**
 - Build flow supports **offline cached FRLG seed data**
 - Vite base path is configurable so the site can be deployed cleanly on a custom domain or subdomain
 
@@ -34,8 +43,12 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 
 - FRLG / RSE search tools
 - Initial Seed lookup
+- ID Combo search with multi-nature filtering and sample IV display
 - Calibration tools
+- Calibration compare panel with target/history tracking, delta readouts, floating mode, optional calculator, and automatic target carry-over from earlier steps
 - Reachable-advance prefiltering in Searcher
+- Searcher perfect-IV-count filtering for `1V` to `6V`
+- FRLG reachable-search sound filtering with an `Any` option
 - English / Chinese UI toggle
 - Chinese naming resources for Gen 3 data shown in the interface
 - Offline-friendly generated FRLG seed cache
@@ -47,6 +60,32 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - Language choice is stored locally in the browser and persists across reloads
 - Chinese text is intended to follow established Pokémon community terminology where practical
 - Imported game data names are sourced from bundled PokeFinder i18n resources, while UI copy is maintained in the web app layer
+- In Chinese mode, natures are shown with their English counterpart in parentheses for easier cross-reference
+
+## Calibration Notes
+
+- Calibration results can be added directly into a compare panel as either a target or history entry
+- History rows can compare against either the target or the previous history row for Seed and advance deltas
+- Compare panel columns are configurable, and the panel can be docked or switched into a draggable floating window
+- The floating compare panel includes an optional built-in calculator for quick frame and timing math
+- Calibration searches now run only when you press submit, which helps avoid UI stalls while editing input values
+- Clicking **Calibration** from Initial Seed can automatically add the selected target into the compare panel before you search
+- If the target originated from Searcher, Calibration compare will try to preserve the selected target's full info, including species/display name and matching search attributes
+- Compare panel settings include an **Auto-add target** switch so this behavior can be disabled if you want a manual workflow
+- Compare target seed values are shown as `SEED (xxx ms)` for easier timing reference
+- Bingo confirmations now sync into compare history automatically, so confirmed hits can be kept as a running calibration log
+
+## Searcher Notes
+
+- The Searcher nature filter supports multi-select input, with an empty selection meaning `Any`
+- The perfect-IV-count filter is separate from manual IV ranges: once enabled, it enumerates every possible combination of exactly `N` perfect stats and searches across those combinations automatically
+- For FRLG reachable filtering, choosing Sound = `Any` checks both `Mono` and `Stereo` routes internally and keeps the lower reachable advance result for the same seed
+- Searcher rows can pass a selected target forward into Initial Seed / Calibration so later steps can reuse the intended species and spread context
+
+## ID Combo Notes
+
+- ID Combo search supports selecting multiple target natures at once
+- Result rows include a sample IV spread, PID, and seed so you can inspect the kind of hit each TID/SID pair is matching
 
 ## Building Locally
 

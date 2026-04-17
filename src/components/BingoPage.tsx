@@ -8,8 +8,10 @@ import type {
 import fetchTenLines, { hexSeed, SEED_IDENTIFIER_TO_GAME } from "../tenLines";
 import { useI18n } from "../i18n";
 import type { CalibrationFormState } from "./CalibrationForm";
+import { createStoredCompareEntry } from "./CalibrationForm";
 import { proxy } from "comlink";
 import useLocalStorage from "../hooks/useLocalStorage";
+import type { CalibrationCompareEntry } from "./CalibrationComparePanel";
 
 export function useBingoBoard() {
     const [bingoBoard, setBingoBoard] = useLocalStorage("bingo-board", []);
@@ -163,6 +165,10 @@ export default function BingoPage({
 }) {
     const { resources } = useI18n();
     const [bingoBoard, _setBingoBoard, counters, setCounters] = useBingoBoard();
+    const [, setCompareHistory] = useLocalStorage<CalibrationCompareEntry[]>(
+        "calibration-compare-history",
+        []
+    );
 
     const width = bingoBoard[0]?.length ?? 0;
     const height = bingoBoard.length;
@@ -289,8 +295,15 @@ export default function BingoPage({
                             style={{ display: "block", lineHeight: 1 }}
                             onClick={() => {
                                 const newCounters = [...(counters ?? [])];
-                                newCounters[y - 1][x - 1] = counter + 1;
+                                const nextCounter = counter + 1;
+                                newCounters[y - 1][x - 1] = nextCounter;
                                 setCounters(newCounters);
+                                setCompareHistory(
+                                    (history: CalibrationCompareEntry[]) => [
+                                        ...history,
+                                        createStoredCompareEntry(entry),
+                                    ]
+                                );
                             }}
                             onMouseDown={(e) => {
                                 if (e.button === 1) {

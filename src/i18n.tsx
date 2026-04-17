@@ -69,6 +69,12 @@ const parseMap = (text: string) =>
         })
     );
 
+const EN_NATURES = parseList(natures_en_txt);
+const ZH_NATURES = parseList(natures_zh_txt).map((nature, index) => {
+    const english = EN_NATURES[index];
+    return english ? `${nature} (${english})` : nature;
+});
+
 const RESOURCES: Record<Locale, ResourceBundle> = {
     en: {
         methods: {
@@ -123,7 +129,7 @@ const RESOURCES: Record<Locale, ResourceBundle> = {
         },
         genders: ["\u2642", "\u2640", "-"],
         shininess: ["\u5426", "\u661f\u95ea", "\u65b9\u95ea"],
-        natures: parseList(natures_zh_txt),
+        natures: ZH_NATURES,
         abilities: parseList(abilities_zh_txt),
         species: ["\u86cb", ...parseList(species_zh_txt)],
         forms: Object.fromEntries(
@@ -179,6 +185,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             filter: "Filter",
             showSeeds: "Show Seeds",
             reset: "Reset",
+            close: "Close",
             mono: "Mono",
             stereo: "Stereo",
         },
@@ -212,6 +219,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             nature: "Nature",
             gender: "Gender",
             hiddenPower: "Hidden Power",
+            perfectIvCount: "Perfect IV Count",
             category: "Category",
             pokemon: "Pokemon",
             location: "Location",
@@ -278,6 +286,12 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             static: "Static",
             hustlePressureVitalSpirit: "Hustle/Pressure/Vital Spirit",
             matchingSynchronize: "Matching Synchronize",
+            perfect1v: "1V",
+            perfect2v: "2V",
+            perfect3v: "3V",
+            perfect4v: "4V",
+            perfect5v: "5V",
+            perfect6v: "6V",
             shinyLocked: "Shiny Locked",
             lockBreak: "Lock Break",
             start: "Start",
@@ -286,6 +300,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             blackout: "Blackout",
         },
         table: {
+            actions: "Actions",
             seed: "Seed",
             advances: "Advances",
             method: "Method",
@@ -302,6 +317,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             hidden: "Hidden",
             power: "Power",
             gender: "Gender",
+            rowsPerPage: "Rows per page",
             minReachableAdvances: "Min Reachable Advances",
             openInInitialSeed: "Open In Initial Seed",
             openInCalibration: "Open In Calibration",
@@ -317,12 +333,46 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             calibration: "Calibration",
             initialSeed: "Initial Seed",
         },
+        compare: {
+            title: "Calibration Compare",
+            target: "Target",
+            history: "History",
+            record: "Record",
+            settings: "Compare Settings",
+            floatWindow: "Float Window",
+            minimize: "Minimize",
+            settingsShort: "Set",
+            clearAll: "Clear All",
+            clearShort: "Clr",
+            delete: "Delete",
+            deleteTarget: "Delete Target",
+            emptyTarget: "Add a result as the target to start comparing.",
+            emptyHistory: "Historical results added later will appear here.",
+            display: "Display",
+            enable: "Enable compare table",
+            enableCalculator: "Enable calculator",
+            autoAddTarget: "Auto-add calibration target",
+            position: "Panel Position",
+            positionLeft: "Left",
+            positionRight: "Right",
+            compareMode: "Comparison Mode",
+            modeTarget: "Always compare with target",
+            modePrevious: "Compare with previous history entry",
+            visibleColumns: "Visible Columns",
+            addToTarget: "Add to Target",
+            addToHistory: "Add to History",
+            addedTarget: "Added as target",
+            addedHistory: "Added to history",
+            resultsTitle: "Calibration Results",
+            calculator: "Calculator",
+        },
         messages: {
             noKnownSeeds: "No known seeds for this game & settings",
             requiredForIvCalculation: "Required for IV calculation",
             ivCalculationDisabled:
                 "IV calculation disabled. Searching all Natures.",
             filterByReachableAdvances: "Filter by reachable advances",
+            usePerfectIvFilter: "Use perfect IV filter",
             idComboIntro:
                 "Search for TID/SID combinations whose TSV makes the matching static target shiny.",
             noMatchingStaticTargets:
@@ -379,6 +429,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             filter: "\u7b5b\u9009",
             showSeeds: "\u663e\u793a Seed",
             reset: "\u91cd\u7f6e",
+            close: "\u5173\u95ed",
             mono: "\u5355\u58f0\u9053",
             stereo: "\u7acb\u4f53\u58f0",
         },
@@ -412,6 +463,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             nature: "\u6027\u683c",
             gender: "\u6027\u522b",
             hiddenPower: "\u89c9\u9192\u529b\u91cf",
+            perfectIvCount: "\u6ee1\u80fd\u529b\u6570\u91cf",
             category: "\u5206\u7c7b",
             pokemon: "\u5b9d\u53ef\u68a6",
             location: "\u5730\u70b9",
@@ -483,6 +535,12 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             hustlePressureVitalSpirit:
                 "\u6d3b\u529b/\u538b\u8feb\u611f/\u5e72\u52b2",
             matchingSynchronize: "\u5339\u914d\u540c\u6b65",
+            perfect1v: "1V",
+            perfect2v: "2V",
+            perfect3v: "3V",
+            perfect4v: "4V",
+            perfect5v: "5V",
+            perfect6v: "6V",
             shinyLocked: "\u5f02\u8272\u9501\u5b9a",
             lockBreak: "\u7834\u9501",
             start: "\u5f00\u59cb",
@@ -491,6 +549,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             blackout: "\u9ed1\u5c4f",
         },
         table: {
+            actions: "\u64cd\u4f5c",
             seed: "Seed",
             advances: "\u6d88\u8017\u5e27",
             method: "\u65b9\u6cd5",
@@ -507,6 +566,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             hidden: "\u89c9\u9192\u5c5e\u6027",
             power: "\u5a01\u529b",
             gender: "\u6027\u522b",
+            rowsPerPage: "\u6bcf\u9875\u884c\u6570",
             minReachableAdvances: "\u6700\u5c0f\u53ef\u8fbe\u6d88\u8017\u5e27",
             openInInitialSeed: "\u5728\u521d\u59cb Seed \u4e2d\u6253\u5f00",
             openInCalibration: "\u5728\u6821\u51c6\u4e2d\u6253\u5f00",
@@ -522,6 +582,41 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             calibration: "\u6821\u51c6",
             initialSeed: "\u521d\u59cb Seed",
         },
+        compare: {
+            title: "\u6821\u51c6\u5bf9\u7167",
+            target: "\u76ee\u6807",
+            history: "\u5386\u53f2",
+            record: "\u8bb0\u5f55",
+            settings: "\u5bf9\u7167\u8bbe\u7f6e",
+            floatWindow: "\u6d6e\u7a97",
+            minimize: "\u6700\u5c0f\u5316",
+            settingsShort: "\u8bbe",
+            clearAll: "\u6e05\u7a7a",
+            clearShort: "\u6e05",
+            delete: "\u5220\u9664",
+            deleteTarget: "\u5220\u9664\u76ee\u6807",
+            emptyTarget:
+                "\u5148\u4ece\u4e0b\u65b9\u7ed3\u679c\u8868\u91cc\u52a0\u5165\u4e00\u6761\u76ee\u6807\u6570\u636e\u3002",
+            emptyHistory:
+                "\u540e\u7eed\u52a0\u5165\u7684\u5386\u53f2\u6570\u636e\u4f1a\u663e\u793a\u5728\u8fd9\u91cc\u3002",
+            display: "\u663e\u793a",
+            enable: "\u542f\u7528\u5bf9\u7167\u8868",
+            enableCalculator: "\u542f\u7528\u8ba1\u7b97\u5668",
+            autoAddTarget: "\u6821\u51c6\u81ea\u52a8\u6dfb\u52a0\u76ee\u6807",
+            position: "\u8868\u683c\u4f4d\u7f6e",
+            positionLeft: "\u5de6\u4fa7",
+            positionRight: "\u53f3\u4fa7",
+            compareMode: "\u5bf9\u6bd4\u65b9\u5f0f",
+            modeTarget: "\u59cb\u7ec8\u4e0e\u76ee\u6807\u5bf9\u6bd4",
+            modePrevious: "\u4e0e\u4e0a\u4e00\u6761\u5386\u53f2\u5bf9\u6bd4",
+            visibleColumns: "\u663e\u793a\u5217",
+            addToTarget: "\u52a0\u5230\u76ee\u6807",
+            addToHistory: "\u52a0\u5230\u5386\u53f2",
+            addedTarget: "\u5df2\u6dfb\u52a0\u4e3a\u76ee\u6807",
+            addedHistory: "\u5df2\u6dfb\u52a0\u5230\u5386\u53f2",
+            resultsTitle: "\u6821\u51c6\u7ed3\u679c",
+            calculator: "\u8ba1\u7b97\u5668",
+        },
         messages: {
             noKnownSeeds:
                 "\u5f53\u524d\u6e38\u620f\u548c\u8bbe\u7f6e\u4e0b\u6ca1\u6709\u5df2\u77e5 Seed",
@@ -531,6 +626,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "IV \u8ba1\u7b97\u5df2\u5173\u95ed\uff0c\u6b63\u5728\u641c\u7d22\u5168\u90e8\u6027\u683c\u3002",
             filterByReachableAdvances:
                 "\u6309\u53ef\u8fbe\u6d88\u8017\u5e27\u7b5b\u9009",
+            usePerfectIvFilter:
+                "\u6ee1\u80fd\u529b\u7b5b\u9009",
             idComboIntro:
                 "\u641c\u7d22\u80fd\u8ba9\u5339\u914d\u9759\u6001\u76ee\u6807\u53d8\u95ea\u7684 TID/SID \u7ec4\u5408\u3002",
             noMatchingStaticTargets:

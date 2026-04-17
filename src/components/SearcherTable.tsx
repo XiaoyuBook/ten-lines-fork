@@ -14,12 +14,30 @@ import type {
     ExtendedSearcherState,
     ExtendedWildSearcherState,
 } from "../tenLines/generated";
+import { SEARCHER_COMPARE_TARGET_KEY } from "./CalibrationForm";
+import { setLocalStorageValue } from "../hooks/useLocalStorage";
+
+type SearcherCompareTarget = {
+    displayName?: string;
+    pid: number;
+    shiny: number;
+    nature: number;
+    ability: number;
+    abilityIndex: number;
+    ivs: number[];
+    hiddenPower: number;
+    hiddenPowerStrength: number;
+    gender: number;
+    species?: number;
+    form?: number;
+};
 
 const SearcherTable = memo(function SearcherTable({
     rows,
     isStatic,
     isMultiMethod,
     showRequiredAdvances,
+    compareTargetName,
 }: {
     rows:
         | (ExtendedSearcherState & { reachableAdvances?: number })[]
@@ -27,14 +45,43 @@ const SearcherTable = memo(function SearcherTable({
     isStatic: boolean;
     isMultiMethod: boolean;
     showRequiredAdvances: boolean;
+    compareTargetName?: string;
 }) {
     const { t, resources } = useI18n();
     const [, setSearchParams] = useSearchParams();
+
+    function cacheCompareTarget(
+        row: ExtendedSearcherState | ExtendedWildSearcherState
+    ) {
+        const cachedTarget: SearcherCompareTarget = {
+            displayName:
+                "species" in row
+                    ? getName(resources, row.species, row.form)
+                    : compareTargetName,
+            pid: row.pid,
+            shiny: row.shiny,
+            nature: row.nature,
+            ability: row.ability,
+            abilityIndex: row.abilityIndex,
+            ivs: [...row.ivs],
+            hiddenPower: row.hiddenPower,
+            hiddenPowerStrength: row.hiddenPowerStrength,
+            gender: row.gender,
+            ...("species" in row
+                ? {
+                    species: row.species,
+                    form: row.form,
+                }
+                : {}),
+        };
+        setLocalStorageValue(SEARCHER_COMPARE_TARGET_KEY, cachedTarget);
+    }
 
     function openInInitialSeed(
         row: ExtendedSearcherState | ExtendedWildSearcherState,
         isAuxClick: boolean
     ) {
+        cacheCompareTarget(row);
         setSearchParams((previous) => {
             const params = new URLSearchParams(previous);
             params.set("targetSeed", hexSeed(row.seed, 32));

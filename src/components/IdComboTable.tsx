@@ -18,6 +18,7 @@ export interface IDComboRow {
     tsv: number;
     shiny: number;
     matchCount: number;
+    exampleIvs: number[];
     examplePid: number;
     exampleSeed: number;
     game: string;
@@ -58,6 +59,7 @@ const IdComboTable = memo(function IdComboTable({
                         <TableCell>TSV</TableCell>
                         <TableCell>{t("table.shiny")}</TableCell>
                         <TableCell>{t("table.matchingTargets")}</TableCell>
+                        <TableCell>{t("table.ivs")}</TableCell>
                         <TableCell>{t("table.exampleSeed")}</TableCell>
                         <TableCell>{t("table.examplePid")}</TableCell>
                         <TableCell>{t("table.openInInitialSeed")}</TableCell>
@@ -72,6 +74,7 @@ const IdComboTable = memo(function IdComboTable({
                             <TableCell>{row.tsv}</TableCell>
                             <TableCell>{resources.shininess[row.shiny]}</TableCell>
                             <TableCell>{row.matchCount}</TableCell>
+                            <TableCell>{row.exampleIvs.join("/")}</TableCell>
                             <TableCell>{hexSeed(row.exampleSeed, 32)}</TableCell>
                             <TableCell>{hexSeed(row.examplePid, 32)}</TableCell>
                             <TableCell>
