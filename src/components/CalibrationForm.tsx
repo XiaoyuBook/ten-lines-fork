@@ -46,6 +46,7 @@ import { fetchBingo, getBingoActive, useBingoBoard } from "./BingoPage";
 import CalibrationComparePanel, {
     type CalibrationCompareColumn,
     type CalibrationCompareEntry,
+    type CalibrationCompareRow,
     type CalibrationCompareSettings,
     type CalibrationResultRow,
     DEFAULT_COMPARE_COLUMNS,
@@ -129,7 +130,7 @@ export interface CalibrationURLState {
     compareTargetAdvances: string;
 }
 
-function createCompareEntry(row: CalibrationResultRow): CalibrationCompareEntry {
+function createCompareEntry(row: CalibrationCompareRow): CalibrationCompareEntry {
     return {
         id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
         row,
@@ -137,7 +138,7 @@ function createCompareEntry(row: CalibrationResultRow): CalibrationCompareEntry 
 }
 
 export function createStoredCompareEntry(
-    row: CalibrationResultRow
+    row: CalibrationCompareRow
 ): CalibrationCompareEntry {
     return createCompareEntry(row);
 }
@@ -441,7 +442,7 @@ export default function CalibrationForm({
         ),
     });
 
-    const addCompareTarget = (row: CalibrationResultRow) => {
+    const addCompareTarget = (row: CalibrationCompareRow) => {
         setCompareTarget(createCompareEntry(row));
         setCompareFeedback(t("compare.addedTarget"));
     };
@@ -487,45 +488,29 @@ export default function CalibrationForm({
             return;
         }
 
-        const matchingRows = rows.filter(
-            (row) => row.initialSeed === targetSeedValue
-        );
-        if (matchingRows.length === 0) {
+        if (targetSeed.initialSeed !== targetSeedValue) {
             return;
         }
 
         const desiredAdvances = parseInt(compareTargetAdvances, 10);
-        const targetRow = matchingRows.reduce((bestRow, currentRow) => {
-            const currentDistance = Number.isNaN(desiredAdvances)
-                ? currentRow.advances
-                : Math.abs(currentRow.advances - desiredAdvances);
-            const bestDistance = Number.isNaN(desiredAdvances)
-                ? bestRow.advances
-                : Math.abs(bestRow.advances - desiredAdvances);
-
-            if (currentDistance < bestDistance) {
-                return currentRow;
-            }
-            if (
-                currentDistance === bestDistance &&
-                currentRow.advances < bestRow.advances
-            ) {
-                return currentRow;
-            }
-            return bestRow;
-        }, matchingRows[0]);
-
-        addCompareTarget(targetRow);
+        addCompareTarget({
+            initialSeed: targetSeed.initialSeed,
+            seedTime: targetSeed.seedTime,
+            advances: Number.isNaN(desiredAdvances)
+                ? advancesRange[0]
+                : desiredAdvances,
+        });
         setCalibrationURLState({
             autoAddCompareTarget: "false",
             compareTargetAdvances: "",
         });
     }, [
         autoAddCompareTarget,
+        advancesRange,
         compareSettings.autoAddTarget,
         compareTargetAdvances,
-        rows,
         setCalibrationURLState,
+        targetSeed,
         targetSeedValue,
     ]);
 
@@ -781,6 +766,26 @@ export default function CalibrationForm({
         };
         void submit();
     };
+
+    useEffect(() => {
+        if (autoAddCompareTarget !== "true") {
+            return;
+        }
+        if (!compareSettings.autoAddTarget) {
+            return;
+        }
+        if (searching || rows.length > 0 || isNotSubmittable) {
+            return;
+        }
+
+        runSearch();
+    }, [
+        autoAddCompareTarget,
+        compareSettings.autoAddTarget,
+        isNotSubmittable,
+        rows.length,
+        searching,
+    ]);
 
     const targetSeedFilterOptions = createFilterOptions({
         limit: 100,

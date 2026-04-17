@@ -28,6 +28,16 @@ export type CalibrationResultRow =
     | ExtendedGeneratorState
     | ExtendedWildGeneratorState;
 
+export interface CalibrationInitialSeedTarget {
+    initialSeed: number;
+    seedTime: number;
+    advances: number;
+}
+
+export type CalibrationCompareRow =
+    | CalibrationResultRow
+    | CalibrationInitialSeedTarget;
+
 export type CalibrationCompareColumn =
     | "seed"
     | "advances"
@@ -54,7 +64,7 @@ export interface CalibrationCompareSettings {
 
 export interface CalibrationCompareEntry {
     id: string;
-    row: CalibrationResultRow;
+    row: CalibrationCompareRow;
 }
 
 export const DEFAULT_COMPARE_COLUMNS: CalibrationCompareColumn[] = [
@@ -93,7 +103,7 @@ function getAbilityText(
 
 function getColumnValue(
     column: CalibrationCompareColumn,
-    row: CalibrationResultRow,
+    row: CalibrationCompareRow,
     resources: ReturnType<typeof useI18n>["resources"]
 ) {
     switch (column) {
@@ -102,21 +112,23 @@ function getColumnValue(
         case "advances":
             return String(row.advances);
         case "pid":
-            return hexSeed(row.pid, 32);
+            return "pid" in row ? hexSeed(row.pid, 32) : "-";
         case "shiny":
-            return resources.shininess[row.shiny];
+            return "shiny" in row ? resources.shininess[row.shiny] : "-";
         case "nature":
-            return resources.natures[row.nature];
+            return "nature" in row ? resources.natures[row.nature] : "-";
         case "ability":
-            return getAbilityText(row, resources);
+            return "ability" in row ? getAbilityText(row, resources) : "-";
         case "ivs":
-            return row.ivs.join("/");
+            return "ivs" in row ? row.ivs.join("/") : "-";
         case "hidden":
-            return resources.types[row.hiddenPower];
+            return "hiddenPower" in row ? resources.types[row.hiddenPower] : "-";
         case "power":
-            return String(row.hiddenPowerStrength);
+            return "hiddenPowerStrength" in row
+                ? String(row.hiddenPowerStrength)
+                : "-";
         case "gender":
-            return resources.genders[row.gender];
+            return "gender" in row ? resources.genders[row.gender] : "-";
     }
 }
 
@@ -127,8 +139,8 @@ function CompareCell({
     gameConsole,
 }: {
     column: CalibrationCompareColumn;
-    row: CalibrationResultRow;
-    baseline: CalibrationResultRow | null;
+    row: CalibrationCompareRow;
+    baseline: CalibrationCompareRow | null;
     gameConsole: string;
 }) {
     const { t, resources } = useI18n();
@@ -193,7 +205,7 @@ function TargetSummary({
     onDelete: () => void;
 }) {
     const { t, resources } = useI18n();
-    const isShiny = entry.row.shiny > 0;
+    const isShiny = "shiny" in entry.row && entry.row.shiny > 0;
 
     return (
         <Paper
