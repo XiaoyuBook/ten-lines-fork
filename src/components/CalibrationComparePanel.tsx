@@ -35,6 +35,7 @@ export interface CalibrationInitialSeedTarget {
 }
 
 export interface CalibrationStoredTarget extends CalibrationInitialSeedTarget {
+    displayName?: string;
     pid: number;
     shiny: number;
     nature: number;
@@ -252,7 +253,11 @@ function TargetSummary({
                         color={isShiny ? "warning" : "primary"}
                         size="small"
                     />
-                    {"species" in entry.row &&
+                    {("displayName" in entry.row && entry.row.displayName) ? (
+                        <Typography variant="body2" color="text.secondary">
+                            {entry.row.displayName}
+                        </Typography>
+                    ) : ("species" in entry.row &&
                         entry.row.species !== undefined && (
                         <Typography variant="body2" color="text.secondary">
                             {getName(
@@ -261,7 +266,7 @@ function TargetSummary({
                                 entry.row.form ?? 0
                             )}
                         </Typography>
-                    )}
+                    ))}
                 </Box>
                 <Tooltip title={t("compare.deleteTarget")}>
                     <IconButton

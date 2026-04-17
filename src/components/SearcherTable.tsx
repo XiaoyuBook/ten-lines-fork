@@ -18,6 +18,7 @@ import { SEARCHER_COMPARE_TARGET_KEY } from "./CalibrationForm";
 import { setLocalStorageValue } from "../hooks/useLocalStorage";
 
 type SearcherCompareTarget = {
+    displayName?: string;
     pid: number;
     shiny: number;
     nature: number;
@@ -36,6 +37,7 @@ const SearcherTable = memo(function SearcherTable({
     isStatic,
     isMultiMethod,
     showRequiredAdvances,
+    compareTargetName,
 }: {
     rows:
         | (ExtendedSearcherState & { reachableAdvances?: number })[]
@@ -43,6 +45,7 @@ const SearcherTable = memo(function SearcherTable({
     isStatic: boolean;
     isMultiMethod: boolean;
     showRequiredAdvances: boolean;
+    compareTargetName?: string;
 }) {
     const { t, resources } = useI18n();
     const [, setSearchParams] = useSearchParams();
@@ -51,6 +54,10 @@ const SearcherTable = memo(function SearcherTable({
         row: ExtendedSearcherState | ExtendedWildSearcherState
     ) {
         const cachedTarget: SearcherCompareTarget = {
+            displayName:
+                "species" in row
+                    ? getName(resources, row.species, row.form)
+                    : compareTargetName,
             pid: row.pid,
             shiny: row.shiny,
             nature: row.nature,

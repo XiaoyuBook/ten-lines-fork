@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
     Autocomplete,
@@ -24,11 +24,12 @@ import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 import { proxy } from "comlink";
 import {
+    type EnumeratedStaticTemplate3,
     type ExtendedSearcherState,
     type ExtendedWildSearcherState,
 } from "../tenLines/generated";
 import React from "react";
-import { getAllGameOptions, useI18n } from "../i18n";
+import { getAllGameOptions, getName, useI18n } from "../i18n";
 import IvEntry from "./IvEntry";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import { useSearchParams } from "react-router-dom";
@@ -197,6 +198,8 @@ export default function CalibrationForm({
 
     const [rows, setRows] = useState<SearcherRowWithAdvances[]>([]);
     const [searching, setSearching] = useState(false);
+    const [selectedStaticTargetName, setSelectedStaticTargetName] =
+        useState<string>();
 
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
     const ivRanges = ivRangesAreValid
@@ -235,6 +238,21 @@ export default function CalibrationForm({
         () => new Set(searcherFormState.natures),
         [searcherFormState.natures]
     );
+    const compareTargetName = useMemo(() => {
+        if (!isStatic && searcherFormState.wildPokemon >= 0) {
+            return getName(
+                resources,
+                searcherFormState.wildPokemon & 0x7ff,
+                searcherFormState.wildPokemon >> 11
+            );
+        }
+        return selectedStaticTargetName;
+    }, [
+        isStatic,
+        resources,
+        searcherFormState.wildPokemon,
+        selectedStaticTargetName,
+    ]);
     const visibleRows = useMemo(
         () =>
             searcherFormState.natures.length === 0
@@ -246,6 +264,46 @@ export default function CalibrationForm({
         searcherFormState.natures.length === 0
             ? [-1]
             : searcherFormState.natures;
+
+    useEffect(() => {
+        if (!isStatic) {
+            setSelectedStaticTargetName(undefined);
+            return;
+        }
+
+        let cancelled = false;
+        const loadStaticTargetName = async () => {
+            const tenLines = await fetchTenLines();
+            const templates = await tenLines.get_static_template_info(
+                searcherFormState.staticCategory
+            );
+            const matchingTemplate = templates.find(
+                (template: EnumeratedStaticTemplate3) =>
+                    template.index === searcherFormState.staticPokemon
+            );
+            if (!cancelled) {
+                setSelectedStaticTargetName(
+                    matchingTemplate
+                        ? getName(
+                            resources,
+                            matchingTemplate.species,
+                            matchingTemplate.form
+                        )
+                        : undefined
+                );
+            }
+        };
+
+        void loadStaticTargetName();
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        isStatic,
+        resources,
+        searcherFormState.staticCategory,
+        searcherFormState.staticPokemon,
+    ]);
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -753,6 +811,7 @@ export default function CalibrationForm({
                     searcherFormState.method === COMBINED_WILD_METHOD
                 }
                 showRequiredAdvances={isReachableAdvancesFilterEnabled}
+                compareTargetName={compareTargetName}
             />
         </Box>
     );
