@@ -600,7 +600,16 @@ const detectPanelLayout = (image: CanvasImage): DetectedLayout | null => {
 
                 const hsv = rgbToHsv(red, green, blue);
                 const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
-                return hsv.value >= 0.82 && hsv.saturation <= 0.22 && luminance >= 200;
+                const warmLight =
+                    red >= 180 &&
+                    green >= 175 &&
+                    blue >= 145;
+                return (
+                    (hsv.value >= 0.72 &&
+                        hsv.saturation <= 0.38 &&
+                        luminance >= 170) ||
+                    warmLight
+                );
             }, rightBounds),
             image.width,
             image.height
@@ -617,8 +626,8 @@ const detectPanelLayout = (image: CanvasImage): DetectedLayout | null => {
             const height = rectHeight(rect);
             return (
                 width >= panelWidth * 0.12 &&
-                height >= panelHeight * 0.04 &&
-                height <= panelHeight * 0.2 &&
+                height >= panelHeight * 0.03 &&
+                height <= panelHeight * 0.11 &&
                 width / Math.max(height, 1) >= 1.05
             );
         });
@@ -668,12 +677,15 @@ const detectPanelLayout = (image: CanvasImage): DetectedLayout | null => {
             }
 
             const labelHeight = rectHeight(labelRect);
+            const fallbackLeft = panel.left + Math.floor(panelWidth * 0.74);
+            const fallbackRight = panel.left + Math.floor(panelWidth * 0.97);
+            const fallbackHalfHeight = Math.round(labelHeight * 0.52);
             statRects[key] = clampRect(
                 {
-                    left: panel.left + Math.floor(panelWidth * 0.62),
-                    top: Math.max(panel.top, Math.round(rectCenterY(labelRect) - labelHeight * 0.8)),
-                    right: panel.right - Math.floor(panelWidth * 0.04),
-                    bottom: Math.min(panel.bottom, Math.round(rectCenterY(labelRect) + labelHeight * 0.8)),
+                    left: fallbackLeft,
+                    top: Math.round(rectCenterY(labelRect) - fallbackHalfHeight),
+                    right: fallbackRight,
+                    bottom: Math.round(rectCenterY(labelRect) + fallbackHalfHeight),
                 },
                 image.width,
                 image.height
@@ -681,15 +693,17 @@ const detectPanelLayout = (image: CanvasImage): DetectedLayout | null => {
         }
 
         const allRects = [...labelRects, ...Object.values(statRects)];
-        const panelRect = expandRect(
+        const maxPanelBottom = Math.floor(image.height * 0.7);
+        const panelRect = clampRect(
             {
-                left: Math.min(...allRects.map((rect) => rect.left)),
-                top: Math.min(...allRects.map((rect) => rect.top)),
-                right: Math.max(...allRects.map((rect) => rect.right)),
-                bottom: Math.max(...allRects.map((rect) => rect.bottom)),
+                left: Math.min(...allRects.map((rect) => rect.left)) - 6,
+                top: Math.min(...allRects.map((rect) => rect.top)) - 6,
+                right: Math.max(...allRects.map((rect) => rect.right)) + 6,
+                bottom: Math.min(
+                    Math.max(...allRects.map((rect) => rect.bottom)) + 6,
+                    maxPanelBottom
+                ),
             },
-            6,
-            6,
             image.width,
             image.height
         );
