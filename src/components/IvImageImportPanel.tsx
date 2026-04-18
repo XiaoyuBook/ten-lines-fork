@@ -11,10 +11,12 @@ import {
 
 import { useI18n } from "../i18n";
 
-type TesseractModule = typeof import("tesseract.js/dist/tesseract.esm.min.js");
+type TesseractModule = NonNullable<Window["Tesseract"]>;
 type TesseractWorker = Awaited<ReturnType<TesseractModule["createWorker"]>>;
-type TesseractLoggerMessage =
-    import("tesseract.js/dist/tesseract.esm.min.js").LoggerMessage;
+type TesseractLoggerMessage = {
+    progress: number;
+    status: string;
+};
 
 type StatKey =
     | "hp"
@@ -53,6 +55,9 @@ const EMPTY_STAT_VALUES: StatValueMap = {
 };
 
 const getEmptyStats = (): StatValueMap => ({ ...EMPTY_STAT_VALUES });
+const TESSERACT_SCRIPT_ID = "tesseract-js-runtime";
+const TESSERACT_SCRIPT_SRC =
+    "https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js";
 
 const loadImage = (file: Blob) =>
     new Promise<HTMLImageElement>((resolve, reject) => {
@@ -121,6 +126,48 @@ const parseRecognizedValue = (rawText: string) => {
     const matches = rawText.replace(/\s/g, "").match(/\d{1,3}/g);
     return matches?.[0] ?? "";
 };
+
+const loadTesseractRuntime = () =>
+    new Promise<TesseractModule>((resolve, reject) => {
+        if (window.Tesseract) {
+            resolve(window.Tesseract);
+            return;
+        }
+
+        const existingScript = document.getElementById(
+            TESSERACT_SCRIPT_ID
+        ) as HTMLScriptElement | null;
+
+        if (existingScript) {
+            existingScript.addEventListener("load", () => {
+                if (window.Tesseract) {
+                    resolve(window.Tesseract);
+                    return;
+                }
+                reject(new Error("Tesseract runtime not available"));
+            });
+            existingScript.addEventListener("error", () => {
+                reject(new Error("Failed to load Tesseract runtime"));
+            });
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.id = TESSERACT_SCRIPT_ID;
+        script.src = TESSERACT_SCRIPT_SRC;
+        script.async = true;
+        script.onload = () => {
+            if (window.Tesseract) {
+                resolve(window.Tesseract);
+                return;
+            }
+            reject(new Error("Tesseract runtime not available"));
+        };
+        script.onerror = () => {
+            reject(new Error("Failed to load Tesseract runtime"));
+        };
+        document.head.appendChild(script);
+    });
 
 export default function IvImageImportPanel({
     currentLineCount,
@@ -218,7 +265,7 @@ export default function IvImageImportPanel({
             return workerRef.current;
         }
 
-        const Tesseract = await import("tesseract.js/dist/tesseract.esm.min.js");
+        const Tesseract = await loadTesseractRuntime();
         const worker = await Tesseract.createWorker("eng", 1, {
             logger: (message: TesseractLoggerMessage) => {
                 if (message.status === "recognizing text") {

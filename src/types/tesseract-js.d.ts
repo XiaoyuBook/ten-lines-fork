@@ -1,36 +1,40 @@
-declare module "tesseract.js" {
-    export type LoggerMessage = {
+type TesseractLoggerMessage = {
         progress: number;
         status: string;
     };
 
-    export type WorkerParams = {
+type TesseractWorkerParams = {
         tessedit_char_whitelist?: string;
         preserve_interword_spaces?: string;
         user_defined_dpi?: string;
     };
 
-    export type RecognizeResult = {
+type TesseractRecognizeResult = {
         data: {
             text: string;
         };
     };
 
-    export type Worker = {
-        setParameters: (params: WorkerParams) => Promise<unknown>;
-        recognize: (image: string) => Promise<RecognizeResult>;
+type TesseractWorker = {
+        setParameters: (params: TesseractWorkerParams) => Promise<unknown>;
+        recognize: (image: string) => Promise<TesseractRecognizeResult>;
         terminate: () => Promise<unknown>;
     };
 
-    export function createWorker(
+type TesseractModule = {
+    createWorker: (
         langs?: string | string[],
         oem?: number,
         options?: {
-            logger?: (message: LoggerMessage) => void;
+            logger?: (message: TesseractLoggerMessage) => void;
         }
-    ): Promise<Worker>;
+    ) => Promise<TesseractWorker>;
+};
+
+declare global {
+    interface Window {
+        Tesseract?: TesseractModule;
+    }
 }
 
-declare module "tesseract.js/dist/tesseract.esm.min.js" {
-    export * from "tesseract.js";
-}
+export {};
