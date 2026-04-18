@@ -25,6 +25,7 @@ import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import IdComboTable, { type IDComboRow } from "./IdComboTable";
+import { filterNatureOptions } from "../utils/natureSearch";
 
 const MAX_ID_ADVANCES_SEARCH = 65535;
 
@@ -559,6 +560,7 @@ export default function IdComboForm({
                 disableCloseOnSelect
                 options={resources.natures.map((_nature, index) => index)}
                 value={formState.natures}
+                filterOptions={filterNatureOptions}
                 onChange={(_event, value) => {
                     setFormState((data) => ({
                         ...data,

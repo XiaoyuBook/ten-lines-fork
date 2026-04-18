@@ -58,6 +58,7 @@ import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import WildEncounterSelector from "./WildEncounterSelector";
+import { filterNatureOptions } from "../utils/natureSearch";
 
 const CALIBRATION_COMPARE_COLUMN_OPTIONS: CalibrationCompareColumn[] = [
     "seed",
@@ -1311,28 +1312,42 @@ export default function CalibrationForm({
                             <MenuItem value="2">{t("options.square")}</MenuItem>
                             <MenuItem value="3">{t("options.starSquare")}</MenuItem>
                         </TextField>
-                        <TextField
-                            label={t("labels.nature")}
-                            margin="normal"
-                            style={{ textAlign: "left" }}
-                            onChange={(event) => {
+                        <Autocomplete
+                            options={[-1, ...resources.natures.map((_nature, index) => index)]}
+                            value={calibrationFormState.nature}
+                            onChange={(_event, value) => {
                                 setCalibrationFormState((data) => ({
                                     ...data,
-                                    nature: parseInt(event.target.value),
+                                    nature: value ?? -1,
                                 }));
                             }}
-                            value={calibrationFormState.nature}
-                            helperText={t("messages.requiredForIvCalculation")}
-                            select
+                            filterOptions={filterNatureOptions}
+                            getOptionLabel={(option) =>
+                                option === -1
+                                    ? t("common.any")
+                                    : resources.natures[option]
+                            }
+                            isOptionEqualToValue={(option, value) =>
+                                option === value
+                            }
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label={t("labels.nature")}
+                                    margin="normal"
+                                    style={{ textAlign: "left" }}
+                                    helperText={t(
+                                        "messages.requiredForIvCalculation"
+                                    )}
+                                    placeholder={
+                                        calibrationFormState.nature === -1
+                                            ? t("common.any")
+                                            : undefined
+                                    }
+                                />
+                            )}
                             fullWidth
-                        >
-                            <MenuItem value="-1">{t("common.any")}</MenuItem>
-                            {resources.natures.map((nature, index) => (
-                                <MenuItem key={index} value={index}>
-                                    {nature}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        />
                         <TextField
                             label={t("labels.gender")}
                             margin="normal"

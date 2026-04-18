@@ -69,8 +69,9 @@ const parseMap = (text: string) =>
         })
     );
 
-const EN_NATURES = parseList(natures_en_txt);
-const ZH_NATURES = parseList(natures_zh_txt).map((nature, index) => {
+export const EN_NATURES = parseList(natures_en_txt);
+export const ZH_NATURES_RAW = parseList(natures_zh_txt);
+export const ZH_NATURES = ZH_NATURES_RAW.map((nature, index) => {
     const english = EN_NATURES[index];
     return english ? `${nature} (${english})` : nature;
 });

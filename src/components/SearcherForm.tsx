@@ -35,6 +35,7 @@ import StaticEncounterSelector from "./StaticEncounterSelector";
 import { useSearchParams } from "react-router-dom";
 import WildEncounterSelector from "./WildEncounterSelector";
 import SearcherTable from "./SearcherTable";
+import { filterNatureOptions } from "../utils/natureSearch";
 
 export interface SearcherFormState {
     shininess: number;
@@ -664,6 +665,7 @@ export default function CalibrationForm({
                 disableCloseOnSelect
                 options={resources.natures.map((_nature, index) => index)}
                 value={searcherFormState.natures}
+                filterOptions={filterNatureOptions}
                 onChange={(_event, value) => {
                     setSearcherFormState((data) => ({
                         ...data,
