@@ -1389,9 +1389,12 @@ const extractRoiColumnStats = async (
         return null;
     }
 
-    const hpToken = tokens[0];
+    const hpToken = tokens[0] ?? "";
+    const hpParts = hpToken.split("/").filter((part) => /^\d+$/.test(part));
     const hpValue = hpToken.includes("/")
-        ? hpToken.split("/").filter((part) => /^\d+$/.test(part)).at(-1) ?? ""
+        ? hpParts.length > 0
+            ? hpParts[hpParts.length - 1]
+            : ""
         : hpToken;
 
     const nextStats = getEmptyStats();
