@@ -4,10 +4,6 @@ import {
     Box,
     Button,
     CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     Paper,
     TextField,
     Typography,
@@ -32,21 +28,6 @@ type StatKey =
 
 type StatValueMap = Record<StatKey, string>;
 
-type OverlayRegion = {
-    key: StatKey;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-};
-
-type PixelBand = {
-    top: number;
-    bottom: number;
-    left: number;
-    right: number;
-};
-
 type RegionBox = {
     x: number;
     y: number;
@@ -58,13 +39,6 @@ type SelectionStart = {
     rect: DOMRect;
     startX: number;
     startY: number;
-};
-
-const DEFAULT_STATS_REGION: RegionBox = {
-    x: 0.705,
-    y: 0.115,
-    width: 0.255,
-    height: 0.695,
 };
 
 const STAT_KEYS: StatKey[] = [
@@ -110,7 +84,7 @@ const loadImage = (file: Blob) =>
 
 const prepareCropDataUrl = (
     image: HTMLImageElement,
-    region: OverlayRegion,
+    region: RegionBox,
     scale = 4
 ) => {
     const sourceX = Math.floor(image.width * region.x);
@@ -159,147 +133,6 @@ const prepareCropDataUrl = (
 const parseRecognizedValue = (rawText: string) => {
     const matches = rawText.replace(/\s/g, "").match(/\d{1,3}/g);
     return matches?.[0] ?? "";
-};
-
-const isLikelyValueBoxPixel = (red: number, green: number, blue: number) => {
-    const maxChannel = Math.max(red, green, blue);
-    const minChannel = Math.min(red, green, blue);
-    const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
-    const saturation = maxChannel - minChannel;
-
-    return luminance > 200 && saturation < 35;
-};
-
-const detectStatValueRegions = (
-    image: HTMLImageElement,
-    statsRegion: RegionBox
-): OverlayRegion[] => {
-    const sourceX = Math.floor(image.width * statsRegion.x);
-    const sourceY = Math.floor(image.height * statsRegion.y);
-    const sourceWidth = Math.max(1, Math.floor(image.width * statsRegion.width));
-    const sourceHeight = Math.max(
-        1,
-        Math.floor(image.height * statsRegion.height)
-    );
-
-    const canvas = document.createElement("canvas");
-    canvas.width = sourceWidth;
-    canvas.height = sourceHeight;
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-        return [];
-    }
-
-    context.drawImage(
-        image,
-        sourceX,
-        sourceY,
-        sourceWidth,
-        sourceHeight,
-        0,
-        0,
-        sourceWidth,
-        sourceHeight
-    );
-
-    const imageData = context.getImageData(0, 0, sourceWidth, sourceHeight).data;
-    const searchStartX = Math.floor(sourceWidth * 0.48);
-    const rowScores = new Array<number>(sourceHeight).fill(0);
-    const rowBounds = Array.from({ length: sourceHeight }, () => ({
-        left: sourceWidth,
-        right: -1,
-    }));
-
-    for (let y = 0; y < sourceHeight; y++) {
-        for (let x = searchStartX; x < sourceWidth; x++) {
-            const index = (y * sourceWidth + x) * 4;
-            const red = imageData[index];
-            const green = imageData[index + 1];
-            const blue = imageData[index + 2];
-
-            if (!isLikelyValueBoxPixel(red, green, blue)) {
-                continue;
-            }
-
-            rowScores[y] += 1;
-            rowBounds[y].left = Math.min(rowBounds[y].left, x);
-            rowBounds[y].right = Math.max(rowBounds[y].right, x);
-        }
-    }
-
-    const smoothedScores = rowScores.map((_value, index) => {
-        const start = Math.max(0, index - 1);
-        const end = Math.min(sourceHeight - 1, index + 1);
-        let total = 0;
-        for (let cursor = start; cursor <= end; cursor++) {
-            total += rowScores[cursor];
-        }
-        return total / (end - start + 1);
-    });
-
-    const maxScore = smoothedScores.reduce((max, value) => Math.max(max, value), 0);
-    if (maxScore === 0) {
-        return [];
-    }
-
-    const threshold = Math.max(12, maxScore * 0.42);
-    const bands: PixelBand[] = [];
-    let currentBand: PixelBand | null = null;
-
-    for (let y = 0; y < sourceHeight; y++) {
-        if (smoothedScores[y] < threshold || rowBounds[y].right < rowBounds[y].left) {
-            if (currentBand) {
-                bands.push(currentBand);
-                currentBand = null;
-            }
-            continue;
-        }
-
-        if (!currentBand) {
-            currentBand = {
-                top: y,
-                bottom: y,
-                left: rowBounds[y].left,
-                right: rowBounds[y].right,
-            };
-            continue;
-        }
-
-        currentBand.bottom = y;
-        currentBand.left = Math.min(currentBand.left, rowBounds[y].left);
-        currentBand.right = Math.max(currentBand.right, rowBounds[y].right);
-    }
-
-    if (currentBand) {
-        bands.push(currentBand);
-    }
-
-    const filteredBands = bands
-        .filter((band) => band.bottom - band.top >= 6)
-        .sort((leftBand, rightBand) => leftBand.top - rightBand.top);
-
-    const selectedBands = filteredBands.slice(0, STAT_KEYS.length);
-    if (selectedBands.length === 0) {
-        return [];
-    }
-
-    return selectedBands.map((band, index) => {
-        const paddingX = Math.max(2, Math.round(sourceWidth * 0.01));
-        const paddingY = Math.max(2, Math.round(sourceHeight * 0.01));
-        const left = Math.max(searchStartX, band.left - paddingX);
-        const right = Math.min(sourceWidth, band.right + paddingX);
-        const top = Math.max(0, band.top - paddingY);
-        const bottom = Math.min(sourceHeight, band.bottom + paddingY);
-
-        return {
-            key: STAT_KEYS[index],
-            x: statsRegion.x + (left / sourceWidth) * statsRegion.width,
-            y: statsRegion.y + (top / sourceHeight) * statsRegion.height,
-            width: ((right - left) / sourceWidth) * statsRegion.width,
-            height: ((bottom - top) / sourceHeight) * statsRegion.height,
-        };
-    });
 };
 
 const clampRegion = (region: RegionBox): RegionBox => {
@@ -369,15 +202,14 @@ export default function IvImageImportPanel({
     const [level, setLevel] = useState("");
     const [previewUrl, setPreviewUrl] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [statsRegion, setStatsRegion] =
-        useState<RegionBox>(DEFAULT_STATS_REGION);
+    const [selectedRegions, setSelectedRegions] = useState<
+        Partial<Record<StatKey, RegionBox>>
+    >({});
     const [draftRegion, setDraftRegion] = useState<RegionBox | null>(null);
-    const [pendingRegion, setPendingRegion] = useState<RegionBox | null>(null);
     const [selectionStart, setSelectionStart] = useState<SelectionStart | null>(
         null
     );
-    const [isSelectingRegion, setIsSelectingRegion] = useState(false);
-    const [selectionDialogOpen, setSelectionDialogOpen] = useState(false);
+    const [selectionIndex, setSelectionIndex] = useState<number | null>(null);
     const [stats, setStats] = useState<StatValueMap>(getEmptyStats);
     const [feedback, setFeedback] = useState("");
     const [feedbackSeverity, setFeedbackSeverity] = useState<
@@ -387,6 +219,8 @@ export default function IvImageImportPanel({
     const [recognitionProgress, setRecognitionProgress] = useState(0);
 
     const statKeys = useMemo(() => STAT_KEYS, []);
+    const currentSelectionKey =
+        selectionIndex === null ? null : statKeys[selectionIndex] ?? null;
     const statLabels = useMemo(
         () =>
             locale === "zh"
@@ -481,11 +315,10 @@ export default function IvImageImportPanel({
         }
         setImageFile(file);
         setPreviewUrl(URL.createObjectURL(file));
-        setStatsRegion(DEFAULT_STATS_REGION);
+        setSelectedRegions({});
         setDraftRegion(null);
-        setPendingRegion(null);
-        setIsSelectingRegion(false);
-        setSelectionDialogOpen(false);
+        setSelectionStart(null);
+        setSelectionIndex(null);
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setStatus(t("imageImport.imageLoaded"), "info");
@@ -497,10 +330,10 @@ export default function IvImageImportPanel({
         }
         setPreviewUrl("");
         setImageFile(null);
+        setSelectedRegions({});
         setDraftRegion(null);
-        setPendingRegion(null);
-        setIsSelectingRegion(false);
-        setSelectionDialogOpen(false);
+        setSelectionStart(null);
+        setSelectionIndex(null);
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setFeedback("");
@@ -531,30 +364,38 @@ export default function IvImageImportPanel({
             const image = await loadImage(imageFile);
             const worker = await getWorker();
             const nextStats = getEmptyStats();
-            const detectedRegions = detectStatValueRegions(image, statsRegion);
+            const missingKey = statKeys.find((key) => !selectedRegions[key]);
 
-            if (detectedRegions.length === 0) {
-                setStats(nextStats);
-                setStatus(t("imageImport.noStatsFound"), "error");
+            if (missingKey) {
+                setStatus(
+                    t("imageImport.selectionIncomplete", {
+                        stat: statLabels[missingKey],
+                    }),
+                    "warning"
+                );
                 return;
             }
 
-            for (const region of detectedRegions) {
+            for (const key of statKeys) {
+                const region = selectedRegions[key];
+                if (!region) {
+                    continue;
+                }
                 const cropDataUrl = prepareCropDataUrl(image, region);
                 const result = await worker.recognize(cropDataUrl);
                 const recognizedValue = parseRecognizedValue(result.data.text);
 
-                if (region.key === "hp" && result.data.text.includes("/")) {
+                if (key === "hp" && result.data.text.includes("/")) {
                     const hpParts = result.data.text
                         .replace(/\s/g, "")
                         .split("/")
                         .filter((entry) => /^\d+$/.test(entry));
-                    nextStats[region.key] =
+                    nextStats[key] =
                         hpParts.length > 0 ? hpParts[hpParts.length - 1] : recognizedValue;
                     continue;
                 }
 
-                nextStats[region.key] = recognizedValue;
+                nextStats[key] = recognizedValue;
             }
 
             setStats(nextStats);
@@ -618,7 +459,7 @@ export default function IvImageImportPanel({
     };
 
     const startSelection = (event: React.PointerEvent<HTMLDivElement>) => {
-        if (!isSelectingRegion) {
+        if (!currentSelectionKey) {
             return;
         }
         if (!previewContainerRef.current) {
@@ -643,7 +484,12 @@ export default function IvImageImportPanel({
                     height: 0.001,
                 })
             );
-            setStatus(t("imageImport.selectionFirstPointSet"), "info");
+            setStatus(
+                t("imageImport.selectionFirstPointSet", {
+                    stat: statLabels[currentSelectionKey],
+                }),
+                "info"
+            );
             return;
         }
 
@@ -658,32 +504,27 @@ export default function IvImageImportPanel({
             height,
         });
 
-        setPendingRegion(nextRegion);
-        setDraftRegion(nextRegion);
+        setSelectedRegions((current) => ({
+            ...current,
+            [currentSelectionKey]: nextRegion,
+        }));
         setSelectionStart(null);
-        setSelectionDialogOpen(true);
-        setIsSelectingRegion(false);
-    };
-
-    const confirmSelectedRegion = () => {
-        if (pendingRegion) {
-            setStatsRegion(clampRegion(pendingRegion));
+        setDraftRegion(null);
+        const nextIndex = selectionIndex === null ? null : selectionIndex + 1;
+        if (nextIndex === null || nextIndex >= statKeys.length) {
+            setSelectionIndex(null);
+            setStatus(t("imageImport.selectionComplete"), "success");
+            return;
         }
-        setSelectionDialogOpen(false);
-        setDraftRegion(null);
-        setPendingRegion(null);
-        setStatus(t("imageImport.selectionApplied"), "success");
-    };
 
-    const cancelSelectedRegion = () => {
-        setSelectionDialogOpen(false);
-        setDraftRegion(null);
-        setPendingRegion(null);
-        setSelectionStart(null);
-        setStatus(t("imageImport.selectionCancelled"), "info");
+        setSelectionIndex(nextIndex);
+        setStatus(
+            t("imageImport.selectionAdvance", {
+                stat: statLabels[statKeys[nextIndex]],
+            }),
+            "info"
+        );
     };
-
-    const displayRegion = draftRegion ?? pendingRegion ?? statsRegion;
 
     return (
         <Paper
@@ -764,13 +605,18 @@ export default function IvImageImportPanel({
                 <Box sx={{ mt: 2 }}>
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
                         <Button
-                            variant={isSelectingRegion ? "contained" : "outlined"}
+                            variant={selectionIndex !== null ? "contained" : "outlined"}
                             onClick={() => {
-                                setIsSelectingRegion(true);
+                                setSelectedRegions({});
                                 setSelectionStart(null);
                                 setDraftRegion(null);
-                                setPendingRegion(null);
-                                setStatus(t("imageImport.selectionModeActive"), "info");
+                                setSelectionIndex(0);
+                                setStatus(
+                                    t("imageImport.selectionModeActive", {
+                                        stat: statLabels[statKeys[0]],
+                                    }),
+                                    "info"
+                                );
                             }}
                         >
                             {t("imageImport.startSelection")}
@@ -788,7 +634,8 @@ export default function IvImageImportPanel({
                             border: "1px solid",
                             borderColor: "divider",
                             backgroundColor: "common.black",
-                            cursor: isSelectingRegion ? "crosshair" : "default",
+                            cursor:
+                                selectionIndex !== null ? "crosshair" : "default",
                         }}
                         onPointerDown={startSelection}
                     >
@@ -798,35 +645,58 @@ export default function IvImageImportPanel({
                             alt={t("imageImport.previewTitle")}
                             sx={{ display: "block", width: "100%", height: "auto" }}
                         />
-                        <Box
-                            sx={{
-                                position: "absolute",
-                                left: `${displayRegion.x * 100}%`,
-                                top: `${displayRegion.y * 100}%`,
-                                width: `${displayRegion.width * 100}%`,
-                                height: `${displayRegion.height * 100}%`,
-                                border: "2px solid rgba(255, 152, 0, 0.95)",
-                                borderRadius: 1.5,
-                                boxSizing: "border-box",
-                                backgroundColor: "rgba(255, 152, 0, 0.08)",
-                                pointerEvents: "none",
-                            }}
-                        >
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    position: "absolute",
-                                    top: 4,
-                                    left: 6,
-                                    px: 0.75,
-                                    borderRadius: 0.75,
-                                    color: "common.white",
-                                    backgroundColor: "rgba(255, 152, 0, 0.95)",
-                                }}
-                            >
-                                {t("imageImport.statsRegion")}
-                            </Typography>
-                        </Box>
+                        {statKeys.map((key) => {
+                            const region =
+                                key === currentSelectionKey && draftRegion
+                                    ? draftRegion
+                                    : selectedRegions[key];
+
+                            if (!region) {
+                                return null;
+                            }
+
+                            const isActiveDraft =
+                                key === currentSelectionKey && !!draftRegion;
+
+                            return (
+                                <Box
+                                    key={key}
+                                    sx={{
+                                        position: "absolute",
+                                        left: `${region.x * 100}%`,
+                                        top: `${region.y * 100}%`,
+                                        width: `${region.width * 100}%`,
+                                        height: `${region.height * 100}%`,
+                                        border: isActiveDraft
+                                            ? "2px solid rgba(255, 152, 0, 0.95)"
+                                            : "2px solid rgba(33, 150, 243, 0.95)",
+                                        borderRadius: 1.5,
+                                        boxSizing: "border-box",
+                                        backgroundColor: isActiveDraft
+                                            ? "rgba(255, 152, 0, 0.08)"
+                                            : "rgba(33, 150, 243, 0.08)",
+                                        pointerEvents: "none",
+                                    }}
+                                >
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            position: "absolute",
+                                            top: 4,
+                                            left: 6,
+                                            px: 0.75,
+                                            borderRadius: 0.75,
+                                            color: "common.white",
+                                            backgroundColor: isActiveDraft
+                                                ? "rgba(255, 152, 0, 0.95)"
+                                                : "rgba(33, 150, 243, 0.95)",
+                                        }}
+                                    >
+                                        {statLabels[key]}
+                                    </Typography>
+                                </Box>
+                            );
+                        })}
                     </Box>
                 </Box>
             )}
@@ -901,25 +771,6 @@ export default function IvImageImportPanel({
             >
                 {t("imageImport.appendAction")}
             </Button>
-            <Dialog
-                open={selectionDialogOpen}
-                onClose={cancelSelectedRegion}
-                fullWidth
-                maxWidth="xs"
-            >
-                <DialogTitle>{t("imageImport.selectionConfirmTitle")}</DialogTitle>
-                <DialogContent>
-                    <Typography>{t("imageImport.selectionConfirmBody")}</Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={cancelSelectedRegion}>
-                        {t("imageImport.selectionRedo")}
-                    </Button>
-                    <Button variant="contained" onClick={confirmSelectedRegion}>
-                        {t("imageImport.selectionConfirm")}
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </Paper>
     );
 }

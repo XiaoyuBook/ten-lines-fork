@@ -461,22 +461,18 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "Suggested flow: set Nature, enter Level, paste a screenshot, recognize, then append.",
             previewTitle: "Recognition Preview",
             adjustHint:
-                "Click the selection button, then click once for the top-left corner and click again for the bottom-right corner of the full stat-value column. Confirm the region before recognition.",
-            statsRegion: "Stats Region",
-            startSelection: "Start Region Selection",
+                "Click the selection button and manually mark six value boxes in order: HP, Attack, Defense, Sp. Atk, Sp. Def, and Speed. Each box uses two clicks: top-left first, then bottom-right.",
+            startSelection: "Select 6 Value Boxes",
             selectionModeActive:
-                "Selection mode is active. Click once to set the top-left corner, then click again to set the bottom-right corner.",
+                "Selection mode is active. Start by selecting the box for {stat}.",
             selectionFirstPointSet:
-                "Top-left corner recorded. Click again to set the bottom-right corner.",
-            selectionConfirmTitle: "Use This Region?",
-            selectionConfirmBody:
-                "Use the selected rectangle as the OCR region for the stat-value column?",
-            selectionConfirm: "Use Region",
-            selectionRedo: "Redo Selection",
-            selectionApplied:
-                "OCR region updated. You can recognize the selected area now.",
-            selectionCancelled:
-                "Selection was not applied. Start region selection again if needed.",
+                "Top-left corner saved for {stat}. Click again to set the bottom-right corner.",
+            selectionAdvance:
+                "{stat} saved. Continue selecting the next value box.",
+            selectionComplete:
+                "All six value boxes are selected. You can recognize them now.",
+            selectionIncomplete:
+                "Please select the box for {stat} before starting recognition.",
         },
         errors: {
             invalidInput: "Invalid input",
@@ -810,22 +806,18 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5efa\u8bae\u6d41\u7a0b\uff1a\u5148\u9009\u6027\u683c\uff0c\u518d\u8f93\u5165\u7b49\u7ea7\uff0c\u7136\u540e\u7c98\u8d34\u622a\u56fe\u3001\u8bc6\u522b\uff0c\u6700\u540e\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c\u3002",
             previewTitle: "\u8bc6\u522b\u9884\u89c8",
             adjustHint:
-                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u70b9\u51fb\u6846\u9009\u6309\u94ae\uff0c\u7136\u540e\u5148\u70b9\u4e00\u4e0b\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u4e00\u4e0b\u53f3\u4e0b\u89d2\uff0c\u628a\u53f3\u4fa7\u6574\u5217\u80fd\u529b\u503c\u6846\u4f4f\u3002\u6700\u540e\u786e\u8ba4\u8fd9\u4e2a\u533a\u57df\uff0c\u518d\u5f00\u59cb\u8bc6\u522b\u3002",
-            statsRegion: "\u80fd\u529b\u533a",
-            startSelection: "\u5f00\u59cb\u6846\u9009\u533a\u57df",
+                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u70b9\u51fb\u6846\u9009\u6309\u94ae\uff0c\u7136\u540e\u6309\u987a\u5e8f\u624b\u52a8\u6846\u9009 6 \u4e2a\u6570\u503c\u6846\uff1aHP\uff0c\u653b\u51fb\uff0c\u9632\u5fa1\uff0c\u7279\u653b\uff0c\u7279\u9632\uff0c\u901f\u5ea6\u3002\u6bcf\u4e2a\u6846\u90fd\u662f\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002",
+            startSelection: "\u5f00\u59cb\u6846\u9009 6 \u9879",
             selectionModeActive:
-                "\u5df2\u8fdb\u5165\u6846\u9009\u6a21\u5f0f\uff0c\u8bf7\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002",
+                "\u5df2\u8fdb\u5165\u6846\u9009\u6a21\u5f0f\uff0c\u8bf7\u5148\u6846\u9009 {stat}\u3002",
             selectionFirstPointSet:
-                "\u5de6\u4e0a\u89d2\u5df2\u8bb0\u5f55\uff0c\u8bf7\u518d\u70b9\u4e00\u4e0b\u53f3\u4e0b\u89d2\u3002",
-            selectionConfirmTitle: "\u786e\u8ba4\u8fd9\u4e2a\u6846\u9009\u533a\u57df\uff1f",
-            selectionConfirmBody:
-                "\u662f\u5426\u4f7f\u7528\u521a\u624d\u6846\u9009\u7684\u77e9\u5f62\u4f5c\u4e3a\u80fd\u529b\u503c\u7684 OCR \u8bc6\u522b\u533a\u57df\uff1f",
-            selectionConfirm: "\u786e\u5b9a\u4f7f\u7528",
-            selectionRedo: "\u91cd\u65b0\u6846\u9009",
-            selectionApplied:
-                "\u8bc6\u522b\u533a\u57df\u5df2\u66f4\u65b0\uff0c\u73b0\u5728\u53ef\u4ee5\u5bf9\u8fd9\u4e2a\u533a\u57df\u6267\u884c\u8bc6\u522b\u3002",
-            selectionCancelled:
-                "\u672a\u5e94\u7528\u8fd9\u6b21\u6846\u9009\u3002\u5982\u679c\u9700\u8981\uff0c\u53ef\u4ee5\u518d\u6b21\u5f00\u59cb\u6846\u9009\u3002",
+                "{stat} \u7684\u5de6\u4e0a\u89d2\u5df2\u8bb0\u5f55\uff0c\u8bf7\u518d\u70b9\u4e00\u4e0b\u53f3\u4e0b\u89d2\u3002",
+            selectionAdvance:
+                "{stat} \u5df2\u4fdd\u5b58\uff0c\u8bf7\u7ee7\u7eed\u6846\u9009\u4e0b\u4e00\u9879\u6570\u503c\u6846\u3002",
+            selectionComplete:
+                "6 \u4e2a\u6570\u503c\u6846\u90fd\u5df2\u6846\u9009\u5b8c\u6210\uff0c\u73b0\u5728\u53ef\u4ee5\u5f00\u59cb\u8bc6\u522b\u3002",
+            selectionIncomplete:
+                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u6846\u9009 {stat} \u5bf9\u5e94\u7684\u6570\u503c\u6846\u3002",
         },
         errors: {
             invalidInput: "\u8f93\u5165\u65e0\u6548",
