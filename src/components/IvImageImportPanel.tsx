@@ -89,6 +89,14 @@ const EXPECTED_LABEL_CENTER_Y: Record<StatKey, number> = {
     specialDefense: 0.57,
     speed: 0.665,
 };
+const PORTRAIT_STATS_X: Record<StatKey, { x: number; width: number }> = {
+    hp: { x: 0.79, width: 0.19 },
+    attack: { x: 0.845, width: 0.13 },
+    defense: { x: 0.845, width: 0.13 },
+    specialAttack: { x: 0.845, width: 0.13 },
+    specialDefense: { x: 0.845, width: 0.13 },
+    speed: { x: 0.845, width: 0.13 },
+};
 const EMPTY_STAT_VALUES: StatValueMap = {
     hp: "",
     attack: "",
@@ -602,6 +610,130 @@ const detectValueRectNearLabel = (
     })[0];
 
     return expandRect(best, 2, 2, image.width, image.height);
+};
+
+const detectPortraitAnchoredLayout = (image: CanvasImage): DetectedLayout | null => {
+    const bounds = {
+        left: Math.floor(image.width * 0.08),
+        top: Math.floor(image.height * 0.18),
+        right: Math.floor(image.width * 0.58),
+        bottom: Math.floor(image.height * 0.74),
+    };
+
+    const portraitMask = closeAndOpenMask(
+        buildMask(image, (red, green, blue, x, y) => {
+            if (
+                x < bounds.left ||
+                x >= bounds.right ||
+                y < bounds.top ||
+                y >= bounds.bottom
+            ) {
+                return false;
+            }
+
+            const hsv = rgbToHsv(red, green, blue);
+            const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+            return (
+                hsv.value >= 0.78 &&
+                hsv.saturation <= 0.12 &&
+                luminance >= 185
+            );
+        }, bounds),
+        image.width,
+        image.height
+    );
+
+    const portraitCandidates = findConnectedComponents(
+        portraitMask,
+        image.width,
+        image.height,
+        bounds,
+        Math.floor(image.width * image.height * 0.01)
+    ).filter((rect) => {
+        const width = rectWidth(rect);
+        const height = rectHeight(rect);
+        return (
+            width >= image.width * 0.22 &&
+            width <= image.width * 0.5 &&
+            height >= image.height * 0.22 &&
+            height <= image.height * 0.5 &&
+            width / Math.max(height, 1) >= 0.95 &&
+            width / Math.max(height, 1) <= 1.8
+        );
+    });
+
+    if (portraitCandidates.length === 0) {
+        return null;
+    }
+
+    const portraitRect = [...portraitCandidates].sort((leftRect, rightRect) => {
+        const leftArea = rectWidth(leftRect) * rectHeight(leftRect);
+        const rightArea = rectWidth(rightRect) * rectHeight(rightRect);
+        return rightArea - leftArea;
+    })[0];
+
+    const portraitHeight = rectHeight(portraitRect);
+    const statsTop = Math.max(0, Math.round(portraitRect.top - portraitHeight * 0.05));
+    const statsBottom = Math.min(
+        image.height,
+        Math.round(portraitRect.bottom + portraitHeight * 0.06)
+    );
+    const statsHeight = statsBottom - statsTop;
+    const hpBandTop = statsTop;
+    const hpBandBottom = Math.round(statsTop + statsHeight * 0.23);
+    const nonHpTop = Math.round(statsTop + statsHeight * 0.30);
+    const nonHpBottom = Math.round(statsTop + statsHeight * 0.97);
+    const nonHpRowHeight = (nonHpBottom - nonHpTop) / 5;
+
+    const statRects = {} as Record<StatKey, PixelRect>;
+
+    for (const key of STAT_KEYS) {
+        const xLayout = PORTRAIT_STATS_X[key];
+        if (key === "hp") {
+            statRects[key] = clampRect(
+                {
+                    left: Math.round(image.width * xLayout.x),
+                    top: Math.round(hpBandTop + (hpBandBottom - hpBandTop) * 0.10),
+                    right: Math.round(image.width * (xLayout.x + xLayout.width)),
+                    bottom: Math.round(hpBandTop + (hpBandBottom - hpBandTop) * 0.82),
+                },
+                image.width,
+                image.height
+            );
+            continue;
+        }
+
+        const keyIndex = STAT_KEYS.indexOf(key) - 1;
+        const rowTop = nonHpTop + nonHpRowHeight * keyIndex;
+        const rowBottom = rowTop + nonHpRowHeight;
+        statRects[key] = clampRect(
+            {
+                left: Math.round(image.width * xLayout.x),
+                top: Math.round(rowTop + nonHpRowHeight * 0.16),
+                right: Math.round(image.width * (xLayout.x + xLayout.width)),
+                bottom: Math.round(rowBottom - nonHpRowHeight * 0.16),
+            },
+            image.width,
+            image.height
+        );
+    }
+
+    const panelRect = clampRect(
+        {
+            left: Math.round(image.width * 0.57),
+            top: statsTop,
+            right: Math.round(image.width * 0.985),
+            bottom: Math.min(statsBottom, Math.floor(image.height * 0.7)),
+        },
+        image.width,
+        image.height
+    );
+
+    return {
+        panelRect,
+        statRects,
+        score: 120,
+    };
 };
 
 const detectLabelAnchoredLayout = (image: CanvasImage): DetectedLayout | null => {
@@ -1418,6 +1550,12 @@ export default function IvImageImportPanel({
                 };
             };
 
+            const portraitAnchoredLayout = detectPortraitAnchoredLayout(
+                prepared.normalized
+            );
+            const portraitAnchoredAttempt = portraitAnchoredLayout
+                ? await evaluateLayout(portraitAnchoredLayout)
+                : null;
             const labelAnchoredLayout = detectLabelAnchoredLayout(prepared.normalized);
             const labelAnchoredAttempt = labelAnchoredLayout
                 ? await evaluateLayout(labelAnchoredLayout)
@@ -1426,13 +1564,15 @@ export default function IvImageImportPanel({
                 getFixedLayout(prepared.normalized)
             );
             const detectedLayout =
-                labelAnchoredAttempt && labelAnchoredAttempt.recognizedCount >= 4
+                (portraitAnchoredAttempt && portraitAnchoredAttempt.recognizedCount >= 4) ||
+                (labelAnchoredAttempt && labelAnchoredAttempt.recognizedCount >= 4)
                     ? null
                     : detectPanelLayout(prepared.normalized);
             const detectedAttempt = detectedLayout
                 ? await evaluateLayout(detectedLayout)
                 : null;
             const allAttempts = [
+                portraitAnchoredAttempt,
                 labelAnchoredAttempt,
                 fixedAttempt,
                 detectedAttempt,
