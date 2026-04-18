@@ -889,18 +889,19 @@ export default function CalibrationForm({
                     alignItems: "start",
                     gridTemplateColumns: {
                         xs: "1fr",
-                        xl: compareSettings.enabled
-                            ? "minmax(300px, 360px) minmax(0, 1fr) minmax(340px, 420px)"
-                            : "minmax(300px, 360px) minmax(0, 1fr)",
+                        lg: compareSettings.enabled
+                            ? "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
+                            : "minmax(280px, 340px) minmax(0, 1fr)",
                     },
                 }}
             >
                 <Box
                     sx={{
-                        order: { xs: 1, xl: 1 },
-                        position: { xl: "sticky" },
-                        top: { xl: 16 },
+                        order: { xs: 1, lg: 1 },
+                        position: { lg: "sticky" },
+                        top: { lg: 16 },
                         alignSelf: "start",
+                        minWidth: 0,
                     }}
                 >
                     {dynamicToolPanel}
@@ -976,9 +977,10 @@ export default function CalibrationForm({
                 <Paper
                     variant="outlined"
                     sx={{
-                        order: { xs: 2, xl: 2 },
+                        order: { xs: 2, lg: 2 },
                         width: "100%",
                         minWidth: 0,
+                        minInlineSize: { lg: 720 },
                         borderRadius: 4,
                         p: { xs: 1.5, sm: 2.5 },
                         background:
@@ -1608,10 +1610,11 @@ export default function CalibrationForm({
                 {compareSettings.enabled && !compareFloating && (
                     <Box
                         sx={{
-                            order: { xs: 3, xl: 3 },
-                            position: { xl: "sticky" },
-                            top: { xl: 16 },
+                            order: { xs: 3, lg: 3 },
+                            position: { lg: "sticky" },
+                            top: { lg: 16 },
                             alignSelf: "start",
+                            minWidth: 0,
                         }}
                     >
                         {comparePanel}

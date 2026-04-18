@@ -35,6 +35,7 @@ function TenLinesPages() {
     const currentPage = parseInt(searchParams.get("page") || "0") ?? 0;
     const bingoActive = getBingoActive();
     const pageSx = { maxWidth: 1100, width: "100%", minWidth: 0 };
+    const calibrationPageSx = { maxWidth: 1680, width: "100%", minWidth: 0 };
 
     useEffect(() => {
         let cancelled = false;
@@ -73,7 +74,7 @@ function TenLinesPages() {
         />,
         <CalibrationForm
             key={1}
-            sx={pageSx}
+            sx={calibrationPageSx}
             hidden={currentPage != 1}
         />,
         <SearcherForm
