@@ -30,3 +30,7 @@ declare module "tesseract.js" {
         }
     ): Promise<Worker>;
 }
+
+declare module "tesseract.js/dist/tesseract.esm.min.js" {
+    export * from "tesseract.js";
+}
