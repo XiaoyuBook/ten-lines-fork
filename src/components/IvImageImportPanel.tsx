@@ -81,6 +81,14 @@ const FIXED_STAT_LAYOUT: Record<StatKey, RegionBox> = {
     specialDefense: { x: 0.84, y: 0.53, width: 0.14, height: 0.078 },
     speed: { x: 0.84, y: 0.625, width: 0.14, height: 0.078 },
 };
+const EXPECTED_LABEL_CENTER_Y: Record<StatKey, number> = {
+    hp: 0.145,
+    attack: 0.285,
+    defense: 0.38,
+    specialAttack: 0.475,
+    specialDefense: 0.57,
+    speed: 0.665,
+};
 const EMPTY_STAT_VALUES: StatValueMap = {
     hp: "",
     attack: "",
@@ -657,48 +665,46 @@ const detectLabelAnchoredLayout = (image: CanvasImage): DetectedLayout | null =>
         return null;
     }
 
-    const sorted = [...labelCandidates].sort(
-        (leftRect, rightRect) => rectCenterY(leftRect) - rectCenterY(rightRect)
-    );
+    const usedLabelIndexes = new Set<number>();
+    const matchedLabelRects: PixelRect[] = [];
+    let labelScore = 0;
 
-    let bestSequence: PixelRect[] | null = null;
-    let bestScore = Number.NEGATIVE_INFINITY;
+    for (const key of STAT_KEYS) {
+        const expectedCenterY = EXPECTED_LABEL_CENTER_Y[key] * image.height;
+        let bestIndex = -1;
+        let bestDistance = Number.POSITIVE_INFINITY;
 
-    for (let index = 0; index <= sorted.length - 6; index++) {
-        const sequence = sorted.slice(index, index + 6);
-        const centers = sequence.map((rect) => rectCenterY(rect));
-        const gaps = centers.slice(1).map((center, gapIndex) => center - centers[gapIndex]);
-        const regularGaps = gaps.slice(1);
-        const averageGap =
-            regularGaps.reduce((total, gap) => total + gap, 0) /
-            Math.max(1, regularGaps.length);
-        const gapVariance =
-            regularGaps.reduce(
-                (total, gap) => total + Math.abs(gap - averageGap),
-                0
-            ) / Math.max(1, regularGaps.length);
-        const averageLeft =
-            sequence.reduce((total, rect) => total + rect.left, 0) / sequence.length;
-        const leftVariance =
-            sequence.reduce((total, rect) => total + Math.abs(rect.left - averageLeft), 0) /
-            sequence.length;
-        const bottomPenalty =
-            sequence[5].bottom > image.height * 0.68 ? 80 : 0;
+        for (let index = 0; index < labelCandidates.length; index++) {
+            if (usedLabelIndexes.has(index)) {
+                continue;
+            }
 
-        const score =
-            sequence.length * 100 -
-            gapVariance * 2.5 -
-            leftVariance * 1.2 -
-            bottomPenalty -
-            Math.abs(gaps[0] - averageGap) * 0.5;
+            const rect = labelCandidates[index];
+            const centerY = rectCenterY(rect);
+            const centerX = rectCenterX(rect);
+            const expectedCenterX = image.width * 0.61;
+            const distance =
+                Math.abs(centerY - expectedCenterY) +
+                Math.abs(centerX - expectedCenterX) * 0.35;
 
-        if (score > bestScore) {
-            bestScore = score;
-            bestSequence = sequence;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestIndex = index;
+            }
         }
+
+        const maxDistance =
+            key === "hp" ? image.height * 0.05 : image.height * 0.04;
+        if (bestIndex < 0 || bestDistance > maxDistance) {
+            return null;
+        }
+
+        usedLabelIndexes.add(bestIndex);
+        matchedLabelRects.push(labelCandidates[bestIndex]);
+        labelScore += Math.max(0, 100 - bestDistance);
     }
 
-    if (!bestSequence) {
+    if (matchedLabelRects.length !== STAT_KEYS.length) {
         return null;
     }
 
@@ -707,7 +713,7 @@ const detectLabelAnchoredLayout = (image: CanvasImage): DetectedLayout | null =>
 
     for (let index = 0; index < STAT_KEYS.length; index++) {
         const key = STAT_KEYS[index];
-        const labelRect = bestSequence[index];
+        const labelRect = matchedLabelRects[index];
         const detectedValueRect = detectValueRectNearLabel(image, labelRect);
 
         if (detectedValueRect) {
@@ -732,7 +738,7 @@ const detectLabelAnchoredLayout = (image: CanvasImage): DetectedLayout | null =>
         );
     }
 
-    const allRects = [...bestSequence, ...Object.values(statRects)];
+    const allRects = [...matchedLabelRects, ...Object.values(statRects)];
     const panelRect = clampRect(
         {
             left: Math.min(...allRects.map((rect) => rect.left)) - 6,
@@ -750,7 +756,7 @@ const detectLabelAnchoredLayout = (image: CanvasImage): DetectedLayout | null =>
     return {
         panelRect,
         statRects,
-        score: bestScore + matchedValues * 15,
+        score: labelScore + matchedValues * 15,
     };
 };
 
