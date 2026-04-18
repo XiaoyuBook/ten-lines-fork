@@ -103,7 +103,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
     );
 
     const updateField = (key: keyof DynamicToolStoredState, value: string) => {
-        setState((current) => ({
+        setState((current: DynamicToolStoredState) => ({
             ...current,
             [key]: value,
         }));
@@ -144,7 +144,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         const adjustedWait = goalWait - tvDiffAdv / RATE_2X2;
         const physicalTotal = safeTv + adjustedWait + baseTime;
 
-        setState((current) => ({
+        setState((current: DynamicToolStoredState) => ({
             ...current,
             lastTv: safeTv.toFixed(2),
             lastWait: adjustedWait.toFixed(2),
@@ -182,7 +182,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         const constantPart = parityFrames + (baseTime + lastWait) * RATE_2X2;
         const nextTvRate = (actualHit - constantPart) / lastTv;
 
-        setState((current) => ({
+        setState((current: DynamicToolStoredState) => ({
             ...current,
             tvRate: nextTvRate.toFixed(4),
         }));
