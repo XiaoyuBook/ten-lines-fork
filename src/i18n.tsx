@@ -434,7 +434,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             queueHint:
                 "Current lines: {count}. Import will append line {nextCount}.",
             imageLoaded:
-                "Screenshot loaded. Review the highlighted boxes, then start recognition.",
+                "Screenshot loaded. Start recognition and the tool will auto-locate the stats panel.",
             noImage: "Paste or upload a screenshot first.",
             recognizing: "Recognizing...",
             recognize: "Recognize Stats",
@@ -461,18 +461,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "Suggested flow: set Nature, enter Level, paste a screenshot, recognize, then append.",
             previewTitle: "Recognition Preview",
             adjustHint:
-                "Click the selection button and manually mark six value boxes in order: HP, Attack, Defense, Sp. Atk, Sp. Def, and Speed. Each box uses two clicks: top-left first, then bottom-right.",
-            startSelection: "Select 6 Value Boxes",
-            selectionModeActive:
-                "Selection mode is active. Start by selecting the box for {stat}.",
-            selectionFirstPointSet:
-                "Top-left corner saved for {stat}. Click again to set the bottom-right corner.",
-            selectionAdvance:
-                "{stat} saved. Continue selecting the next value box.",
-            selectionComplete:
-                "All six value boxes are selected. You can recognize them now.",
-            selectionIncomplete:
-                "Please select the box for {stat} before starting recognition.",
+                "The tool will auto-crop black borders, normalize the screenshot, locate the yellow stats panel, and read the six value boxes automatically.",
         },
         errors: {
             invalidInput: "Invalid input",
@@ -776,7 +765,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             queueHint:
                 "\u5f53\u524d\u5df2\u6709 {count} \u884c\uff0c\u5bfc\u5165\u540e\u4f1a\u8ffd\u52a0\u4e3a\u7b2c {nextCount} \u884c\u3002",
             imageLoaded:
-                "\u622a\u56fe\u5df2\u8f7d\u5165\uff0c\u8bf7\u5148\u786e\u8ba4\u9ad8\u4eae\u6846\u533a\u57df\uff0c\u7136\u540e\u5f00\u59cb\u8bc6\u522b\u3002",
+                "\u622a\u56fe\u5df2\u8f7d\u5165\uff0c\u70b9\u51fb\u8bc6\u522b\u540e\u5de5\u5177\u4f1a\u81ea\u52a8\u5b9a\u4f4d\u80fd\u529b\u9762\u677f\u3002",
             noImage: "\u8bf7\u5148\u7c98\u8d34\u6216\u4e0a\u4f20\u622a\u56fe\u3002",
             recognizing: "\u6b63\u5728\u8bc6\u522b...",
             recognize: "\u8bc6\u522b\u80fd\u529b\u503c",
@@ -806,18 +795,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5efa\u8bae\u6d41\u7a0b\uff1a\u5148\u9009\u6027\u683c\uff0c\u518d\u8f93\u5165\u7b49\u7ea7\uff0c\u7136\u540e\u7c98\u8d34\u622a\u56fe\u3001\u8bc6\u522b\uff0c\u6700\u540e\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c\u3002",
             previewTitle: "\u8bc6\u522b\u9884\u89c8",
             adjustHint:
-                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u70b9\u51fb\u6846\u9009\u6309\u94ae\uff0c\u7136\u540e\u6309\u987a\u5e8f\u624b\u52a8\u6846\u9009 6 \u4e2a\u6570\u503c\u6846\uff1aHP\uff0c\u653b\u51fb\uff0c\u9632\u5fa1\uff0c\u7279\u653b\uff0c\u7279\u9632\uff0c\u901f\u5ea6\u3002\u6bcf\u4e2a\u6846\u90fd\u662f\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002",
-            startSelection: "\u5f00\u59cb\u6846\u9009 6 \u9879",
-            selectionModeActive:
-                "\u5df2\u8fdb\u5165\u6846\u9009\u6a21\u5f0f\uff0c\u8bf7\u5148\u6846\u9009 {stat}\u3002",
-            selectionFirstPointSet:
-                "{stat} \u7684\u5de6\u4e0a\u89d2\u5df2\u8bb0\u5f55\uff0c\u8bf7\u518d\u70b9\u4e00\u4e0b\u53f3\u4e0b\u89d2\u3002",
-            selectionAdvance:
-                "{stat} \u5df2\u4fdd\u5b58\uff0c\u8bf7\u7ee7\u7eed\u6846\u9009\u4e0b\u4e00\u9879\u6570\u503c\u6846\u3002",
-            selectionComplete:
-                "6 \u4e2a\u6570\u503c\u6846\u90fd\u5df2\u6846\u9009\u5b8c\u6210\uff0c\u73b0\u5728\u53ef\u4ee5\u5f00\u59cb\u8bc6\u522b\u3002",
-            selectionIncomplete:
-                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u6846\u9009 {stat} \u5bf9\u5e94\u7684\u6570\u503c\u6846\u3002",
+                "\u5de5\u5177\u4f1a\u81ea\u52a8\u88c1\u6389\u9ed1\u8fb9\uff0c\u7edf\u4e00\u622a\u56fe\u5c3a\u5bf8\uff0c\u5b9a\u4f4d\u53f3\u4fa7\u9ec4\u8272\u80fd\u529b\u9762\u677f\uff0c\u7136\u540e\u81ea\u52a8\u8bc6\u522b 6 \u4e2a\u6570\u503c\u6846\u3002",
         },
         errors: {
             invalidInput: "\u8f93\u5165\u65e0\u6548",

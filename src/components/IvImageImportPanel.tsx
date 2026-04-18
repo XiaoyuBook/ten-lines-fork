@@ -35,10 +35,32 @@ type RegionBox = {
     height: number;
 };
 
-type SelectionStart = {
-    rect: DOMRect;
-    startX: number;
-    startY: number;
+type PixelRect = {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+};
+
+type CanvasImage = {
+    canvas: HTMLCanvasElement;
+    width: number;
+    height: number;
+    data: Uint8ClampedArray;
+};
+
+type PreparedImage = {
+    normalized: CanvasImage;
+    crop: PixelRect;
+    scale: number;
+    originalWidth: number;
+    originalHeight: number;
+};
+
+type DetectedLayout = {
+    panelRect: PixelRect;
+    statRects: Record<StatKey, PixelRect>;
+    score: number;
 };
 
 const STAT_KEYS: StatKey[] = [
@@ -50,9 +72,7 @@ const STAT_KEYS: StatKey[] = [
     "speed",
 ];
 
-const MIN_REGION_WIDTH = 0.001;
-const MIN_REGION_HEIGHT = 0.001;
-
+const TARGET_IMAGE_WIDTH = 800;
 const EMPTY_STAT_VALUES: StatValueMap = {
     hp: "",
     attack: "",
@@ -62,10 +82,15 @@ const EMPTY_STAT_VALUES: StatValueMap = {
     speed: "",
 };
 
-const getEmptyStats = (): StatValueMap => ({ ...EMPTY_STAT_VALUES });
 const TESSERACT_SCRIPT_ID = "tesseract-js-runtime";
 const TESSERACT_SCRIPT_SRC =
     "https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js";
+
+const getEmptyStats = (): StatValueMap => ({ ...EMPTY_STAT_VALUES });
+const rectWidth = (rect: PixelRect) => rect.right - rect.left;
+const rectHeight = (rect: PixelRect) => rect.bottom - rect.top;
+const rectCenterX = (rect: PixelRect) => (rect.left + rect.right) / 2;
+const rectCenterY = (rect: PixelRect) => (rect.top + rect.bottom) / 2;
 
 const loadImage = (file: Blob) =>
     new Promise<HTMLImageElement>((resolve, reject) => {
@@ -82,18 +107,627 @@ const loadImage = (file: Blob) =>
         image.src = objectUrl;
     });
 
-const prepareCropDataUrl = (
-    image: HTMLImageElement,
-    region: RegionBox,
-    scale = 4
-) => {
-    const sourceX = Math.floor(image.width * region.x);
-    const sourceY = Math.floor(image.height * region.y);
-    const sourceWidth = Math.floor(image.width * region.width);
-    const sourceHeight = Math.floor(image.height * region.height);
+const snapshotCanvas = (canvas: HTMLCanvasElement): CanvasImage => {
+    const context = canvas.getContext("2d");
+    if (!context) {
+        throw new Error("Canvas is unavailable");
+    }
+
+    return {
+        canvas,
+        width: canvas.width,
+        height: canvas.height,
+        data: context.getImageData(0, 0, canvas.width, canvas.height).data,
+    };
+};
+
+const createCanvasFromImage = (image: HTMLImageElement) => {
     const canvas = document.createElement("canvas");
-    canvas.width = sourceWidth * scale;
-    canvas.height = sourceHeight * scale;
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+        throw new Error("Canvas is unavailable");
+    }
+
+    context.drawImage(image, 0, 0);
+    return snapshotCanvas(canvas);
+};
+
+const getPixel = (
+    image: CanvasImage,
+    x: number,
+    y: number
+): [number, number, number] => {
+    const index = (y * image.width + x) * 4;
+    return [image.data[index], image.data[index + 1], image.data[index + 2]];
+};
+
+const rgbToHsv = (red: number, green: number, blue: number) => {
+    const r = red / 255;
+    const g = green / 255;
+    const b = blue / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let hue = 0;
+    if (delta !== 0) {
+        if (max === r) {
+            hue = 60 * (((g - b) / delta) % 6);
+        } else if (max === g) {
+            hue = 60 * ((b - r) / delta + 2);
+        } else {
+            hue = 60 * ((r - g) / delta + 4);
+        }
+    }
+
+    return {
+        hue: hue < 0 ? hue + 360 : hue,
+        saturation: max === 0 ? 0 : delta / max,
+        value: max,
+    };
+};
+
+const clampRect = (
+    rect: PixelRect,
+    maxWidth: number,
+    maxHeight: number
+): PixelRect => ({
+    left: Math.max(0, Math.min(rect.left, maxWidth - 1)),
+    top: Math.max(0, Math.min(rect.top, maxHeight - 1)),
+    right: Math.max(1, Math.min(rect.right, maxWidth)),
+    bottom: Math.max(1, Math.min(rect.bottom, maxHeight)),
+});
+
+const expandRect = (
+    rect: PixelRect,
+    paddingX: number,
+    paddingY: number,
+    maxWidth: number,
+    maxHeight: number
+) =>
+    clampRect(
+        {
+            left: rect.left - paddingX,
+            top: rect.top - paddingY,
+            right: rect.right + paddingX,
+            bottom: rect.bottom + paddingY,
+        },
+        maxWidth,
+        maxHeight
+    );
+
+const insetRect = (rect: PixelRect, insetX: number, insetY: number): PixelRect => ({
+    left: rect.left + insetX,
+    top: rect.top + insetY,
+    right: rect.right - insetX,
+    bottom: rect.bottom - insetY,
+});
+
+const cropBlackBorder = (image: CanvasImage) => {
+    let left = image.width;
+    let right = -1;
+    let top = image.height;
+    let bottom = -1;
+
+    for (let y = 0; y < image.height; y++) {
+        for (let x = 0; x < image.width; x++) {
+            const [red, green, blue] = getPixel(image, x, y);
+            const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+            if (Math.max(red, green, blue) < 20 && luminance < 24) {
+                continue;
+            }
+
+            left = Math.min(left, x);
+            right = Math.max(right, x);
+            top = Math.min(top, y);
+            bottom = Math.max(bottom, y);
+        }
+    }
+
+    if (right < left || bottom < top) {
+        return {
+            image,
+            crop: { left: 0, top: 0, right: image.width, bottom: image.height },
+        };
+    }
+
+    const crop = expandRect(
+        { left, top, right: right + 1, bottom: bottom + 1 },
+        2,
+        2,
+        image.width,
+        image.height
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = rectWidth(crop);
+    canvas.height = rectHeight(crop);
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+        throw new Error("Canvas is unavailable");
+    }
+
+    context.drawImage(
+        image.canvas,
+        crop.left,
+        crop.top,
+        rectWidth(crop),
+        rectHeight(crop),
+        0,
+        0,
+        rectWidth(crop),
+        rectHeight(crop)
+    );
+
+    return {
+        image: snapshotCanvas(canvas),
+        crop,
+    };
+};
+
+const resizeCanvasImage = (image: CanvasImage, targetWidth: number) => {
+    const scale = targetWidth / image.width;
+    const targetHeight = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+        throw new Error("Canvas is unavailable");
+    }
+
+    context.imageSmoothingEnabled = false;
+    context.drawImage(image.canvas, 0, 0, targetWidth, targetHeight);
+
+    return {
+        image: snapshotCanvas(canvas),
+        scale,
+    };
+};
+
+const buildMask = (
+    image: CanvasImage,
+    predicate: (red: number, green: number, blue: number, x: number, y: number) => boolean,
+    bounds?: PixelRect
+) => {
+    const mask = new Uint8Array(image.width * image.height);
+    const startX = bounds?.left ?? 0;
+    const endX = bounds?.right ?? image.width;
+    const startY = bounds?.top ?? 0;
+    const endY = bounds?.bottom ?? image.height;
+
+    for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+            const pixelIndex = y * image.width + x;
+            const offset = pixelIndex * 4;
+            mask[pixelIndex] = predicate(
+                image.data[offset],
+                image.data[offset + 1],
+                image.data[offset + 2],
+                x,
+                y
+            )
+                ? 1
+                : 0;
+        }
+    }
+
+    return mask;
+};
+
+const dilateMask = (mask: Uint8Array, width: number, height: number) => {
+    const next = new Uint8Array(mask.length);
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let active = 0;
+            for (let dy = -1; dy <= 1 && active === 0; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
+                        continue;
+                    }
+                    if (mask[ny * width + nx] === 1) {
+                        active = 1;
+                        break;
+                    }
+                }
+            }
+            next[y * width + x] = active;
+        }
+    }
+
+    return next;
+};
+
+const erodeMask = (mask: Uint8Array, width: number, height: number) => {
+    const next = new Uint8Array(mask.length);
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let active = 1;
+            for (let dy = -1; dy <= 1 && active === 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
+                        active = 0;
+                        break;
+                    }
+                    if (mask[ny * width + nx] === 0) {
+                        active = 0;
+                        break;
+                    }
+                }
+            }
+            next[y * width + x] = active;
+        }
+    }
+
+    return next;
+};
+
+const closeAndOpenMask = (mask: Uint8Array, width: number, height: number) => {
+    const closed = erodeMask(dilateMask(mask, width, height), width, height);
+    return dilateMask(erodeMask(closed, width, height), width, height);
+};
+
+const findConnectedComponents = (
+    mask: Uint8Array,
+    width: number,
+    height: number,
+    bounds?: PixelRect,
+    minArea = 1
+) => {
+    const visited = new Uint8Array(mask.length);
+    const components: PixelRect[] = [];
+    const startX = bounds?.left ?? 0;
+    const endX = bounds?.right ?? width;
+    const startY = bounds?.top ?? 0;
+    const endY = bounds?.bottom ?? height;
+
+    for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+            const startIndex = y * width + x;
+            if (mask[startIndex] === 0 || visited[startIndex] === 1) {
+                continue;
+            }
+
+            const queueX = [x];
+            const queueY = [y];
+            visited[startIndex] = 1;
+            let area = 0;
+            let left = x;
+            let right = x;
+            let top = y;
+            let bottom = y;
+
+            while (queueX.length > 0) {
+                const currentX = queueX.pop()!;
+                const currentY = queueY.pop()!;
+                area += 1;
+                left = Math.min(left, currentX);
+                right = Math.max(right, currentX);
+                top = Math.min(top, currentY);
+                bottom = Math.max(bottom, currentY);
+
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) {
+                            continue;
+                        }
+                        const nextX = currentX + dx;
+                        const nextY = currentY + dy;
+                        if (
+                            nextX < startX ||
+                            nextY < startY ||
+                            nextX >= endX ||
+                            nextY >= endY
+                        ) {
+                            continue;
+                        }
+
+                        const nextIndex = nextY * width + nextX;
+                        if (mask[nextIndex] === 0 || visited[nextIndex] === 1) {
+                            continue;
+                        }
+
+                        visited[nextIndex] = 1;
+                        queueX.push(nextX);
+                        queueY.push(nextY);
+                    }
+                }
+            }
+
+            if (area >= minArea) {
+                components.push({
+                    left,
+                    top,
+                    right: right + 1,
+                    bottom: bottom + 1,
+                });
+            }
+        }
+    }
+
+    return components;
+};
+
+const pickPrimaryRows = (components: PixelRect[], count: number) =>
+    [...components]
+        .sort((leftRect, rightRect) => rectCenterY(leftRect) - rectCenterY(rightRect))
+        .slice(0, count);
+
+const prepareImageForDetection = (image: HTMLImageElement): PreparedImage => {
+    const original = createCanvasFromImage(image);
+    const cropped = cropBlackBorder(original);
+    const resized = resizeCanvasImage(cropped.image, TARGET_IMAGE_WIDTH);
+
+    return {
+        normalized: resized.image,
+        crop: cropped.crop,
+        scale: resized.scale,
+        originalWidth: image.width,
+        originalHeight: image.height,
+    };
+};
+
+const detectPanelLayout = (image: CanvasImage): DetectedLayout | null => {
+    const yellowMask = closeAndOpenMask(
+        buildMask(image, (red, green, blue, x) => {
+            if (x < image.width * 0.45) {
+                return false;
+            }
+            const hsv = rgbToHsv(red, green, blue);
+            return hsv.hue >= 35 && hsv.hue <= 70 && hsv.saturation >= 0.25 && hsv.value >= 0.5;
+        }),
+        image.width,
+        image.height
+    );
+
+    const candidatePanels = findConnectedComponents(
+        yellowMask,
+        image.width,
+        image.height,
+        {
+            left: Math.floor(image.width * 0.45),
+            top: 0,
+            right: image.width,
+            bottom: image.height,
+        },
+        Math.floor(image.width * image.height * 0.01)
+    );
+
+    let bestLayout: DetectedLayout | null = null;
+
+    for (const candidate of candidatePanels) {
+        const panel = expandRect(candidate, 6, 6, image.width, image.height);
+        const panelWidth = rectWidth(panel);
+        const panelHeight = rectHeight(panel);
+        if (panelWidth < image.width * 0.18 || panelHeight < image.height * 0.22) {
+            continue;
+        }
+
+        const leftBounds = {
+            left: panel.left,
+            top: panel.top,
+            right: panel.left + Math.floor(panelWidth * 0.58),
+            bottom: panel.bottom,
+        };
+        const rightBounds = {
+            left: panel.left + Math.floor(panelWidth * 0.42),
+            top: panel.top,
+            right: panel.right,
+            bottom: panel.bottom,
+        };
+
+        const labelMask = closeAndOpenMask(
+            buildMask(image, (red, green, blue, x, y) => {
+                if (
+                    x < leftBounds.left ||
+                    x >= leftBounds.right ||
+                    y < leftBounds.top ||
+                    y >= leftBounds.bottom
+                ) {
+                    return false;
+                }
+
+                const hsv = rgbToHsv(red, green, blue);
+                const maxChannel = Math.max(red, green, blue);
+                const minChannel = Math.min(red, green, blue);
+                const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+                return (
+                    hsv.value >= 0.35 &&
+                    hsv.value <= 0.82 &&
+                    hsv.saturation <= 0.28 &&
+                    luminance >= 85 &&
+                    luminance <= 190 &&
+                    blue >= red - 15 &&
+                    blue >= green - 15 &&
+                    maxChannel - minChannel <= 75
+                );
+            }, leftBounds),
+            image.width,
+            image.height
+        );
+
+        const rawLabelRects = findConnectedComponents(
+            labelMask,
+            image.width,
+            image.height,
+            leftBounds,
+            Math.floor(panelWidth * panelHeight * 0.002)
+        ).filter((rect) => {
+            const width = rectWidth(rect);
+            const height = rectHeight(rect);
+            return (
+                width >= panelWidth * 0.18 &&
+                height >= panelHeight * 0.035 &&
+                height <= panelHeight * 0.18 &&
+                width / Math.max(height, 1) >= 1.15
+            );
+        });
+
+        if (rawLabelRects.length < 6) {
+            continue;
+        }
+
+        const labelRects = pickPrimaryRows(rawLabelRects, 6);
+        const valueMask = closeAndOpenMask(
+            buildMask(image, (red, green, blue, x, y) => {
+                if (
+                    x < rightBounds.left ||
+                    x >= rightBounds.right ||
+                    y < rightBounds.top ||
+                    y >= rightBounds.bottom
+                ) {
+                    return false;
+                }
+
+                const hsv = rgbToHsv(red, green, blue);
+                const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+                return hsv.value >= 0.82 && hsv.saturation <= 0.22 && luminance >= 200;
+            }, rightBounds),
+            image.width,
+            image.height
+        );
+
+        const valueRects = findConnectedComponents(
+            valueMask,
+            image.width,
+            image.height,
+            rightBounds,
+            Math.floor(panelWidth * panelHeight * 0.0025)
+        ).filter((rect) => {
+            const width = rectWidth(rect);
+            const height = rectHeight(rect);
+            return (
+                width >= panelWidth * 0.12 &&
+                height >= panelHeight * 0.04 &&
+                height <= panelHeight * 0.2 &&
+                width / Math.max(height, 1) >= 1.05
+            );
+        });
+
+        if (valueRects.length < 5) {
+            continue;
+        }
+
+        const statRects = {} as Record<StatKey, PixelRect>;
+        const usedValueIndexes = new Set<number>();
+        let matchedValues = 0;
+
+        for (let index = 0; index < STAT_KEYS.length; index++) {
+            const key = STAT_KEYS[index];
+            const labelRect = labelRects[index];
+            let bestValueIndex = -1;
+            let bestDistance = Number.POSITIVE_INFINITY;
+
+            for (let valueIndex = 0; valueIndex < valueRects.length; valueIndex++) {
+                if (usedValueIndexes.has(valueIndex)) {
+                    continue;
+                }
+
+                const valueRect = valueRects[valueIndex];
+                const distance = Math.abs(
+                    rectCenterY(valueRect) - rectCenterY(labelRect)
+                );
+
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestValueIndex = valueIndex;
+                }
+            }
+
+            const maxDistance = panelHeight * (index === 0 ? 0.11 : 0.08);
+            if (bestValueIndex >= 0 && bestDistance <= maxDistance) {
+                usedValueIndexes.add(bestValueIndex);
+                statRects[key] = expandRect(
+                    valueRects[bestValueIndex],
+                    2,
+                    2,
+                    image.width,
+                    image.height
+                );
+                matchedValues += 1;
+                continue;
+            }
+
+            const labelHeight = rectHeight(labelRect);
+            statRects[key] = clampRect(
+                {
+                    left: panel.left + Math.floor(panelWidth * 0.62),
+                    top: Math.max(panel.top, Math.round(rectCenterY(labelRect) - labelHeight * 0.8)),
+                    right: panel.right - Math.floor(panelWidth * 0.04),
+                    bottom: Math.min(panel.bottom, Math.round(rectCenterY(labelRect) + labelHeight * 0.8)),
+                },
+                image.width,
+                image.height
+            );
+        }
+
+        const allRects = [...labelRects, ...Object.values(statRects)];
+        const panelRect = expandRect(
+            {
+                left: Math.min(...allRects.map((rect) => rect.left)),
+                top: Math.min(...allRects.map((rect) => rect.top)),
+                right: Math.max(...allRects.map((rect) => rect.right)),
+                bottom: Math.max(...allRects.map((rect) => rect.bottom)),
+            },
+            6,
+            6,
+            image.width,
+            image.height
+        );
+
+        const score =
+            matchedValues * 20 +
+            rawLabelRects.length * 3 +
+            valueRects.length * 2 +
+            rectCenterX(panelRect) / image.width;
+
+        if (!bestLayout || score > bestLayout.score) {
+            bestLayout = { panelRect, statRects, score };
+        }
+    }
+
+    return bestLayout;
+};
+
+const mapRectToOriginalRegion = (
+    rect: PixelRect,
+    prepared: PreparedImage
+): RegionBox => {
+    const sourceLeft = prepared.crop.left + rect.left / prepared.scale;
+    const sourceTop = prepared.crop.top + rect.top / prepared.scale;
+    const sourceRight = prepared.crop.left + rect.right / prepared.scale;
+    const sourceBottom = prepared.crop.top + rect.bottom / prepared.scale;
+
+    return {
+        x: sourceLeft / prepared.originalWidth,
+        y: sourceTop / prepared.originalHeight,
+        width: (sourceRight - sourceLeft) / prepared.originalWidth,
+        height: (sourceBottom - sourceTop) / prepared.originalHeight,
+    };
+};
+
+const createBinaryCropDataUrl = (
+    image: CanvasImage,
+    rect: PixelRect,
+    scale: number
+) => {
+    const sourceRect = clampRect(rect, image.width, image.height);
+    const width = Math.max(1, rectWidth(sourceRect));
+    const height = Math.max(1, rectHeight(sourceRect));
+    const canvas = document.createElement("canvas");
+    canvas.width = width * scale;
+    canvas.height = height * scale;
     const context = canvas.getContext("2d");
 
     if (!context) {
@@ -102,11 +736,11 @@ const prepareCropDataUrl = (
 
     context.imageSmoothingEnabled = false;
     context.drawImage(
-        image,
-        sourceX,
-        sourceY,
-        sourceWidth,
-        sourceHeight,
+        image.canvas,
+        sourceRect.left,
+        sourceRect.top,
+        width,
+        height,
         0,
         0,
         canvas.width,
@@ -119,7 +753,7 @@ const prepareCropDataUrl = (
         const green = imageData.data[index + 1];
         const blue = imageData.data[index + 2];
         const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
-        const binary = luminance > 175 ? 255 : 0;
+        const binary = luminance > 178 ? 255 : 0;
         imageData.data[index] = binary;
         imageData.data[index + 1] = binary;
         imageData.data[index + 2] = binary;
@@ -130,18 +764,32 @@ const prepareCropDataUrl = (
     return canvas.toDataURL("image/png");
 };
 
-const parseRecognizedValue = (rawText: string) => {
+const parseNumericValue = (rawText: string) => {
     const matches = rawText.replace(/\s/g, "").match(/\d{1,3}/g);
     return matches?.[0] ?? "";
 };
 
-const clampRegion = (region: RegionBox): RegionBox => {
-    const width = Math.min(Math.max(region.width, MIN_REGION_WIDTH), 1);
-    const height = Math.min(Math.max(region.height, MIN_REGION_HEIGHT), 1);
-    const x = Math.min(Math.max(region.x, 0), 1 - width);
-    const y = Math.min(Math.max(region.y, 0), 1 - height);
+const extractHpValue = (rawText: string) => {
+    const compact = rawText.replace(/\s/g, "");
+    const exact = compact.match(/(\d{1,3})\/(\d{1,3})/);
+    if (exact) {
+        return { value: exact[2], strong: true };
+    }
 
-    return { x, y, width, height };
+    const groups = compact.match(/\d{1,3}/g);
+    if (!groups || groups.length === 0) {
+        return { value: "", strong: false };
+    }
+
+    return {
+        value: groups[groups.length - 1],
+        strong: groups.length >= 2,
+    };
+};
+
+const isValidStatValue = (value: string) => {
+    const parsed = parseInt(value, 10);
+    return !Number.isNaN(parsed) && parsed >= 1 && parsed <= 999;
 };
 
 const loadTesseractRuntime = () =>
@@ -197,19 +845,16 @@ export default function IvImageImportPanel({
 }) {
     const { locale, t } = useI18n();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
-    const previewContainerRef = useRef<HTMLDivElement | null>(null);
     const workerRef = useRef<TesseractWorker | null>(null);
     const [level, setLevel] = useState("");
     const [previewUrl, setPreviewUrl] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [selectedRegions, setSelectedRegions] = useState<
-        Partial<Record<StatKey, RegionBox>>
-    >({});
-    const [draftRegion, setDraftRegion] = useState<RegionBox | null>(null);
-    const [selectionStart, setSelectionStart] = useState<SelectionStart | null>(
+    const [detectedPanelRegion, setDetectedPanelRegion] = useState<RegionBox | null>(
         null
     );
-    const [selectionIndex, setSelectionIndex] = useState<number | null>(null);
+    const [detectedRegions, setDetectedRegions] = useState<
+        Partial<Record<StatKey, RegionBox>>
+    >({});
     const [stats, setStats] = useState<StatValueMap>(getEmptyStats);
     const [feedback, setFeedback] = useState("");
     const [feedbackSeverity, setFeedbackSeverity] = useState<
@@ -219,8 +864,6 @@ export default function IvImageImportPanel({
     const [recognitionProgress, setRecognitionProgress] = useState(0);
 
     const statKeys = useMemo(() => STAT_KEYS, []);
-    const currentSelectionKey =
-        selectionIndex === null ? null : statKeys[selectionIndex] ?? null;
     const statLabels = useMemo(
         () =>
             locale === "zh"
@@ -299,12 +942,6 @@ export default function IvImageImportPanel({
             },
         });
 
-        await worker.setParameters({
-            tessedit_char_whitelist: "0123456789/",
-            preserve_interword_spaces: "1",
-            user_defined_dpi: "300",
-        });
-
         workerRef.current = worker;
         return worker;
     };
@@ -315,10 +952,8 @@ export default function IvImageImportPanel({
         }
         setImageFile(file);
         setPreviewUrl(URL.createObjectURL(file));
-        setSelectedRegions({});
-        setDraftRegion(null);
-        setSelectionStart(null);
-        setSelectionIndex(null);
+        setDetectedPanelRegion(null);
+        setDetectedRegions({});
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setStatus(t("imageImport.imageLoaded"), "info");
@@ -330,10 +965,8 @@ export default function IvImageImportPanel({
         }
         setPreviewUrl("");
         setImageFile(null);
-        setSelectedRegions({});
-        setDraftRegion(null);
-        setSelectionStart(null);
-        setSelectionIndex(null);
+        setDetectedPanelRegion(null);
+        setDetectedRegions({});
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setFeedback("");
@@ -350,6 +983,70 @@ export default function IvImageImportPanel({
         event.target.value = "";
     };
 
+    const recognizeRegion = async (
+        worker: TesseractWorker,
+        image: CanvasImage,
+        rect: PixelRect,
+        allowSlash: boolean
+    ) => {
+        const attemptOffsets = [0, -2, 2, -4, 4];
+        let fallbackValue = "";
+
+        await worker.setParameters({
+            tessedit_char_whitelist: allowSlash ? "0123456789/" : "0123456789",
+            preserve_interword_spaces: "1",
+            user_defined_dpi: "300",
+        });
+
+        for (const offset of attemptOffsets) {
+            const shiftedRect = clampRect(
+                {
+                    left: rect.left,
+                    top: rect.top + offset,
+                    right: rect.right,
+                    bottom: rect.bottom + offset,
+                },
+                image.width,
+                image.height
+            );
+            const innerRect = insetRect(
+                shiftedRect,
+                allowSlash ? 2 : 3,
+                allowSlash ? 1 : 2
+            );
+            const cropRect =
+                rectWidth(innerRect) > 4 && rectHeight(innerRect) > 4
+                    ? innerRect
+                    : shiftedRect;
+
+            const result = await worker.recognize(
+                createBinaryCropDataUrl(image, cropRect, allowSlash ? 4 : 5)
+            );
+            const rawText = result.data.text;
+
+            if (allowSlash) {
+                const hpCandidate = extractHpValue(rawText);
+                if (fallbackValue === "" && hpCandidate.value !== "") {
+                    fallbackValue = hpCandidate.value;
+                }
+                if (hpCandidate.strong && isValidStatValue(hpCandidate.value)) {
+                    return hpCandidate.value;
+                }
+                continue;
+            }
+
+            const numericValue = parseNumericValue(rawText);
+            if (fallbackValue === "" && numericValue !== "") {
+                fallbackValue = numericValue;
+            }
+            if (isValidStatValue(numericValue)) {
+                return numericValue;
+            }
+        }
+
+        return fallbackValue;
+    };
+
     const recognizeStats = async () => {
         if (!imageFile) {
             setStatus(t("imageImport.noImage"), "warning");
@@ -362,46 +1059,43 @@ export default function IvImageImportPanel({
 
         try {
             const image = await loadImage(imageFile);
-            const worker = await getWorker();
-            const nextStats = getEmptyStats();
-            const missingKey = statKeys.find((key) => !selectedRegions[key]);
+            const prepared = prepareImageForDetection(image);
+            const layout = detectPanelLayout(prepared.normalized);
 
-            if (missingKey) {
-                setStatus(
-                    t("imageImport.selectionIncomplete", {
-                        stat: statLabels[missingKey],
-                    }),
-                    "warning"
-                );
+            if (!layout) {
+                setDetectedPanelRegion(null);
+                setDetectedRegions({});
+                setStats(getEmptyStats());
+                setStatus(t("imageImport.noStatsFound"), "error");
                 return;
             }
 
+            setDetectedPanelRegion(mapRectToOriginalRegion(layout.panelRect, prepared));
+            setDetectedRegions(
+                Object.fromEntries(
+                    statKeys.map((key) => [
+                        key,
+                        mapRectToOriginalRegion(layout.statRects[key], prepared),
+                    ])
+                ) as Record<StatKey, RegionBox>
+            );
+
+            const worker = await getWorker();
+            const nextStats = getEmptyStats();
+
             for (const key of statKeys) {
-                const region = selectedRegions[key];
-                if (!region) {
-                    continue;
-                }
-                const cropDataUrl = prepareCropDataUrl(image, region);
-                const result = await worker.recognize(cropDataUrl);
-                const recognizedValue = parseRecognizedValue(result.data.text);
-
-                if (key === "hp" && result.data.text.includes("/")) {
-                    const hpParts = result.data.text
-                        .replace(/\s/g, "")
-                        .split("/")
-                        .filter((entry) => /^\d+$/.test(entry));
-                    nextStats[key] =
-                        hpParts.length > 0 ? hpParts[hpParts.length - 1] : recognizedValue;
-                    continue;
-                }
-
-                nextStats[key] = recognizedValue;
+                nextStats[key] = await recognizeRegion(
+                    worker,
+                    prepared.normalized,
+                    layout.statRects[key],
+                    key === "hp"
+                );
             }
 
             setStats(nextStats);
 
-            const recognizedCount = statKeys.filter(
-                (key) => nextStats[key] !== ""
+            const recognizedCount = statKeys.filter((key) =>
+                isValidStatValue(nextStats[key])
             ).length;
 
             if (recognizedCount === 0) {
@@ -456,74 +1150,6 @@ export default function IvImageImportPanel({
         } catch {
             setStatus(t("imageImport.appendFailed"), "error");
         }
-    };
-
-    const startSelection = (event: React.PointerEvent<HTMLDivElement>) => {
-        if (!currentSelectionKey) {
-            return;
-        }
-        if (!previewContainerRef.current) {
-            return;
-        }
-
-        const rect = previewContainerRef.current.getBoundingClientRect();
-        const currentX = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
-        const currentY = Math.min(Math.max(event.clientY - rect.top, 0), rect.height);
-
-        if (!selectionStart) {
-            setSelectionStart({
-                rect,
-                startX: currentX,
-                startY: currentY,
-            });
-            setDraftRegion(
-                clampRegion({
-                    x: currentX / rect.width,
-                    y: currentY / rect.height,
-                    width: 0.001,
-                    height: 0.001,
-                })
-            );
-            setStatus(
-                t("imageImport.selectionFirstPointSet", {
-                    stat: statLabels[currentSelectionKey],
-                }),
-                "info"
-            );
-            return;
-        }
-
-        const left = Math.min(selectionStart.startX, currentX) / rect.width;
-        const top = Math.min(selectionStart.startY, currentY) / rect.height;
-        const width = Math.abs(currentX - selectionStart.startX) / rect.width;
-        const height = Math.abs(currentY - selectionStart.startY) / rect.height;
-        const nextRegion = clampRegion({
-            x: left,
-            y: top,
-            width,
-            height,
-        });
-
-        setSelectedRegions((current) => ({
-            ...current,
-            [currentSelectionKey]: nextRegion,
-        }));
-        setSelectionStart(null);
-        setDraftRegion(null);
-        const nextIndex = selectionIndex === null ? null : selectionIndex + 1;
-        if (nextIndex === null || nextIndex >= statKeys.length) {
-            setSelectionIndex(null);
-            setStatus(t("imageImport.selectionComplete"), "success");
-            return;
-        }
-
-        setSelectionIndex(nextIndex);
-        setStatus(
-            t("imageImport.selectionAdvance", {
-                stat: statLabels[statKeys[nextIndex]],
-            }),
-            "info"
-        );
     };
 
     return (
@@ -603,30 +1229,10 @@ export default function IvImageImportPanel({
 
             {previewUrl !== "" && (
                 <Box sx={{ mt: 2 }}>
-                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
-                        <Button
-                            variant={selectionIndex !== null ? "contained" : "outlined"}
-                            onClick={() => {
-                                setSelectedRegions({});
-                                setSelectionStart(null);
-                                setDraftRegion(null);
-                                setSelectionIndex(0);
-                                setStatus(
-                                    t("imageImport.selectionModeActive", {
-                                        stat: statLabels[statKeys[0]],
-                                    }),
-                                    "info"
-                                );
-                            }}
-                        >
-                            {t("imageImport.startSelection")}
-                        </Button>
-                    </Box>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                         {t("imageImport.previewTitle")}
                     </Typography>
                     <Box
-                        ref={previewContainerRef}
                         sx={{
                             position: "relative",
                             borderRadius: 2,
@@ -634,10 +1240,7 @@ export default function IvImageImportPanel({
                             border: "1px solid",
                             borderColor: "divider",
                             backgroundColor: "common.black",
-                            cursor:
-                                selectionIndex !== null ? "crosshair" : "default",
                         }}
-                        onPointerDown={startSelection}
                     >
                         <Box
                             component="img"
@@ -645,18 +1248,27 @@ export default function IvImageImportPanel({
                             alt={t("imageImport.previewTitle")}
                             sx={{ display: "block", width: "100%", height: "auto" }}
                         />
+                        {detectedPanelRegion && (
+                            <Box
+                                sx={{
+                                    position: "absolute",
+                                    left: `${detectedPanelRegion.x * 100}%`,
+                                    top: `${detectedPanelRegion.y * 100}%`,
+                                    width: `${detectedPanelRegion.width * 100}%`,
+                                    height: `${detectedPanelRegion.height * 100}%`,
+                                    border: "2px solid rgba(255, 152, 0, 0.95)",
+                                    borderRadius: 1.5,
+                                    boxSizing: "border-box",
+                                    backgroundColor: "rgba(255, 152, 0, 0.06)",
+                                    pointerEvents: "none",
+                                }}
+                            />
+                        )}
                         {statKeys.map((key) => {
-                            const region =
-                                key === currentSelectionKey && draftRegion
-                                    ? draftRegion
-                                    : selectedRegions[key];
-
+                            const region = detectedRegions[key];
                             if (!region) {
                                 return null;
                             }
-
-                            const isActiveDraft =
-                                key === currentSelectionKey && !!draftRegion;
 
                             return (
                                 <Box
@@ -667,14 +1279,10 @@ export default function IvImageImportPanel({
                                         top: `${region.y * 100}%`,
                                         width: `${region.width * 100}%`,
                                         height: `${region.height * 100}%`,
-                                        border: isActiveDraft
-                                            ? "2px solid rgba(255, 152, 0, 0.95)"
-                                            : "2px solid rgba(33, 150, 243, 0.95)",
+                                        border: "2px solid rgba(33, 150, 243, 0.95)",
                                         borderRadius: 1.5,
                                         boxSizing: "border-box",
-                                        backgroundColor: isActiveDraft
-                                            ? "rgba(255, 152, 0, 0.08)"
-                                            : "rgba(33, 150, 243, 0.08)",
+                                        backgroundColor: "rgba(33, 150, 243, 0.08)",
                                         pointerEvents: "none",
                                     }}
                                 >
@@ -687,9 +1295,8 @@ export default function IvImageImportPanel({
                                             px: 0.75,
                                             borderRadius: 0.75,
                                             color: "common.white",
-                                            backgroundColor: isActiveDraft
-                                                ? "rgba(255, 152, 0, 0.95)"
-                                                : "rgba(33, 150, 243, 0.95)",
+                                            backgroundColor:
+                                                "rgba(33, 150, 243, 0.95)",
                                         }}
                                     >
                                         {statLabels[key]}
