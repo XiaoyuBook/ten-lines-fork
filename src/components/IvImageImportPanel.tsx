@@ -13,9 +13,7 @@ import { useI18n } from "../i18n";
 
 type TesseractModule = typeof import("tesseract.js");
 type TesseractWorker = Awaited<ReturnType<TesseractModule["createWorker"]>>;
-type TesseractLoggerMessage = Awaited<
-    Parameters<NonNullable<Parameters<TesseractModule["createWorker"]>[2]["logger"]>>[0]
->;
+type TesseractLoggerMessage = import("tesseract.js").LoggerMessage;
 
 type StatKey =
     | "hp"
