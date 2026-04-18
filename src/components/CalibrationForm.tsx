@@ -1,5 +1,5 @@
 import { proxy } from "comlink";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Alert,
     Autocomplete,
@@ -53,6 +53,9 @@ import CalibrationComparePanel, {
     DEFAULT_COMPARE_COLUMNS,
 } from "./CalibrationComparePanel";
 import CalibrationTable from "./CalibrationTable";
+import CalibrationRunHistoryPanel, {
+    type CalibrationRunHistoryEntry,
+} from "./CalibrationRunHistoryPanel";
 import IvCalculator from "./IvCalculator";
 import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";
@@ -97,6 +100,8 @@ const FLOATING_COMPARE_DEFAULT_POSITION = {
 
 export const COMPARE_TARGET_STORAGE_KEY = "calibration-compare-target";
 export const SEARCHER_COMPARE_TARGET_KEY = "searcher-compare-target";
+const CALIBRATION_RUN_HISTORY_STORAGE_KEY = "calibration-run-history";
+const MAX_CALIBRATION_RUN_HISTORY = 20;
 
 export interface CalibrationFormState {
     seedLeewayString: string;
@@ -288,6 +293,9 @@ export default function CalibrationForm({
     const [compareHistory, setCompareHistory] = useLocalStorage<
         CalibrationCompareEntry[]
     >("calibration-compare-history", []);
+    const [runHistoryEntries, setRunHistoryEntries] = useLocalStorage<
+        CalibrationRunHistoryEntry[]
+    >(CALIBRATION_RUN_HISTORY_STORAGE_KEY, []);
     const [compareSettingsOpen, setCompareSettingsOpen] = useState(false);
     const [compareFeedback, setCompareFeedback] = useState("");
     const [compareFloating, setCompareFloating] = useState(false);
@@ -418,7 +426,7 @@ export default function CalibrationForm({
         ? 520
         : 400;
 
-    const clampFloatingPosition = (
+    const clampFloatingPosition = useCallback((
         x: number,
         y: number,
         width: number,
@@ -432,9 +440,9 @@ export default function CalibrationForm({
             Math.max(12, y),
             Math.max(12, window.innerHeight - height - 12)
         ),
-    });
+    }), []);
 
-    const clampFloatingSize = (width: number, height: number) => ({
+    const clampFloatingSize = useCallback((width: number, height: number) => ({
         width: Math.min(
             Math.max(FLOATING_COMPARE_MIN_WIDTH, width),
             Math.max(FLOATING_COMPARE_MIN_WIDTH, window.innerWidth - 24)
@@ -443,7 +451,7 @@ export default function CalibrationForm({
             Math.max(compareFloatingMinHeight, height),
             Math.max(compareFloatingMinHeight, window.innerHeight - 24)
         ),
-    });
+    }), [compareFloatingMinHeight]);
 
     const addCompareTarget = (row: CalibrationCompareRow) => {
         setCompareTarget(createCompareEntry(row));
@@ -457,6 +465,45 @@ export default function CalibrationForm({
         ]);
         setCompareFeedback(t("compare.addedHistory"));
     };
+
+    const createRunHistoryEntry = (): CalibrationRunHistoryEntry => ({
+        id:
+            globalThis.crypto?.randomUUID?.() ??
+            `${Date.now()}-${Math.random()}`,
+        createdAt: Date.now(),
+        resultCount: 0,
+        values: {
+            game,
+            sound,
+            buttonMode,
+            button,
+            heldButton,
+            gameConsole,
+            targetInitialSeed: hexSeed(targetSeedValue, 16),
+            seedLeeway: calibrationFormState.seedLeewayString,
+            advancesMin,
+            advancesMax,
+            offset,
+            overworldFrames,
+            trainerID,
+            secretID,
+            teachyTVMode: isTeachyTVMode,
+            ttvAdvancesMin,
+            ttvAdvancesMax,
+            staticCategory: calibrationFormState.staticCategory,
+            staticPokemon: calibrationFormState.staticPokemon,
+            wildCategory: calibrationFormState.wildCategory,
+            wildLocation: calibrationFormState.wildLocation,
+            wildPokemon: calibrationFormState.wildPokemon,
+            wildLead: calibrationFormState.wildLead,
+            shouldFilterPokemon: calibrationFormState.shouldFilterPokemon,
+            method: calibrationFormState.method,
+            shininess: calibrationFormState.shininess,
+            nature: calibrationFormState.nature,
+            gender: calibrationFormState.gender,
+            ivRangeStrings: calibrationFormState.ivRangeStrings,
+        },
+    });
 
     const handleQuickAdd = (
         row: CalibrationResultRow,
@@ -476,6 +523,46 @@ export default function CalibrationForm({
     const clearCompareEntries = () => {
         setCompareTarget(null);
         setCompareHistory([]);
+    };
+
+    const restoreRunHistoryEntry = (entry: CalibrationRunHistoryEntry) => {
+        const { values } = entry;
+
+        setCalibrationURLState({
+            game: values.game,
+            sound: values.sound,
+            buttonMode: values.buttonMode,
+            button: values.button,
+            heldButton: values.heldButton,
+            gameConsole: values.gameConsole,
+            targetInitialSeed: values.targetInitialSeed,
+            advancesMin: values.advancesMin,
+            advancesMax: values.advancesMax,
+            ttvAdvancesMin: values.ttvAdvancesMin,
+            ttvAdvancesMax: values.ttvAdvancesMax,
+            offset: values.offset,
+            overworldFrames: values.overworldFrames,
+            trainerID: values.trainerID,
+            secretID: values.secretID,
+            teachyTVMode: values.teachyTVMode.toString(),
+        });
+        setCalibrationFormState((current) => ({
+            ...current,
+            seedLeewayString: values.seedLeeway,
+            shininess: values.shininess,
+            nature: values.nature,
+            gender: values.gender,
+            ivRangeStrings: values.ivRangeStrings,
+            staticCategory: values.staticCategory,
+            staticPokemon: values.staticPokemon,
+            wildCategory: values.wildCategory,
+            wildLocation: values.wildLocation,
+            wildPokemon: values.wildPokemon,
+            wildLead: values.wildLead,
+            shouldFilterPokemon: values.shouldFilterPokemon,
+            method: values.method,
+        }));
+        setCompareFeedback(t("compare.restoredRun"));
     };
 
     useEffect(() => {
@@ -532,7 +619,14 @@ export default function CalibrationForm({
             window.removeEventListener("mousemove", handlePointerMove);
             window.removeEventListener("mouseup", handlePointerUp);
         };
-    }, [compareFloating, compareFloatingMinHeight, compareFloatingSize.height, compareFloatingSize.width]);
+    }, [
+        clampFloatingPosition,
+        clampFloatingSize,
+        compareFloating,
+        compareFloatingMinHeight,
+        compareFloatingSize.height,
+        compareFloatingSize.width,
+    ]);
 
     useEffect(() => {
         if (!compareFloating) {
@@ -557,7 +651,14 @@ export default function CalibrationForm({
         return () => {
             window.removeEventListener("resize", handleResize);
         };
-    }, [compareFloating, compareFloatingMinHeight, compareFloatingSize.height, compareFloatingSize.width]);
+    }, [
+        clampFloatingPosition,
+        clampFloatingSize,
+        compareFloating,
+        compareFloatingMinHeight,
+        compareFloatingSize.height,
+        compareFloatingSize.width,
+    ]);
 
     useEffect(() => {
         if (!compareFloating) {
@@ -566,7 +667,7 @@ export default function CalibrationForm({
         setCompareFloatingSize((current) =>
             clampFloatingSize(current.width, current.height)
         );
-    }, [compareFloating, compareFloatingMinHeight]);
+    }, [clampFloatingSize, compareFloating, compareFloatingMinHeight]);
 
     const startCompareFloatingDrag = (
         event: React.MouseEvent<HTMLDivElement>
@@ -652,6 +753,43 @@ export default function CalibrationForm({
         });
     };
 
+    useEffect(() => {
+        if (
+            !compareSettings.autoAddTarget ||
+            compareTarget ||
+            rows.length === 0
+        ) {
+            return;
+        }
+        setCompareTarget(createCompareEntry(rows[0]));
+    }, [
+        compareSettings.autoAddTarget,
+        compareTarget,
+        rows,
+        setCompareTarget,
+    ]);
+
+    useEffect(() => {
+        let nextStaticCategory = calibrationFormState.staticCategory;
+
+        if (nextStaticCategory === 3 && !isFRLG) {
+            nextStaticCategory = 0;
+        }
+        if (nextStaticCategory === 6 && !isFRLGE) {
+            nextStaticCategory = 0;
+        }
+        if (nextStaticCategory === 8 && isFRLG) {
+            nextStaticCategory = 0;
+        }
+
+        if (nextStaticCategory !== calibrationFormState.staticCategory) {
+            setCalibrationFormState((current) => ({
+                ...current,
+                staticCategory: nextStaticCategory,
+            }));
+        }
+    }, [calibrationFormState.staticCategory, isFRLG, isFRLGE]);
+
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         runSearch();
@@ -662,69 +800,94 @@ export default function CalibrationForm({
             setRows([]);
             return;
         }
+
+        const runHistoryEntry = createRunHistoryEntry();
+        setRunHistoryEntries((current: CalibrationRunHistoryEntry[]) =>
+            [runHistoryEntry, ...current].slice(0, MAX_CALIBRATION_RUN_HISTORY)
+        );
+
         const searchSeeds = seedList.slice(
             Math.max(0, targetSeedIndex - seedLeeway),
             Math.min(seedList.length, targetSeedIndex + seedLeeway + 1)
         );
         const submit = async () => {
             const tenLines = await fetchTenLines();
+            let totalResults = 0;
             setRows([]);
             setSearching(true);
-            if (isStatic) {
-                await tenLines.check_seeds_static(
-                    searchSeeds,
-                    advancesRange,
-                    ttvAdvancesRange,
-                    parseInt(offset),
-                    SEED_IDENTIFIER_TO_GAME[game],
-                    parseInt(trainerID),
-                    parseInt(secretID),
-                    calibrationFormState.staticCategory,
-                    calibrationFormState.staticPokemon,
-                    calibrationFormState.method,
-                    calibrationFormState.shininess,
-                    calibrationFormState.nature,
-                    calibrationFormState.gender,
-                    ivRanges,
-                    proxy((results: ExtendedGeneratorState[]) => {
-                        setRows((currentRows) => {
-                            if (currentRows.length > 1000 || results.length === 0) {
-                                return currentRows;
-                            }
-                            return [...currentRows, ...results];
-                        });
-                    }),
-                    proxy(setSearching)
-                );
-            } else {
-                await tenLines.check_seeds_wild(
-                    searchSeeds,
-                    advancesRange,
-                    ttvAdvancesRange,
-                    parseInt(offset),
-                    SEED_IDENTIFIER_TO_GAME[game],
-                    parseInt(trainerID),
-                    parseInt(secretID),
-                    calibrationFormState.wildCategory,
-                    calibrationFormState.wildLocation,
-                    !calibrationFormState.shouldFilterPokemon
-                        ? -1
-                        : calibrationFormState.wildPokemon,
-                    calibrationFormState.method,
-                    calibrationFormState.wildLead,
-                    calibrationFormState.shininess,
-                    calibrationFormState.nature,
-                    calibrationFormState.gender,
-                    ivRanges,
-                    proxy((results: ExtendedWildGeneratorState[]) => {
-                        setRows((currentRows) => {
-                            if (currentRows.length > 1000 || results.length === 0) {
-                                return currentRows;
-                            }
-                            return [...currentRows, ...results];
-                        });
-                    }),
-                    proxy(setSearching)
+            try {
+                if (isStatic) {
+                    await tenLines.check_seeds_static(
+                        searchSeeds,
+                        advancesRange,
+                        ttvAdvancesRange,
+                        parseInt(offset),
+                        SEED_IDENTIFIER_TO_GAME[game],
+                        parseInt(trainerID),
+                        parseInt(secretID),
+                        calibrationFormState.staticCategory,
+                        calibrationFormState.staticPokemon,
+                        calibrationFormState.method,
+                        calibrationFormState.shininess,
+                        calibrationFormState.nature,
+                        calibrationFormState.gender,
+                        ivRanges,
+                        proxy((results: ExtendedGeneratorState[]) => {
+                            totalResults += results.length;
+                            setRows((currentRows) => {
+                                if (
+                                    currentRows.length > 1000 ||
+                                    results.length === 0
+                                ) {
+                                    return currentRows;
+                                }
+                                return [...currentRows, ...results];
+                            });
+                        }),
+                        proxy(setSearching)
+                    );
+                } else {
+                    await tenLines.check_seeds_wild(
+                        searchSeeds,
+                        advancesRange,
+                        ttvAdvancesRange,
+                        parseInt(offset),
+                        SEED_IDENTIFIER_TO_GAME[game],
+                        parseInt(trainerID),
+                        parseInt(secretID),
+                        calibrationFormState.wildCategory,
+                        calibrationFormState.wildLocation,
+                        !calibrationFormState.shouldFilterPokemon
+                            ? -1
+                            : calibrationFormState.wildPokemon,
+                        calibrationFormState.method,
+                        calibrationFormState.wildLead,
+                        calibrationFormState.shininess,
+                        calibrationFormState.nature,
+                        calibrationFormState.gender,
+                        ivRanges,
+                        proxy((results: ExtendedWildGeneratorState[]) => {
+                            totalResults += results.length;
+                            setRows((currentRows) => {
+                                if (
+                                    currentRows.length > 1000 ||
+                                    results.length === 0
+                                ) {
+                                    return currentRows;
+                                }
+                                return [...currentRows, ...results];
+                            });
+                        }),
+                        proxy(setSearching)
+                    );
+                }
+            } finally {
+                setRunHistoryEntries((current: CalibrationRunHistoryEntry[]) =>
+                    current.map((entry: CalibrationRunHistoryEntry) =>
+                        entry.id === runHistoryEntry.id
+                            ? { ...entry, resultCount: totalResults }
+                            : entry
+                    )
                 );
             }
         };
@@ -782,22 +945,65 @@ export default function CalibrationForm({
         }));
     };
 
-    if (calibrationFormState.staticCategory == 3 && !isFRLG) {
-        calibrationFormState.staticCategory = 0;
-        setCalibrationFormState(calibrationFormState);
-    }
-    if (calibrationFormState.staticCategory == 6 && !isFRLGE) {
-        calibrationFormState.staticCategory = 0;
-        setCalibrationFormState(calibrationFormState);
-    }
-    if (calibrationFormState.staticCategory == 8 && isFRLG) {
-        calibrationFormState.staticCategory = 0;
-        setCalibrationFormState(calibrationFormState);
-    }
-
     if (hidden) {
         return null;
     }
+
+    const comparePanel = (
+        <CalibrationComparePanel
+            targetEntry={compareTarget}
+            historyEntries={compareHistory}
+            settings={{
+                ...compareSettings,
+                visibleColumns: orderedVisibleColumns,
+            }}
+            floating={compareFloating}
+            gameConsole={gameConsole}
+            onDeleteTarget={deleteCompareTarget}
+            onDeleteHistoryEntry={(id) => {
+                setCompareHistory((history: CalibrationCompareEntry[]) =>
+                    history.filter(
+                        (entry: CalibrationCompareEntry) => entry.id !== id
+                    )
+                );
+            }}
+            onClearAll={clearCompareEntries}
+            onOpenSettings={() => setCompareSettingsOpen(true)}
+            onToggleFloating={toggleCompareFloating}
+            onHeaderMouseDown={startCompareFloatingDrag}
+        />
+    );
+
+    const runHistoryPanel = (
+        <CalibrationRunHistoryPanel
+            entries={runHistoryEntries}
+            onRestore={restoreRunHistoryEntry}
+            onDelete={(id) => {
+                setRunHistoryEntries((current: CalibrationRunHistoryEntry[]) =>
+                    current.filter(
+                        (entry: CalibrationRunHistoryEntry) => entry.id !== id
+                    )
+                );
+            }}
+            onClear={() => {
+                setRunHistoryEntries([]);
+                setCompareFeedback(t("compare.clearedRuns"));
+            }}
+        />
+    );
+
+    const inlinePanels =
+        compareSettings.enabled && !compareFloating
+            ? compareSettings.position === "left"
+                ? [
+                      <React.Fragment key="compare">{comparePanel}</React.Fragment>,
+                      <React.Fragment key="runs">{runHistoryPanel}</React.Fragment>,
+                  ]
+                : [
+                      <React.Fragment key="runs">{runHistoryPanel}</React.Fragment>,
+                      <React.Fragment key="compare">{comparePanel}</React.Fragment>,
+                  ]
+            : [<React.Fragment key="runs">{runHistoryPanel}</React.Fragment>];
 
     return (
         <Box
@@ -815,126 +1021,88 @@ export default function CalibrationForm({
             >
                 <Box
                     sx={{
-                        display: {
-                            xs: compareSettings.enabled ? "block" : "none",
-                            lg: compareSettings.enabled ? "block" : "none",
+                        display: "grid",
+                        gap: 2,
+                        gridTemplateColumns: {
+                            xs: "1fr",
+                            xl:
+                                compareSettings.enabled && !compareFloating
+                                    ? "minmax(0, 1fr) minmax(0, 1fr)"
+                                    : "1fr",
                         },
-                        position: {
-                            xs: "static",
-                            lg: compareFloating ? "fixed" : "absolute",
-                        },
-                        top: { lg: compareFloating ? compareFloatingPosition.y : 0 },
-                        left: {
-                            lg:
-                                compareFloating
-                                    ? compareFloatingPosition.x
-                                    : compareSettings.position === "left"
-                                    ? "calc(-390px - 24px)"
-                                    : "auto",
-                        },
-                        right: {
-                            lg:
-                                compareFloating
-                                    ? "auto"
-                                    : compareSettings.position === "right"
-                                    ? "calc(-390px - 24px)"
-                                    : "auto",
-                        },
-                        width: {
-                            xs: "100%",
-                            lg: compareFloating ? compareFloatingSize.width : 390,
-                        },
-                        height: {
-                            lg: compareFloating ? compareFloatingSize.height : "auto",
-                        },
-                        minWidth: { lg: compareFloating ? FLOATING_COMPARE_MIN_WIDTH : 0 },
-                        minHeight: { lg: compareFloating ? compareFloatingMinHeight : 0 },
-                        maxWidth: { lg: compareFloating ? "calc(100vw - 24px)" : "none" },
-                        maxHeight: { lg: compareFloating ? "calc(100vh - 24px)" : "none" },
-                        overflow: { lg: compareFloating ? "hidden" : "visible" },
-                        zIndex: { lg: compareFloating ? 1400 : "auto" },
-                        boxShadow: {
-                            lg: compareFloating
-                                ? "0 20px 60px rgba(0,0,0,0.45)"
-                                : "none",
-                        },
-                        mb: { xs: 2, lg: 0 },
+                        alignItems: "start",
+                        mb: 2,
                     }}
                 >
-                    <CalibrationComparePanel
-                        targetEntry={compareTarget}
-                        historyEntries={compareHistory}
-                        settings={{
-                            ...compareSettings,
-                            visibleColumns: orderedVisibleColumns,
-                        }}
-                        floating={compareFloating}
-                        gameConsole={gameConsole}
-                        onDeleteTarget={deleteCompareTarget}
-                        onDeleteHistoryEntry={(id) => {
-                            setCompareHistory((history: CalibrationCompareEntry[]) =>
-                                history.filter(
-                                    (entry: CalibrationCompareEntry) =>
-                                        entry.id !== id
-                                )
-                            );
-                        }}
-                        onClearAll={clearCompareEntries}
-                        onOpenSettings={() => setCompareSettingsOpen(true)}
-                        onToggleFloating={toggleCompareFloating}
-                        onHeaderMouseDown={startCompareFloatingDrag}
-                    />
-                    {compareFloating && (
-                        <>
-                            <Box
-                                onMouseDown={startCompareFloatingResize("resize-right")}
-                                sx={{
-                                    position: "absolute",
-                                    top: 0,
-                                    right: 0,
-                                    width: 10,
-                                    height: "100%",
-                                    cursor: "ew-resize",
-                                    zIndex: 2,
-                                }}
-                            />
-                            <Box
-                                onMouseDown={startCompareFloatingResize("resize-bottom")}
-                                sx={{
-                                    position: "absolute",
-                                    left: 0,
-                                    bottom: 0,
-                                    width: "100%",
-                                    height: 10,
-                                    cursor: "ns-resize",
-                                    zIndex: 2,
-                                }}
-                            />
-                            <Box
-                                onMouseDown={startCompareFloatingResize("resize-corner")}
-                                sx={{
-                                    position: "absolute",
-                                    right: 0,
-                                    bottom: 0,
-                                    width: 18,
-                                    height: 18,
-                                    cursor: "nwse-resize",
-                                    zIndex: 3,
-                                    "&::after": {
-                                        content: '""',
-                                        position: "absolute",
-                                        right: 4,
-                                        bottom: 4,
-                                        width: 8,
-                                        height: 8,
-                                        borderRight: "2px solid rgba(255,255,255,0.45)",
-                                        borderBottom: "2px solid rgba(255,255,255,0.45)",
-                                    },
-                                }}
-                            />
-                        </>
-                    )}
+                    {inlinePanels}
                 </Box>
+
+                {compareSettings.enabled && compareFloating && (
+                    <Box
+                        sx={{
+                            position: "fixed",
+                            top: compareFloatingPosition.y,
+                            left: compareFloatingPosition.x,
+                            width: compareFloatingSize.width,
+                            height: compareFloatingSize.height,
+                            minWidth: FLOATING_COMPARE_MIN_WIDTH,
+                            minHeight: compareFloatingMinHeight,
+                            maxWidth: "calc(100vw - 24px)",
+                            maxHeight: "calc(100vh - 24px)",
+                            overflow: "hidden",
+                            zIndex: 1400,
+                            boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+                        }}
+                    >
+                        {comparePanel}
+                        <Box
+                            onMouseDown={startCompareFloatingResize("resize-right")}
+                            sx={{
+                                position: "absolute",
+                                top: 0,
+                                right: 0,
+                                width: 10,
+                                height: "100%",
+                                cursor: "ew-resize",
+                                zIndex: 2,
+                            }}
+                        />
+                        <Box
+                            onMouseDown={startCompareFloatingResize("resize-bottom")}
+                            sx={{
+                                position: "absolute",
+                                left: 0,
+                                bottom: 0,
+                                width: "100%",
+                                height: 10,
+                                cursor: "ns-resize",
+                                zIndex: 2,
+                            }}
+                        />
+                        <Box
+                            onMouseDown={startCompareFloatingResize("resize-corner")}
+                            sx={{
+                                position: "absolute",
+                                right: 0,
+                                bottom: 0,
+                                width: 18,
+                                height: 18,
+                                cursor: "nwse-resize",
+                                zIndex: 3,
+                                "&::after": {
+                                    content: '""',
+                                    position: "absolute",
+                                    right: 4,
+                                    bottom: 4,
+                                    width: 8,
+                                    height: 8,
+                                    borderRight: "2px solid rgba(255,255,255,0.45)",
+                                    borderBottom: "2px solid rgba(255,255,255,0.45)",
+                                },
+                            }}
+                        />
+                    </Box>
+                )}
 
                 <Paper
                     variant="outlined"
