@@ -206,9 +206,10 @@ const detectStatValueRegions = (
     const imageData = context.getImageData(0, 0, sourceWidth, sourceHeight).data;
     const searchStartX = Math.floor(sourceWidth * 0.48);
     const rowScores = new Array<number>(sourceHeight).fill(0);
-    const rowBounds = new Array<{ left: number; right: number }>(sourceHeight)
-        .fill(null)
-        .map(() => ({ left: sourceWidth, right: -1 }));
+    const rowBounds = Array.from({ length: sourceHeight }, () => ({
+        left: sourceWidth,
+        right: -1,
+    }));
 
     for (let y = 0; y < sourceHeight; y++) {
         for (let x = searchStartX; x < sourceWidth; x++) {
