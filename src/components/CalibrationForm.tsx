@@ -53,9 +53,7 @@ import CalibrationComparePanel, {
     DEFAULT_COMPARE_COLUMNS,
 } from "./CalibrationComparePanel";
 import CalibrationTable from "./CalibrationTable";
-import CalibrationRunHistoryPanel, {
-    type CalibrationRunHistoryEntry,
-} from "./CalibrationRunHistoryPanel";
+import CalibrationDynamicToolPanel from "./CalibrationDynamicToolPanel";
 import IvCalculator from "./IvCalculator";
 import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";
@@ -100,8 +98,6 @@ const FLOATING_COMPARE_DEFAULT_POSITION = {
 
 export const COMPARE_TARGET_STORAGE_KEY = "calibration-compare-target";
 export const SEARCHER_COMPARE_TARGET_KEY = "searcher-compare-target";
-const CALIBRATION_RUN_HISTORY_STORAGE_KEY = "calibration-run-history";
-const MAX_CALIBRATION_RUN_HISTORY = 20;
 
 export interface CalibrationFormState {
     seedLeewayString: string;
@@ -293,9 +289,6 @@ export default function CalibrationForm({
     const [compareHistory, setCompareHistory] = useLocalStorage<
         CalibrationCompareEntry[]
     >("calibration-compare-history", []);
-    const [runHistoryEntries, setRunHistoryEntries] = useLocalStorage<
-        CalibrationRunHistoryEntry[]
-    >(CALIBRATION_RUN_HISTORY_STORAGE_KEY, []);
     const [compareSettingsOpen, setCompareSettingsOpen] = useState(false);
     const [compareFeedback, setCompareFeedback] = useState("");
     const [compareFloating, setCompareFloating] = useState(false);
@@ -466,45 +459,6 @@ export default function CalibrationForm({
         setCompareFeedback(t("compare.addedHistory"));
     };
 
-    const createRunHistoryEntry = (): CalibrationRunHistoryEntry => ({
-        id:
-            globalThis.crypto?.randomUUID?.() ??
-            `${Date.now()}-${Math.random()}`,
-        createdAt: Date.now(),
-        resultCount: 0,
-        values: {
-            game,
-            sound,
-            buttonMode,
-            button,
-            heldButton,
-            gameConsole,
-            targetInitialSeed: hexSeed(targetSeedValue, 16),
-            seedLeeway: calibrationFormState.seedLeewayString,
-            advancesMin,
-            advancesMax,
-            offset,
-            overworldFrames,
-            trainerID,
-            secretID,
-            teachyTVMode: isTeachyTVMode,
-            ttvAdvancesMin,
-            ttvAdvancesMax,
-            staticCategory: calibrationFormState.staticCategory,
-            staticPokemon: calibrationFormState.staticPokemon,
-            wildCategory: calibrationFormState.wildCategory,
-            wildLocation: calibrationFormState.wildLocation,
-            wildPokemon: calibrationFormState.wildPokemon,
-            wildLead: calibrationFormState.wildLead,
-            shouldFilterPokemon: calibrationFormState.shouldFilterPokemon,
-            method: calibrationFormState.method,
-            shininess: calibrationFormState.shininess,
-            nature: calibrationFormState.nature,
-            gender: calibrationFormState.gender,
-            ivRangeStrings: calibrationFormState.ivRangeStrings,
-        },
-    });
-
     const handleQuickAdd = (
         row: CalibrationResultRow,
         destination: "target" | "history"
@@ -523,46 +477,6 @@ export default function CalibrationForm({
     const clearCompareEntries = () => {
         setCompareTarget(null);
         setCompareHistory([]);
-    };
-
-    const restoreRunHistoryEntry = (entry: CalibrationRunHistoryEntry) => {
-        const { values } = entry;
-
-        setCalibrationURLState({
-            game: values.game,
-            sound: values.sound,
-            buttonMode: values.buttonMode,
-            button: values.button,
-            heldButton: values.heldButton,
-            gameConsole: values.gameConsole,
-            targetInitialSeed: values.targetInitialSeed,
-            advancesMin: values.advancesMin,
-            advancesMax: values.advancesMax,
-            ttvAdvancesMin: values.ttvAdvancesMin,
-            ttvAdvancesMax: values.ttvAdvancesMax,
-            offset: values.offset,
-            overworldFrames: values.overworldFrames,
-            trainerID: values.trainerID,
-            secretID: values.secretID,
-            teachyTVMode: values.teachyTVMode.toString(),
-        });
-        setCalibrationFormState((current) => ({
-            ...current,
-            seedLeewayString: values.seedLeeway,
-            shininess: values.shininess,
-            nature: values.nature,
-            gender: values.gender,
-            ivRangeStrings: values.ivRangeStrings,
-            staticCategory: values.staticCategory,
-            staticPokemon: values.staticPokemon,
-            wildCategory: values.wildCategory,
-            wildLocation: values.wildLocation,
-            wildPokemon: values.wildPokemon,
-            wildLead: values.wildLead,
-            shouldFilterPokemon: values.shouldFilterPokemon,
-            method: values.method,
-        }));
-        setCompareFeedback(t("compare.restoredRun"));
     };
 
     useEffect(() => {
@@ -801,93 +715,75 @@ export default function CalibrationForm({
             return;
         }
 
-        const runHistoryEntry = createRunHistoryEntry();
-        setRunHistoryEntries((current: CalibrationRunHistoryEntry[]) =>
-            [runHistoryEntry, ...current].slice(0, MAX_CALIBRATION_RUN_HISTORY)
-        );
-
         const searchSeeds = seedList.slice(
             Math.max(0, targetSeedIndex - seedLeeway),
             Math.min(seedList.length, targetSeedIndex + seedLeeway + 1)
         );
         const submit = async () => {
             const tenLines = await fetchTenLines();
-            let totalResults = 0;
             setRows([]);
             setSearching(true);
-            try {
-                if (isStatic) {
-                    await tenLines.check_seeds_static(
-                        searchSeeds,
-                        advancesRange,
-                        ttvAdvancesRange,
-                        parseInt(offset),
-                        SEED_IDENTIFIER_TO_GAME[game],
-                        parseInt(trainerID),
-                        parseInt(secretID),
-                        calibrationFormState.staticCategory,
-                        calibrationFormState.staticPokemon,
-                        calibrationFormState.method,
-                        calibrationFormState.shininess,
-                        calibrationFormState.nature,
-                        calibrationFormState.gender,
-                        ivRanges,
-                        proxy((results: ExtendedGeneratorState[]) => {
-                            totalResults += results.length;
-                            setRows((currentRows) => {
-                                if (
-                                    currentRows.length > 1000 ||
-                                    results.length === 0
-                                ) {
-                                    return currentRows;
-                                }
-                                return [...currentRows, ...results];
-                            });
-                        }),
-                        proxy(setSearching)
-                    );
-                } else {
-                    await tenLines.check_seeds_wild(
-                        searchSeeds,
-                        advancesRange,
-                        ttvAdvancesRange,
-                        parseInt(offset),
-                        SEED_IDENTIFIER_TO_GAME[game],
-                        parseInt(trainerID),
-                        parseInt(secretID),
-                        calibrationFormState.wildCategory,
-                        calibrationFormState.wildLocation,
-                        !calibrationFormState.shouldFilterPokemon
-                            ? -1
-                            : calibrationFormState.wildPokemon,
-                        calibrationFormState.method,
-                        calibrationFormState.wildLead,
-                        calibrationFormState.shininess,
-                        calibrationFormState.nature,
-                        calibrationFormState.gender,
-                        ivRanges,
-                        proxy((results: ExtendedWildGeneratorState[]) => {
-                            totalResults += results.length;
-                            setRows((currentRows) => {
-                                if (
-                                    currentRows.length > 1000 ||
-                                    results.length === 0
-                                ) {
-                                    return currentRows;
-                                }
-                                return [...currentRows, ...results];
-                            });
-                        }),
-                        proxy(setSearching)
-                    );
-                }
-            } finally {
-                setRunHistoryEntries((current: CalibrationRunHistoryEntry[]) =>
-                    current.map((entry: CalibrationRunHistoryEntry) =>
-                        entry.id === runHistoryEntry.id
-                            ? { ...entry, resultCount: totalResults }
-                            : entry
-                    )
+            if (isStatic) {
+                await tenLines.check_seeds_static(
+                    searchSeeds,
+                    advancesRange,
+                    ttvAdvancesRange,
+                    parseInt(offset),
+                    SEED_IDENTIFIER_TO_GAME[game],
+                    parseInt(trainerID),
+                    parseInt(secretID),
+                    calibrationFormState.staticCategory,
+                    calibrationFormState.staticPokemon,
+                    calibrationFormState.method,
+                    calibrationFormState.shininess,
+                    calibrationFormState.nature,
+                    calibrationFormState.gender,
+                    ivRanges,
+                    proxy((results: ExtendedGeneratorState[]) => {
+                        setRows((currentRows) => {
+                            if (
+                                currentRows.length > 1000 ||
+                                results.length === 0
+                            ) {
+                                return currentRows;
+                            }
+                            return [...currentRows, ...results];
+                        });
+                    }),
+                    proxy(setSearching)
+                );
+            } else {
+                await tenLines.check_seeds_wild(
+                    searchSeeds,
+                    advancesRange,
+                    ttvAdvancesRange,
+                    parseInt(offset),
+                    SEED_IDENTIFIER_TO_GAME[game],
+                    parseInt(trainerID),
+                    parseInt(secretID),
+                    calibrationFormState.wildCategory,
+                    calibrationFormState.wildLocation,
+                    !calibrationFormState.shouldFilterPokemon
+                        ? -1
+                        : calibrationFormState.wildPokemon,
+                    calibrationFormState.method,
+                    calibrationFormState.wildLead,
+                    calibrationFormState.shininess,
+                    calibrationFormState.nature,
+                    calibrationFormState.gender,
+                    ivRanges,
+                    proxy((results: ExtendedWildGeneratorState[]) => {
+                        setRows((currentRows) => {
+                            if (
+                                currentRows.length > 1000 ||
+                                results.length === 0
+                            ) {
+                                return currentRows;
+                            }
+                            return [...currentRows, ...results];
+                        });
+                    }),
+                    proxy(setSearching)
                 );
             }
         };
@@ -974,36 +870,20 @@ export default function CalibrationForm({
         />
     );
 
-    const runHistoryPanel = (
-        <CalibrationRunHistoryPanel
-            entries={runHistoryEntries}
-            onRestore={restoreRunHistoryEntry}
-            onDelete={(id) => {
-                setRunHistoryEntries((current: CalibrationRunHistoryEntry[]) =>
-                    current.filter(
-                        (entry: CalibrationRunHistoryEntry) => entry.id !== id
-                    )
-                );
-            }}
-            onClear={() => {
-                setRunHistoryEntries([]);
-                setCompareFeedback(t("compare.clearedRuns"));
-            }}
-        />
-    );
+    const dynamicToolPanel = <CalibrationDynamicToolPanel />;
 
     const inlinePanels =
         compareSettings.enabled && !compareFloating
             ? compareSettings.position === "left"
                 ? [
                       <React.Fragment key="compare">{comparePanel}</React.Fragment>,
-                      <React.Fragment key="runs">{runHistoryPanel}</React.Fragment>,
+                      <React.Fragment key="tool">{dynamicToolPanel}</React.Fragment>,
                   ]
                 : [
-                      <React.Fragment key="runs">{runHistoryPanel}</React.Fragment>,
+                      <React.Fragment key="tool">{dynamicToolPanel}</React.Fragment>,
                       <React.Fragment key="compare">{comparePanel}</React.Fragment>,
                   ]
-            : [<React.Fragment key="runs">{runHistoryPanel}</React.Fragment>];
+            : [<React.Fragment key="tool">{dynamicToolPanel}</React.Fragment>];
 
     return (
         <Box
