@@ -36,14 +36,41 @@ type OverlayRegion = {
     height: number;
 };
 
+type RegionBox = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
+type DragMode = "move" | "resize";
+
+type DragState = {
+    mode: DragMode;
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startRegion: RegionBox;
+};
+
+const DEFAULT_STATS_REGION: RegionBox = {
+    x: 0.705,
+    y: 0.115,
+    width: 0.255,
+    height: 0.695,
+};
+
 const OVERLAY_REGIONS: OverlayRegion[] = [
-    { key: "hp", x: 0.74, y: 0.12, width: 0.18, height: 0.085 },
-    { key: "attack", x: 0.74, y: 0.24, width: 0.18, height: 0.085 },
-    { key: "defense", x: 0.74, y: 0.35, width: 0.18, height: 0.085 },
-    { key: "specialAttack", x: 0.74, y: 0.46, width: 0.18, height: 0.085 },
-    { key: "specialDefense", x: 0.74, y: 0.575, width: 0.18, height: 0.085 },
-    { key: "speed", x: 0.74, y: 0.69, width: 0.18, height: 0.085 },
+    { key: "hp", x: 0, y: 0, width: 1, height: 0.12 },
+    { key: "attack", x: 0, y: 0.182, width: 1, height: 0.12 },
+    { key: "defense", x: 0, y: 0.364, width: 1, height: 0.12 },
+    { key: "specialAttack", x: 0, y: 0.545, width: 1, height: 0.12 },
+    { key: "specialDefense", x: 0, y: 0.727, width: 1, height: 0.12 },
+    { key: "speed", x: 0, y: 0.909, width: 1, height: 0.12 },
 ];
+
+const MIN_REGION_WIDTH = 0.12;
+const MIN_REGION_HEIGHT = 0.25;
 
 const EMPTY_STAT_VALUES: StatValueMap = {
     hp: "",
@@ -127,6 +154,24 @@ const parseRecognizedValue = (rawText: string) => {
     return matches?.[0] ?? "";
 };
 
+const clampRegion = (region: RegionBox): RegionBox => {
+    const width = Math.min(Math.max(region.width, MIN_REGION_WIDTH), 1);
+    const height = Math.min(Math.max(region.height, MIN_REGION_HEIGHT), 1);
+    const x = Math.min(Math.max(region.x, 0), 1 - width);
+    const y = Math.min(Math.max(region.y, 0), 1 - height);
+
+    return { x, y, width, height };
+};
+
+const getAbsoluteOverlayRegions = (statsRegion: RegionBox): OverlayRegion[] =>
+    OVERLAY_REGIONS.map((region) => ({
+        ...region,
+        x: statsRegion.x + statsRegion.width * region.x,
+        y: statsRegion.y + statsRegion.height * region.y,
+        width: statsRegion.width * region.width,
+        height: statsRegion.height * region.height,
+    }));
+
 const loadTesseractRuntime = () =>
     new Promise<TesseractModule>((resolve, reject) => {
         if (window.Tesseract) {
@@ -180,10 +225,14 @@ export default function IvImageImportPanel({
 }) {
     const { locale, t } = useI18n();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const previewContainerRef = useRef<HTMLDivElement | null>(null);
     const workerRef = useRef<TesseractWorker | null>(null);
     const [level, setLevel] = useState("");
     const [previewUrl, setPreviewUrl] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [statsRegion, setStatsRegion] =
+        useState<RegionBox>(DEFAULT_STATS_REGION);
+    const [dragState, setDragState] = useState<DragState | null>(null);
     const [stats, setStats] = useState<StatValueMap>(getEmptyStats);
     const [feedback, setFeedback] = useState("");
     const [feedbackSeverity, setFeedbackSeverity] = useState<
@@ -195,6 +244,10 @@ export default function IvImageImportPanel({
     const statKeys = useMemo(
         () => OVERLAY_REGIONS.map((region) => region.key) as StatKey[],
         []
+    );
+    const absoluteOverlayRegions = useMemo(
+        () => getAbsoluteOverlayRegions(statsRegion),
+        [statsRegion]
     );
     const statLabels = useMemo(
         () =>
@@ -252,6 +305,62 @@ export default function IvImageImportPanel({
         return () => window.removeEventListener("paste", handlePaste);
     });
 
+    useEffect(() => {
+        if (!dragState) {
+            return;
+        }
+
+        const handlePointerMove = (event: PointerEvent) => {
+            if (
+                !previewContainerRef.current ||
+                dragState.pointerId !== event.pointerId
+            ) {
+                return;
+            }
+
+            const rect = previewContainerRef.current.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                return;
+            }
+
+            const deltaX = (event.clientX - dragState.startClientX) / rect.width;
+            const deltaY =
+                (event.clientY - dragState.startClientY) / rect.height;
+
+            if (dragState.mode === "move") {
+                setStatsRegion(
+                    clampRegion({
+                        ...dragState.startRegion,
+                        x: dragState.startRegion.x + deltaX,
+                        y: dragState.startRegion.y + deltaY,
+                    })
+                );
+                return;
+            }
+
+            setStatsRegion(
+                clampRegion({
+                    ...dragState.startRegion,
+                    width: dragState.startRegion.width + deltaX,
+                    height: dragState.startRegion.height + deltaY,
+                })
+            );
+        };
+
+        const handlePointerUp = (event: PointerEvent) => {
+            if (dragState.pointerId === event.pointerId) {
+                setDragState(null);
+            }
+        };
+
+        window.addEventListener("pointermove", handlePointerMove);
+        window.addEventListener("pointerup", handlePointerUp);
+        return () => {
+            window.removeEventListener("pointermove", handlePointerMove);
+            window.removeEventListener("pointerup", handlePointerUp);
+        };
+    }, [dragState]);
+
     const setStatus = (
         message: string,
         severity: "success" | "info" | "warning" | "error"
@@ -290,6 +399,7 @@ export default function IvImageImportPanel({
         }
         setImageFile(file);
         setPreviewUrl(URL.createObjectURL(file));
+        setStatsRegion(DEFAULT_STATS_REGION);
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setStatus(t("imageImport.imageLoaded"), "info");
@@ -332,7 +442,7 @@ export default function IvImageImportPanel({
             const worker = await getWorker();
             const nextStats = getEmptyStats();
 
-            for (const region of OVERLAY_REGIONS) {
+            for (const region of absoluteOverlayRegions) {
                 const cropDataUrl = prepareCropDataUrl(image, region);
                 const result = await worker.recognize(cropDataUrl);
                 nextStats[region.key] = parseRecognizedValue(result.data.text);
@@ -398,6 +508,19 @@ export default function IvImageImportPanel({
         }
     };
 
+    const startDrag =
+        (mode: DragMode) => (event: React.PointerEvent<HTMLDivElement>) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setDragState({
+                mode,
+                pointerId: event.pointerId,
+                startClientX: event.clientX,
+                startClientY: event.clientY,
+                startRegion: statsRegion,
+            });
+        };
+
     return (
         <Paper
             variant="outlined"
@@ -417,6 +540,9 @@ export default function IvImageImportPanel({
                     count: `${currentLineCount}`,
                     nextCount: `${currentLineCount + 1}`,
                 })}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {t("imageImport.adjustHint")}
             </Typography>
 
             {!natureSelected && (
@@ -476,6 +602,7 @@ export default function IvImageImportPanel({
                         {t("imageImport.previewTitle")}
                     </Typography>
                     <Box
+                        ref={previewContainerRef}
                         sx={{
                             position: "relative",
                             borderRadius: 2,
@@ -491,7 +618,51 @@ export default function IvImageImportPanel({
                             alt={t("imageImport.previewTitle")}
                             sx={{ display: "block", width: "100%", height: "auto" }}
                         />
-                        {OVERLAY_REGIONS.map((region) => (
+                        <Box
+                            sx={{
+                                position: "absolute",
+                                left: `${statsRegion.x * 100}%`,
+                                top: `${statsRegion.y * 100}%`,
+                                width: `${statsRegion.width * 100}%`,
+                                height: `${statsRegion.height * 100}%`,
+                                border: "2px solid rgba(255, 152, 0, 0.95)",
+                                borderRadius: 1.5,
+                                boxSizing: "border-box",
+                                backgroundColor: "rgba(255, 152, 0, 0.08)",
+                                cursor: dragState?.mode === "move" ? "grabbing" : "grab",
+                            }}
+                            onPointerDown={startDrag("move")}
+                        >
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    position: "absolute",
+                                    top: 4,
+                                    left: 6,
+                                    px: 0.75,
+                                    borderRadius: 0.75,
+                                    color: "common.white",
+                                    backgroundColor: "rgba(255, 152, 0, 0.95)",
+                                }}
+                            >
+                                {t("imageImport.statsRegion")}
+                            </Typography>
+                            <Box
+                                sx={{
+                                    position: "absolute",
+                                    right: -8,
+                                    bottom: -8,
+                                    width: 18,
+                                    height: 18,
+                                    borderRadius: "50%",
+                                    border: "2px solid white",
+                                    backgroundColor: "rgba(255, 152, 0, 1)",
+                                    cursor: "nwse-resize",
+                                }}
+                                onPointerDown={startDrag("resize")}
+                            />
+                        </Box>
+                        {absoluteOverlayRegions.map((region) => (
                             <Box
                                 key={region.key}
                                 sx={{
@@ -504,6 +675,7 @@ export default function IvImageImportPanel({
                                     borderRadius: 1,
                                     boxSizing: "border-box",
                                     backgroundColor: "rgba(33, 150, 243, 0.08)",
+                                    pointerEvents: "none",
                                 }}
                             >
                                 <Typography
@@ -516,6 +688,7 @@ export default function IvImageImportPanel({
                                         borderRadius: 0.5,
                                         color: "common.white",
                                         backgroundColor: "rgba(33, 150, 243, 0.9)",
+                                        pointerEvents: "none",
                                     }}
                                 >
                                     {statLabels[region.key]}

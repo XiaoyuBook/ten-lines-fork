@@ -427,6 +427,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             dropzoneHint:
                 "Suggested flow: set Nature, enter Level, paste a screenshot, recognize, then append.",
             previewTitle: "Recognition Preview",
+            adjustHint:
+                "Drag the orange stats region to the right-side panel and use the bottom-right handle to resize it before recognition.",
+            statsRegion: "Stats Region",
         },
         errors: {
             invalidInput: "Invalid input",
@@ -723,6 +726,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             dropzoneHint:
                 "\u5efa\u8bae\u6d41\u7a0b\uff1a\u5148\u9009\u6027\u683c\uff0c\u518d\u8f93\u5165\u7b49\u7ea7\uff0c\u7136\u540e\u7c98\u8d34\u622a\u56fe\u3001\u8bc6\u522b\uff0c\u6700\u540e\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c\u3002",
             previewTitle: "\u8bc6\u522b\u9884\u89c8",
+            adjustHint:
+                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u62d6\u52a8\u6a59\u8272\u603b\u6846\u5bf9\u9f50\u53f3\u4fa7\u80fd\u529b\u533a\uff0c\u9700\u8981\u65f6\u53ef\u62d6\u52a8\u53f3\u4e0b\u89d2\u62c9\u4f38\u5927\u5c0f\u3002",
+            statsRegion: "\u80fd\u529b\u533a",
         },
         errors: {
             invalidInput: "\u8f93\u5165\u65e0\u6548",
