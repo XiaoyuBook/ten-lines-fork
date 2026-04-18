@@ -41,6 +41,7 @@ import type {
     ExtendedGeneratorState,
     ExtendedWildGeneratorState,
     FRLGContiguousSeedEntry,
+    IVRange,
 } from "../tenLines/generated";
 import { fetchBingo, getBingoActive, useBingoBoard } from "./BingoPage";
 import CalibrationComparePanel, {
@@ -766,7 +767,7 @@ export default function CalibrationForm({
                   calibrationFormState.nature
               );
 
-        if (ivRanges.some((range) => range.min === 32)) {
+        if (ivRanges.some((range: IVRange) => range.min === 32)) {
             throw new Error("No possible IV result");
         }
 
@@ -774,7 +775,7 @@ export default function CalibrationForm({
         setCalibrationFormState((data) => ({
             ...data,
             ivCalculatorText: nextText,
-            ivRangeStrings: ivRanges.map((range) => [
+            ivRangeStrings: ivRanges.map((range: IVRange) => [
                 range.min.toString(),
                 range.max.toString(),
             ]),

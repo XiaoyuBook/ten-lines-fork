@@ -218,7 +218,7 @@ export default function IvImageImportPanel({
 
         const Tesseract = await import("tesseract.js");
         const worker = await Tesseract.createWorker("eng", 1, {
-            logger: (message) => {
+            logger: (message: TesseractModule.LoggerMessage) => {
                 if (message.status === "recognizing text") {
                     setRecognitionProgress(Math.round(message.progress * 100));
                 }
