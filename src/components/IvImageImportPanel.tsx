@@ -47,8 +47,7 @@ type RegionBox = {
     height: number;
 };
 
-type DrawState = {
-    pointerId: number;
+type SelectionStart = {
     rect: DOMRect;
     startX: number;
     startY: number;
@@ -226,7 +225,9 @@ export default function IvImageImportPanel({
         useState<RegionBox>(DEFAULT_STATS_REGION);
     const [draftRegion, setDraftRegion] = useState<RegionBox | null>(null);
     const [pendingRegion, setPendingRegion] = useState<RegionBox | null>(null);
-    const [drawState, setDrawState] = useState<DrawState | null>(null);
+    const [selectionStart, setSelectionStart] = useState<SelectionStart | null>(
+        null
+    );
     const [isSelectingRegion, setIsSelectingRegion] = useState(false);
     const [selectionDialogOpen, setSelectionDialogOpen] = useState(false);
     const [stats, setStats] = useState<StatValueMap>(getEmptyStats);
@@ -293,62 +294,6 @@ export default function IvImageImportPanel({
         window.addEventListener("paste", handlePaste);
         return () => window.removeEventListener("paste", handlePaste);
     });
-
-    useEffect(() => {
-        if (!drawState) {
-            return;
-        }
-
-        const getRegionFromPointer = (
-            clientX: number,
-            clientY: number
-        ): RegionBox => {
-            const { rect, startX, startY } = drawState;
-            const currentX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
-            const currentY = Math.min(Math.max(clientY - rect.top, 0), rect.height);
-            const left = Math.min(startX, currentX) / rect.width;
-            const top = Math.min(startY, currentY) / rect.height;
-            const width = Math.abs(currentX - startX) / rect.width;
-            const height = Math.abs(currentY - startY) / rect.height;
-
-            return clampRegion({
-                x: left,
-                y: top,
-                width,
-                height,
-            });
-        };
-
-        const handlePointerMove = (event: PointerEvent) => {
-            if (drawState.pointerId !== event.pointerId) {
-                return;
-            }
-
-            const { rect } = drawState;
-            if (rect.width === 0 || rect.height === 0) {
-                return;
-            }
-
-            setDraftRegion(getRegionFromPointer(event.clientX, event.clientY));
-        };
-
-        const handlePointerUp = (event: PointerEvent) => {
-            if (drawState.pointerId === event.pointerId) {
-                setPendingRegion(getRegionFromPointer(event.clientX, event.clientY));
-                setSelectionDialogOpen(true);
-                setIsSelectingRegion(false);
-                setDraftRegion(null);
-                setDrawState(null);
-            }
-        };
-
-        window.addEventListener("pointermove", handlePointerMove);
-        window.addEventListener("pointerup", handlePointerUp);
-        return () => {
-            window.removeEventListener("pointermove", handlePointerMove);
-            window.removeEventListener("pointerup", handlePointerUp);
-        };
-    }, [drawState]);
 
     const setStatus = (
         message: string,
@@ -531,22 +476,43 @@ export default function IvImageImportPanel({
         }
 
         const rect = previewContainerRef.current.getBoundingClientRect();
-        const startX = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
-        const startY = Math.min(Math.max(event.clientY - rect.top, 0), rect.height);
-        setDrawState({
-            pointerId: event.pointerId,
-            rect,
-            startX,
-            startY,
+        const currentX = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
+        const currentY = Math.min(Math.max(event.clientY - rect.top, 0), rect.height);
+
+        if (!selectionStart) {
+            setSelectionStart({
+                rect,
+                startX: currentX,
+                startY: currentY,
+            });
+            setDraftRegion(
+                clampRegion({
+                    x: currentX / rect.width,
+                    y: currentY / rect.height,
+                    width: 0.001,
+                    height: 0.001,
+                })
+            );
+            setStatus(t("imageImport.selectionFirstPointSet"), "info");
+            return;
+        }
+
+        const left = Math.min(selectionStart.startX, currentX) / rect.width;
+        const top = Math.min(selectionStart.startY, currentY) / rect.height;
+        const width = Math.abs(currentX - selectionStart.startX) / rect.width;
+        const height = Math.abs(currentY - selectionStart.startY) / rect.height;
+        const nextRegion = clampRegion({
+            x: left,
+            y: top,
+            width,
+            height,
         });
-        setDraftRegion(
-            clampRegion({
-                x: startX / rect.width,
-                y: startY / rect.height,
-                width: 0.001,
-                height: 0.001,
-            })
-        );
+
+        setPendingRegion(nextRegion);
+        setDraftRegion(nextRegion);
+        setSelectionStart(null);
+        setSelectionDialogOpen(true);
+        setIsSelectingRegion(false);
     };
 
     const confirmSelectedRegion = () => {
@@ -563,6 +529,7 @@ export default function IvImageImportPanel({
         setSelectionDialogOpen(false);
         setDraftRegion(null);
         setPendingRegion(null);
+        setSelectionStart(null);
         setStatus(t("imageImport.selectionCancelled"), "info");
     };
 
@@ -650,6 +617,9 @@ export default function IvImageImportPanel({
                             variant={isSelectingRegion ? "contained" : "outlined"}
                             onClick={() => {
                                 setIsSelectingRegion(true);
+                                setSelectionStart(null);
+                                setDraftRegion(null);
+                                setPendingRegion(null);
                                 setStatus(t("imageImport.selectionModeActive"), "info");
                             }}
                         >
