@@ -43,14 +43,11 @@ type RegionBox = {
     height: number;
 };
 
-type DragMode = "move" | "resize";
-
-type DragState = {
-    mode: DragMode;
+type DrawState = {
     pointerId: number;
-    startClientX: number;
-    startClientY: number;
-    startRegion: RegionBox;
+    rect: DOMRect;
+    startX: number;
+    startY: number;
 };
 
 const DEFAULT_STATS_REGION: RegionBox = {
@@ -60,13 +57,13 @@ const DEFAULT_STATS_REGION: RegionBox = {
     height: 0.695,
 };
 
-const OVERLAY_REGIONS: OverlayRegion[] = [
-    { key: "hp", x: 0, y: 0, width: 1, height: 0.12 },
-    { key: "attack", x: 0, y: 0.182, width: 1, height: 0.12 },
-    { key: "defense", x: 0, y: 0.364, width: 1, height: 0.12 },
-    { key: "specialAttack", x: 0, y: 0.545, width: 1, height: 0.12 },
-    { key: "specialDefense", x: 0, y: 0.727, width: 1, height: 0.12 },
-    { key: "speed", x: 0, y: 0.909, width: 1, height: 0.12 },
+const STAT_KEYS: StatKey[] = [
+    "hp",
+    "attack",
+    "defense",
+    "specialAttack",
+    "specialDefense",
+    "speed",
 ];
 
 const MIN_REGION_WIDTH = 0.12;
@@ -163,15 +160,6 @@ const clampRegion = (region: RegionBox): RegionBox => {
     return { x, y, width, height };
 };
 
-const getAbsoluteOverlayRegions = (statsRegion: RegionBox): OverlayRegion[] =>
-    OVERLAY_REGIONS.map((region) => ({
-        ...region,
-        x: statsRegion.x + statsRegion.width * region.x,
-        y: statsRegion.y + statsRegion.height * region.y,
-        width: statsRegion.width * region.width,
-        height: statsRegion.height * region.height,
-    }));
-
 const loadTesseractRuntime = () =>
     new Promise<TesseractModule>((resolve, reject) => {
         if (window.Tesseract) {
@@ -232,7 +220,7 @@ export default function IvImageImportPanel({
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [statsRegion, setStatsRegion] =
         useState<RegionBox>(DEFAULT_STATS_REGION);
-    const [dragState, setDragState] = useState<DragState | null>(null);
+    const [drawState, setDrawState] = useState<DrawState | null>(null);
     const [stats, setStats] = useState<StatValueMap>(getEmptyStats);
     const [feedback, setFeedback] = useState("");
     const [feedbackSeverity, setFeedbackSeverity] = useState<
@@ -241,14 +229,7 @@ export default function IvImageImportPanel({
     const [recognizing, setRecognizing] = useState(false);
     const [recognitionProgress, setRecognitionProgress] = useState(0);
 
-    const statKeys = useMemo(
-        () => OVERLAY_REGIONS.map((region) => region.key) as StatKey[],
-        []
-    );
-    const absoluteOverlayRegions = useMemo(
-        () => getAbsoluteOverlayRegions(statsRegion),
-        [statsRegion]
-    );
+    const statKeys = useMemo(() => STAT_KEYS, []);
     const statLabels = useMemo(
         () =>
             locale === "zh"
@@ -306,50 +287,40 @@ export default function IvImageImportPanel({
     });
 
     useEffect(() => {
-        if (!dragState) {
+        if (!drawState) {
             return;
         }
 
         const handlePointerMove = (event: PointerEvent) => {
-            if (
-                !previewContainerRef.current ||
-                dragState.pointerId !== event.pointerId
-            ) {
+            if (drawState.pointerId !== event.pointerId) {
                 return;
             }
 
-            const rect = previewContainerRef.current.getBoundingClientRect();
+            const { rect, startX, startY } = drawState;
             if (rect.width === 0 || rect.height === 0) {
                 return;
             }
 
-            const deltaX = (event.clientX - dragState.startClientX) / rect.width;
-            const deltaY =
-                (event.clientY - dragState.startClientY) / rect.height;
-
-            if (dragState.mode === "move") {
-                setStatsRegion(
-                    clampRegion({
-                        ...dragState.startRegion,
-                        x: dragState.startRegion.x + deltaX,
-                        y: dragState.startRegion.y + deltaY,
-                    })
-                );
-                return;
-            }
+            const currentX = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
+            const currentY = Math.min(Math.max(event.clientY - rect.top, 0), rect.height);
+            const left = Math.min(startX, currentX) / rect.width;
+            const top = Math.min(startY, currentY) / rect.height;
+            const width = Math.abs(currentX - startX) / rect.width;
+            const height = Math.abs(currentY - startY) / rect.height;
 
             setStatsRegion(
                 clampRegion({
-                    ...dragState.startRegion,
-                    width: dragState.startRegion.width + deltaX,
-                    height: dragState.startRegion.height + deltaY,
+                    x: left,
+                    y: top,
+                    width,
+                    height,
                 })
             );
         };
 
         const handlePointerUp = (event: PointerEvent) => {
-            if (dragState.pointerId === event.pointerId) {
-                setDragState(null);
+            if (drawState.pointerId === event.pointerId) {
+                setDrawState(null);
             }
         };
 
@@ -359,7 +330,7 @@ export default function IvImageImportPanel({
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUp);
         };
-    }, [dragState]);
+    }, [drawState]);
 
     const setStatus = (
         message: string,
@@ -442,10 +413,27 @@ export default function IvImageImportPanel({
             const worker = await getWorker();
             const nextStats = getEmptyStats();
 
-            for (const region of absoluteOverlayRegions) {
-                const cropDataUrl = prepareCropDataUrl(image, region);
-                const result = await worker.recognize(cropDataUrl);
-                nextStats[region.key] = parseRecognizedValue(result.data.text);
+            const cropDataUrl = prepareCropDataUrl(image, {
+                key: "hp",
+                ...statsRegion,
+            });
+            const result = await worker.recognize(cropDataUrl);
+            const recognizedLines = result.data.text
+                .split("\n")
+                .map((line) => line.trim())
+                .filter((line) => line !== "")
+                .map((line) => parseRecognizedValue(line))
+                .filter((line) => line !== "");
+
+            for (const [index, key] of statKeys.entries()) {
+                const line = recognizedLines[index] ?? "";
+                if (key === "hp" && line.includes("/")) {
+                    const hpParts = line.split("/").filter((entry) => entry !== "");
+                    nextStats[key] =
+                        hpParts.length > 0 ? hpParts[hpParts.length - 1] : "";
+                    continue;
+                }
+                nextStats[key] = line;
             }
 
             setStats(nextStats);
@@ -508,18 +496,29 @@ export default function IvImageImportPanel({
         }
     };
 
-    const startDrag =
-        (mode: DragMode) => (event: React.PointerEvent<HTMLDivElement>) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setDragState({
-                mode,
-                pointerId: event.pointerId,
-                startClientX: event.clientX,
-                startClientY: event.clientY,
-                startRegion: statsRegion,
-            });
-        };
+    const startSelection = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (!previewContainerRef.current) {
+            return;
+        }
+
+        const rect = previewContainerRef.current.getBoundingClientRect();
+        const startX = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
+        const startY = Math.min(Math.max(event.clientY - rect.top, 0), rect.height);
+        setDrawState({
+            pointerId: event.pointerId,
+            rect,
+            startX,
+            startY,
+        });
+        setStatsRegion(
+            clampRegion({
+                x: startX / rect.width,
+                y: startY / rect.height,
+                width: MIN_REGION_WIDTH,
+                height: MIN_REGION_HEIGHT,
+            })
+        );
+    };
 
     return (
         <Paper
@@ -610,7 +609,9 @@ export default function IvImageImportPanel({
                             border: "1px solid",
                             borderColor: "divider",
                             backgroundColor: "common.black",
+                            cursor: "crosshair",
                         }}
+                        onPointerDown={startSelection}
                     >
                         <Box
                             component="img"
@@ -629,9 +630,8 @@ export default function IvImageImportPanel({
                                 borderRadius: 1.5,
                                 boxSizing: "border-box",
                                 backgroundColor: "rgba(255, 152, 0, 0.08)",
-                                cursor: dragState?.mode === "move" ? "grabbing" : "grab",
+                                pointerEvents: "none",
                             }}
-                            onPointerDown={startDrag("move")}
                         >
                             <Typography
                                 variant="caption"
@@ -647,54 +647,7 @@ export default function IvImageImportPanel({
                             >
                                 {t("imageImport.statsRegion")}
                             </Typography>
-                            <Box
-                                sx={{
-                                    position: "absolute",
-                                    right: -8,
-                                    bottom: -8,
-                                    width: 18,
-                                    height: 18,
-                                    borderRadius: "50%",
-                                    border: "2px solid white",
-                                    backgroundColor: "rgba(255, 152, 0, 1)",
-                                    cursor: "nwse-resize",
-                                }}
-                                onPointerDown={startDrag("resize")}
-                            />
                         </Box>
-                        {absoluteOverlayRegions.map((region) => (
-                            <Box
-                                key={region.key}
-                                sx={{
-                                    position: "absolute",
-                                    left: `${region.x * 100}%`,
-                                    top: `${region.y * 100}%`,
-                                    width: `${region.width * 100}%`,
-                                    height: `${region.height * 100}%`,
-                                    border: "2px solid rgba(33, 150, 243, 0.9)",
-                                    borderRadius: 1,
-                                    boxSizing: "border-box",
-                                    backgroundColor: "rgba(33, 150, 243, 0.08)",
-                                    pointerEvents: "none",
-                                }}
-                            >
-                                <Typography
-                                    variant="caption"
-                                    sx={{
-                                        position: "absolute",
-                                        top: 2,
-                                        left: 4,
-                                        px: 0.5,
-                                        borderRadius: 0.5,
-                                        color: "common.white",
-                                        backgroundColor: "rgba(33, 150, 243, 0.9)",
-                                        pointerEvents: "none",
-                                    }}
-                                >
-                                    {statLabels[region.key]}
-                                </Typography>
-                            </Box>
-                        ))}
                     </Box>
                 </Box>
             )}

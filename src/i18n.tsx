@@ -428,7 +428,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "Suggested flow: set Nature, enter Level, paste a screenshot, recognize, then append.",
             previewTitle: "Recognition Preview",
             adjustHint:
-                "Drag the orange stats region to the right-side panel and use the bottom-right handle to resize it before recognition.",
+                "Draw one large rectangle over the full stat-value column before recognition. The OCR will read the selected area from top to bottom.",
             statsRegion: "Stats Region",
         },
         errors: {
@@ -727,7 +727,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5efa\u8bae\u6d41\u7a0b\uff1a\u5148\u9009\u6027\u683c\uff0c\u518d\u8f93\u5165\u7b49\u7ea7\uff0c\u7136\u540e\u7c98\u8d34\u622a\u56fe\u3001\u8bc6\u522b\uff0c\u6700\u540e\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c\u3002",
             previewTitle: "\u8bc6\u522b\u9884\u89c8",
             adjustHint:
-                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u62d6\u52a8\u6a59\u8272\u603b\u6846\u5bf9\u9f50\u53f3\u4fa7\u80fd\u529b\u533a\uff0c\u9700\u8981\u65f6\u53ef\u62d6\u52a8\u53f3\u4e0b\u89d2\u62c9\u4f38\u5927\u5c0f\u3002",
+                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u5728\u9884\u89c8\u56fe\u4e0a\u753b\u4e00\u4e2a\u5927\u6846\uff0c\u5c06\u53f3\u4fa7\u6574\u5217\u80fd\u529b\u503c\u90fd\u6846\u4f4f\u3002OCR \u4f1a\u6309\u4ece\u4e0a\u5230\u4e0b\u7684\u987a\u5e8f\u8bfb\u53d6\u8fd9\u4e2a\u533a\u57df\u3002",
             statsRegion: "\u80fd\u529b\u533a",
         },
         errors: {
