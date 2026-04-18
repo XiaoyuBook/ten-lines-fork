@@ -13,6 +13,9 @@ import { useI18n } from "../i18n";
 
 type TesseractModule = typeof import("tesseract.js");
 type TesseractWorker = Awaited<ReturnType<TesseractModule["createWorker"]>>;
+type TesseractLoggerMessage = Awaited<
+    Parameters<NonNullable<Parameters<TesseractModule["createWorker"]>[2]["logger"]>>[0]
+>;
 
 type StatKey =
     | "hp"
@@ -218,7 +221,7 @@ export default function IvImageImportPanel({
 
         const Tesseract = await import("tesseract.js");
         const worker = await Tesseract.createWorker("eng", 1, {
-            logger: (message: TesseractModule.LoggerMessage) => {
+            logger: (message: TesseractLoggerMessage) => {
                 if (message.status === "recognizing text") {
                     setRecognitionProgress(Math.round(message.progress * 100));
                 }
