@@ -73,6 +73,14 @@ const STAT_KEYS: StatKey[] = [
 ];
 
 const TARGET_IMAGE_WIDTH = 800;
+const FIXED_STAT_LAYOUT: Record<StatKey, RegionBox> = {
+    hp: { x: 0.77, y: 0.12, width: 0.205, height: 0.085 },
+    attack: { x: 0.84, y: 0.245, width: 0.14, height: 0.078 },
+    defense: { x: 0.84, y: 0.34, width: 0.14, height: 0.078 },
+    specialAttack: { x: 0.84, y: 0.435, width: 0.14, height: 0.078 },
+    specialDefense: { x: 0.84, y: 0.53, width: 0.14, height: 0.078 },
+    speed: { x: 0.84, y: 0.625, width: 0.14, height: 0.078 },
+};
 const EMPTY_STAT_VALUES: StatValueMap = {
     hp: "",
     attack: "",
@@ -717,6 +725,47 @@ const mapRectToOriginalRegion = (
     };
 };
 
+const fixedRegionToPixelRect = (
+    image: CanvasImage,
+    region: RegionBox
+): PixelRect =>
+    clampRect(
+        {
+            left: Math.round(region.x * image.width),
+            top: Math.round(region.y * image.height),
+            right: Math.round((region.x + region.width) * image.width),
+            bottom: Math.round((region.y + region.height) * image.height),
+        },
+        image.width,
+        image.height
+    );
+
+const getFixedLayout = (image: CanvasImage): DetectedLayout => {
+    const statRects = Object.fromEntries(
+        STAT_KEYS.map((key) => [key, fixedRegionToPixelRect(image, FIXED_STAT_LAYOUT[key])])
+    ) as Record<StatKey, PixelRect>;
+
+    const allRects = Object.values(statRects);
+    const panelRect = expandRect(
+        {
+            left: Math.min(...allRects.map((rect) => rect.left)) - Math.round(image.width * 0.2),
+            top: Math.min(...allRects.map((rect) => rect.top)) - Math.round(image.height * 0.03),
+            right: Math.max(...allRects.map((rect) => rect.right)),
+            bottom: Math.max(...allRects.map((rect) => rect.bottom)) + Math.round(image.height * 0.02),
+        },
+        0,
+        0,
+        image.width,
+        image.height
+    );
+
+    return {
+        panelRect,
+        statRects,
+        score: 0,
+    };
+};
+
 const createBinaryCropDataUrl = (
     image: CanvasImage,
     rect: PixelRect,
@@ -1060,9 +1109,44 @@ export default function IvImageImportPanel({
         try {
             const image = await loadImage(imageFile);
             const prepared = prepareImageForDetection(image);
-            const layout = detectPanelLayout(prepared.normalized);
+            const worker = await getWorker();
+            const evaluateLayout = async (layout: DetectedLayout) => {
+                const nextStats = getEmptyStats();
+                for (const key of statKeys) {
+                    nextStats[key] = await recognizeRegion(
+                        worker,
+                        prepared.normalized,
+                        layout.statRects[key],
+                        key === "hp"
+                    );
+                }
 
-            if (!layout) {
+                return {
+                    layout,
+                    stats: nextStats,
+                    recognizedCount: statKeys.filter((key) =>
+                        isValidStatValue(nextStats[key])
+                    ).length,
+                };
+            };
+
+            const fixedAttempt = await evaluateLayout(
+                getFixedLayout(prepared.normalized)
+            );
+            const detectedLayout =
+                fixedAttempt.recognizedCount >= 4
+                    ? null
+                    : detectPanelLayout(prepared.normalized);
+            const detectedAttempt = detectedLayout
+                ? await evaluateLayout(detectedLayout)
+                : null;
+            const bestAttempt =
+                detectedAttempt &&
+                detectedAttempt.recognizedCount > fixedAttempt.recognizedCount
+                    ? detectedAttempt
+                    : fixedAttempt;
+
+            if (bestAttempt.recognizedCount === 0) {
                 setDetectedPanelRegion(null);
                 setDetectedRegions({});
                 setStats(getEmptyStats());
@@ -1070,40 +1154,23 @@ export default function IvImageImportPanel({
                 return;
             }
 
-            setDetectedPanelRegion(mapRectToOriginalRegion(layout.panelRect, prepared));
+            setDetectedPanelRegion(
+                mapRectToOriginalRegion(bestAttempt.layout.panelRect, prepared)
+            );
             setDetectedRegions(
                 Object.fromEntries(
                     statKeys.map((key) => [
                         key,
-                        mapRectToOriginalRegion(layout.statRects[key], prepared),
+                        mapRectToOriginalRegion(bestAttempt.layout.statRects[key], prepared),
                     ])
                 ) as Record<StatKey, RegionBox>
             );
+            setStats(bestAttempt.stats);
 
-            const worker = await getWorker();
-            const nextStats = getEmptyStats();
-
-            for (const key of statKeys) {
-                nextStats[key] = await recognizeRegion(
-                    worker,
-                    prepared.normalized,
-                    layout.statRects[key],
-                    key === "hp"
-                );
-            }
-
-            setStats(nextStats);
-
-            const recognizedCount = statKeys.filter((key) =>
-                isValidStatValue(nextStats[key])
-            ).length;
-
-            if (recognizedCount === 0) {
-                setStatus(t("imageImport.noStatsFound"), "error");
-            } else if (recognizedCount < statKeys.length) {
+            if (bestAttempt.recognizedCount < statKeys.length) {
                 setStatus(
                     t("imageImport.partialRecognition", {
-                        count: `${recognizedCount}`,
+                        count: `${bestAttempt.recognizedCount}`,
                         total: `${statKeys.length}`,
                     }),
                     "warning"

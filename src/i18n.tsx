@@ -461,7 +461,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "Suggested flow: set Nature, enter Level, paste a screenshot, recognize, then append.",
             previewTitle: "Recognition Preview",
             adjustHint:
-                "The tool will auto-crop black borders, normalize the screenshot, locate the yellow stats panel, and read the six value boxes automatically.",
+                "The tool will auto-crop black borders, normalize the screenshot, and prioritize fixed layout slicing for the six stat boxes. Structure or color detection is only used as a fallback.",
         },
         errors: {
             invalidInput: "Invalid input",
@@ -795,7 +795,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5efa\u8bae\u6d41\u7a0b\uff1a\u5148\u9009\u6027\u683c\uff0c\u518d\u8f93\u5165\u7b49\u7ea7\uff0c\u7136\u540e\u7c98\u8d34\u622a\u56fe\u3001\u8bc6\u522b\uff0c\u6700\u540e\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c\u3002",
             previewTitle: "\u8bc6\u522b\u9884\u89c8",
             adjustHint:
-                "\u5de5\u5177\u4f1a\u81ea\u52a8\u88c1\u6389\u9ed1\u8fb9\uff0c\u7edf\u4e00\u622a\u56fe\u5c3a\u5bf8\uff0c\u5b9a\u4f4d\u53f3\u4fa7\u9ec4\u8272\u80fd\u529b\u9762\u677f\uff0c\u7136\u540e\u81ea\u52a8\u8bc6\u522b 6 \u4e2a\u6570\u503c\u6846\u3002",
+                "\u5de5\u5177\u4f1a\u81ea\u52a8\u88c1\u6389\u9ed1\u8fb9\uff0c\u7edf\u4e00\u622a\u56fe\u5c3a\u5bf8\uff0c\u4f18\u5148\u6309\u56fa\u5b9a\u5e03\u5c40\u76f4\u63a5\u5207\u51fa 6 \u4e2a\u6570\u503c\u6846\uff0c\u53ea\u5728\u5fc5\u8981\u65f6\u624d\u518d\u4f7f\u7528\u7ed3\u6784/\u989c\u8272\u68c0\u6d4b\u515c\u5e95\u3002",
         },
         errors: {
             invalidInput: "\u8f93\u5165\u65e0\u6548",
