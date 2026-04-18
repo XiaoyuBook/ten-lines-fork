@@ -4,6 +4,10 @@ import {
     Box,
     Button,
     CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     Paper,
     TextField,
     Typography,
@@ -220,7 +224,10 @@ export default function IvImageImportPanel({
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [statsRegion, setStatsRegion] =
         useState<RegionBox>(DEFAULT_STATS_REGION);
+    const [pendingRegion, setPendingRegion] = useState<RegionBox | null>(null);
     const [drawState, setDrawState] = useState<DrawState | null>(null);
+    const [isSelectingRegion, setIsSelectingRegion] = useState(false);
+    const [selectionDialogOpen, setSelectionDialogOpen] = useState(false);
     const [stats, setStats] = useState<StatValueMap>(getEmptyStats);
     const [feedback, setFeedback] = useState("");
     const [feedbackSeverity, setFeedbackSeverity] = useState<
@@ -320,6 +327,9 @@ export default function IvImageImportPanel({
 
         const handlePointerUp = (event: PointerEvent) => {
             if (drawState.pointerId === event.pointerId) {
+                setPendingRegion(statsRegion);
+                setSelectionDialogOpen(true);
+                setIsSelectingRegion(false);
                 setDrawState(null);
             }
         };
@@ -330,7 +340,7 @@ export default function IvImageImportPanel({
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUp);
         };
-    }, [drawState]);
+    }, [drawState, statsRegion]);
 
     const setStatus = (
         message: string,
@@ -371,6 +381,9 @@ export default function IvImageImportPanel({
         setImageFile(file);
         setPreviewUrl(URL.createObjectURL(file));
         setStatsRegion(DEFAULT_STATS_REGION);
+        setPendingRegion(null);
+        setIsSelectingRegion(false);
+        setSelectionDialogOpen(false);
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setStatus(t("imageImport.imageLoaded"), "info");
@@ -382,6 +395,9 @@ export default function IvImageImportPanel({
         }
         setPreviewUrl("");
         setImageFile(null);
+        setPendingRegion(null);
+        setIsSelectingRegion(false);
+        setSelectionDialogOpen(false);
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setFeedback("");
@@ -497,6 +513,9 @@ export default function IvImageImportPanel({
     };
 
     const startSelection = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isSelectingRegion) {
+            return;
+        }
         if (!previewContainerRef.current) {
             return;
         }
@@ -514,10 +533,25 @@ export default function IvImageImportPanel({
             clampRegion({
                 x: startX / rect.width,
                 y: startY / rect.height,
-                width: MIN_REGION_WIDTH,
-                height: MIN_REGION_HEIGHT,
+                width: 0.001,
+                height: 0.001,
             })
         );
+    };
+
+    const confirmSelectedRegion = () => {
+        if (pendingRegion) {
+            setStatsRegion(clampRegion(pendingRegion));
+        }
+        setSelectionDialogOpen(false);
+        setPendingRegion(null);
+        setStatus(t("imageImport.selectionApplied"), "success");
+    };
+
+    const cancelSelectedRegion = () => {
+        setSelectionDialogOpen(false);
+        setPendingRegion(null);
+        setStatus(t("imageImport.selectionCancelled"), "info");
     };
 
     return (
@@ -597,6 +631,17 @@ export default function IvImageImportPanel({
 
             {previewUrl !== "" && (
                 <Box sx={{ mt: 2 }}>
+                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
+                        <Button
+                            variant={isSelectingRegion ? "contained" : "outlined"}
+                            onClick={() => {
+                                setIsSelectingRegion(true);
+                                setStatus(t("imageImport.selectionModeActive"), "info");
+                            }}
+                        >
+                            {t("imageImport.startSelection")}
+                        </Button>
+                    </Box>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                         {t("imageImport.previewTitle")}
                     </Typography>
@@ -609,7 +654,7 @@ export default function IvImageImportPanel({
                             border: "1px solid",
                             borderColor: "divider",
                             backgroundColor: "common.black",
-                            cursor: "crosshair",
+                            cursor: isSelectingRegion ? "crosshair" : "default",
                         }}
                         onPointerDown={startSelection}
                     >
@@ -722,6 +767,25 @@ export default function IvImageImportPanel({
             >
                 {t("imageImport.appendAction")}
             </Button>
+            <Dialog
+                open={selectionDialogOpen}
+                onClose={cancelSelectedRegion}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle>{t("imageImport.selectionConfirmTitle")}</DialogTitle>
+                <DialogContent>
+                    <Typography>{t("imageImport.selectionConfirmBody")}</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={cancelSelectedRegion}>
+                        {t("imageImport.selectionRedo")}
+                    </Button>
+                    <Button variant="contained" onClick={confirmSelectedRegion}>
+                        {t("imageImport.selectionConfirm")}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Paper>
     );
 }

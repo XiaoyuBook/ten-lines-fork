@@ -428,8 +428,20 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "Suggested flow: set Nature, enter Level, paste a screenshot, recognize, then append.",
             previewTitle: "Recognition Preview",
             adjustHint:
-                "Draw one large rectangle over the full stat-value column before recognition. The OCR will read the selected area from top to bottom.",
+                "Click the selection button, then drag from top-left to bottom-right over the full stat-value column. After you release, confirm the region before recognition.",
             statsRegion: "Stats Region",
+            startSelection: "Start Region Selection",
+            selectionModeActive:
+                "Selection mode is active. Drag a large box over the stat-value column.",
+            selectionConfirmTitle: "Use This Region?",
+            selectionConfirmBody:
+                "Use the selected rectangle as the OCR region for the stat-value column?",
+            selectionConfirm: "Use Region",
+            selectionRedo: "Redo Selection",
+            selectionApplied:
+                "OCR region updated. You can recognize the selected area now.",
+            selectionCancelled:
+                "Selection was not applied. Start region selection again if needed.",
         },
         errors: {
             invalidInput: "Invalid input",
@@ -727,8 +739,20 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5efa\u8bae\u6d41\u7a0b\uff1a\u5148\u9009\u6027\u683c\uff0c\u518d\u8f93\u5165\u7b49\u7ea7\uff0c\u7136\u540e\u7c98\u8d34\u622a\u56fe\u3001\u8bc6\u522b\uff0c\u6700\u540e\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c\u3002",
             previewTitle: "\u8bc6\u522b\u9884\u89c8",
             adjustHint:
-                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u5728\u9884\u89c8\u56fe\u4e0a\u753b\u4e00\u4e2a\u5927\u6846\uff0c\u5c06\u53f3\u4fa7\u6574\u5217\u80fd\u529b\u503c\u90fd\u6846\u4f4f\u3002OCR \u4f1a\u6309\u4ece\u4e0a\u5230\u4e0b\u7684\u987a\u5e8f\u8bfb\u53d6\u8fd9\u4e2a\u533a\u57df\u3002",
+                "\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u70b9\u51fb\u6846\u9009\u6309\u94ae\uff0c\u7136\u540e\u4ece\u5de6\u4e0a\u62d6\u5230\u53f3\u4e0b\uff0c\u5c06\u53f3\u4fa7\u6574\u5217\u80fd\u529b\u503c\u6846\u4f4f\u3002\u677e\u5f00\u9f20\u6807\u540e\u786e\u8ba4\u8fd9\u4e2a\u533a\u57df\uff0c\u518d\u5f00\u59cb\u8bc6\u522b\u3002",
             statsRegion: "\u80fd\u529b\u533a",
+            startSelection: "\u5f00\u59cb\u6846\u9009\u533a\u57df",
+            selectionModeActive:
+                "\u5df2\u8fdb\u5165\u6846\u9009\u6a21\u5f0f\uff0c\u8bf7\u62d6\u51fa\u4e00\u4e2a\u5927\u6846\u5c06\u80fd\u529b\u503c\u6574\u5217\u6846\u4f4f\u3002",
+            selectionConfirmTitle: "\u786e\u8ba4\u8fd9\u4e2a\u6846\u9009\u533a\u57df\uff1f",
+            selectionConfirmBody:
+                "\u662f\u5426\u4f7f\u7528\u521a\u624d\u6846\u9009\u7684\u77e9\u5f62\u4f5c\u4e3a\u80fd\u529b\u503c\u7684 OCR \u8bc6\u522b\u533a\u57df\uff1f",
+            selectionConfirm: "\u786e\u5b9a\u4f7f\u7528",
+            selectionRedo: "\u91cd\u65b0\u6846\u9009",
+            selectionApplied:
+                "\u8bc6\u522b\u533a\u57df\u5df2\u66f4\u65b0\uff0c\u73b0\u5728\u53ef\u4ee5\u5bf9\u8fd9\u4e2a\u533a\u57df\u6267\u884c\u8bc6\u522b\u3002",
+            selectionCancelled:
+                "\u672a\u5e94\u7528\u8fd9\u6b21\u6846\u9009\u3002\u5982\u679c\u9700\u8981\uff0c\u53ef\u4ee5\u518d\u6b21\u5f00\u59cb\u6846\u9009\u3002",
         },
         errors: {
             invalidInput: "\u8f93\u5165\u65e0\u6548",
