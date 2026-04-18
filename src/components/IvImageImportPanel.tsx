@@ -1358,6 +1358,53 @@ const isValidStatValue = (value: string) => {
     return !Number.isNaN(parsed) && parsed >= 1 && parsed <= 999;
 };
 
+const extractRoiColumnStats = async (
+    worker: TesseractWorker,
+    image: CanvasImage
+): Promise<StatValueMap | null> => {
+    const aspectRatio = image.width / Math.max(image.height, 1);
+    if (aspectRatio > 0.42) {
+        return null;
+    }
+
+    await worker.setParameters({
+        tessedit_char_whitelist: "0123456789/\n",
+        preserve_interword_spaces: "1",
+        user_defined_dpi: "300",
+    });
+
+    const fullRect = {
+        left: 0,
+        top: 0,
+        right: image.width,
+        bottom: image.height,
+    };
+    const result = await worker.recognize(createBinaryCropDataUrl(image, fullRect, 5));
+    const tokens =
+        result.data.text
+            .replace(/[|]/g, "/")
+            .match(/\d{1,3}\/\d{1,3}|\d{1,3}/g) ?? [];
+
+    if (tokens.length < 6) {
+        return null;
+    }
+
+    const hpToken = tokens[0];
+    const hpValue = hpToken.includes("/")
+        ? hpToken.split("/").filter((part) => /^\d+$/.test(part)).at(-1) ?? ""
+        : hpToken;
+
+    const nextStats = getEmptyStats();
+    nextStats.hp = hpValue;
+    nextStats.attack = tokens[1] ?? "";
+    nextStats.defense = tokens[2] ?? "";
+    nextStats.specialAttack = tokens[3] ?? "";
+    nextStats.specialDefense = tokens[4] ?? "";
+    nextStats.speed = tokens[5] ?? "";
+
+    return nextStats;
+};
+
 const loadTesseractRuntime = () =>
     new Promise<TesseractModule>((resolve, reject) => {
         if (window.Tesseract) {
@@ -1650,10 +1697,29 @@ export default function IvImageImportPanel({
                     ).length,
                 };
             };
+            const evaluateRoiColumn = async (prepared: PreparedImage) => {
+                const nextStats = await extractRoiColumnStats(
+                    worker,
+                    prepared.normalized
+                );
+                if (!nextStats) {
+                    return null;
+                }
+
+                return {
+                    prepared,
+                    layout: getFixedLayout(prepared.normalized),
+                    stats: nextStats,
+                    recognizedCount: statKeys.filter((key) =>
+                        isValidStatValue(nextStats[key])
+                    ).length,
+                };
+            };
 
             const allAttempts = [];
 
             for (const prepared of preparedVariants) {
+                const roiColumnAttempt = await evaluateRoiColumn(prepared);
                 const portraitAnchoredLayout = detectPortraitAnchoredLayout(
                     prepared.normalized
                 );
@@ -1682,6 +1748,7 @@ export default function IvImageImportPanel({
                     : null;
 
                 allAttempts.push(
+                    roiColumnAttempt,
                     portraitAnchoredAttempt,
                     labelAnchoredAttempt,
                     fixedAttempt,
