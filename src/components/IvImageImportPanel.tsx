@@ -293,6 +293,95 @@ const cropBlackBorder = (image: CanvasImage) => {
     };
 };
 
+const trimDarkSideMargins = (
+    image: CanvasImage,
+    baseCrop: PixelRect
+) => {
+    const isMostlyDarkColumn = (x: number) => {
+        let darkCount = 0;
+        for (let y = 0; y < image.height; y++) {
+            const [red, green, blue] = getPixel(image, x, y);
+            const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+            if (Math.max(red, green, blue) < 40 && luminance < 42) {
+                darkCount += 1;
+            }
+        }
+        return darkCount / image.height >= 0.94;
+    };
+
+    const isMostlyDarkRow = (y: number) => {
+        let darkCount = 0;
+        for (let x = 0; x < image.width; x++) {
+            const [red, green, blue] = getPixel(image, x, y);
+            const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+            if (Math.max(red, green, blue) < 40 && luminance < 42) {
+                darkCount += 1;
+            }
+        }
+        return darkCount / image.width >= 0.94;
+    };
+
+    let left = 0;
+    let right = image.width - 1;
+    let top = 0;
+    let bottom = image.height - 1;
+
+    while (left < image.width * 0.08 && isMostlyDarkColumn(left)) {
+        left += 1;
+    }
+    while (right > image.width * 0.92 && isMostlyDarkColumn(right)) {
+        right -= 1;
+    }
+    while (top < image.height * 0.06 && isMostlyDarkRow(top)) {
+        top += 1;
+    }
+    while (bottom > image.height * 0.94 && isMostlyDarkRow(bottom)) {
+        bottom -= 1;
+    }
+
+    const trimmed = clampRect(
+        {
+            left,
+            top,
+            right: right + 1,
+            bottom: bottom + 1,
+        },
+        image.width,
+        image.height
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = rectWidth(trimmed);
+    canvas.height = rectHeight(trimmed);
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+        throw new Error("Canvas is unavailable");
+    }
+
+    context.drawImage(
+        image.canvas,
+        trimmed.left,
+        trimmed.top,
+        rectWidth(trimmed),
+        rectHeight(trimmed),
+        0,
+        0,
+        rectWidth(trimmed),
+        rectHeight(trimmed)
+    );
+
+    return {
+        image: snapshotCanvas(canvas),
+        crop: {
+            left: baseCrop.left + trimmed.left,
+            top: baseCrop.top + trimmed.top,
+            right: baseCrop.left + trimmed.right,
+            bottom: baseCrop.top + trimmed.bottom,
+        },
+    };
+};
+
 const resizeCanvasImage = (image: CanvasImage, targetWidth: number) => {
     const scale = targetWidth / image.width;
     const targetHeight = Math.max(1, Math.round(image.height * scale));
@@ -519,18 +608,26 @@ const hasLikelyLabelText = (image: CanvasImage, rect: PixelRect) => {
     return brightPixels / area >= 0.08;
 };
 
-const prepareImageForDetection = (image: HTMLImageElement): PreparedImage => {
+const prepareImageVariants = (image: HTMLImageElement): PreparedImage[] => {
     const original = createCanvasFromImage(image);
     const cropped = cropBlackBorder(original);
-    const resized = resizeCanvasImage(cropped.image, TARGET_IMAGE_WIDTH);
+    const trimmed = trimDarkSideMargins(cropped.image, cropped.crop);
 
-    return {
-        normalized: resized.image,
-        crop: cropped.crop,
-        scale: resized.scale,
-        originalWidth: image.width,
-        originalHeight: image.height,
+    const buildPrepared = (
+        source: CanvasImage,
+        crop: PixelRect
+    ): PreparedImage => {
+        const resized = resizeCanvasImage(source, TARGET_IMAGE_WIDTH);
+        return {
+            normalized: resized.image,
+            crop,
+            scale: resized.scale,
+            originalWidth: image.width,
+            originalHeight: image.height,
+        };
     };
+
+    return [buildPrepared(cropped.image, cropped.crop), buildPrepared(trimmed.image, trimmed.crop)];
 };
 
 const detectValueRectNearLabel = (
@@ -1528,9 +1625,12 @@ export default function IvImageImportPanel({
 
         try {
             const image = await loadImage(imageFile);
-            const prepared = prepareImageForDetection(image);
             const worker = await getWorker();
-            const evaluateLayout = async (layout: DetectedLayout) => {
+            const preparedVariants = prepareImageVariants(image);
+            const evaluateLayout = async (
+                prepared: PreparedImage,
+                layout: DetectedLayout
+            ) => {
                 const nextStats = getEmptyStats();
                 for (const key of statKeys) {
                     nextStats[key] = await recognizeRegion(
@@ -1542,6 +1642,7 @@ export default function IvImageImportPanel({
                 }
 
                 return {
+                    prepared,
                     layout,
                     stats: nextStats,
                     recognizedCount: statKeys.filter((key) =>
@@ -1550,34 +1651,46 @@ export default function IvImageImportPanel({
                 };
             };
 
-            const portraitAnchoredLayout = detectPortraitAnchoredLayout(
-                prepared.normalized
-            );
-            const portraitAnchoredAttempt = portraitAnchoredLayout
-                ? await evaluateLayout(portraitAnchoredLayout)
-                : null;
-            const labelAnchoredLayout = detectLabelAnchoredLayout(prepared.normalized);
-            const labelAnchoredAttempt = labelAnchoredLayout
-                ? await evaluateLayout(labelAnchoredLayout)
-                : null;
-            const fixedAttempt = await evaluateLayout(
-                getFixedLayout(prepared.normalized)
-            );
-            const detectedLayout =
-                (portraitAnchoredAttempt && portraitAnchoredAttempt.recognizedCount >= 4) ||
-                (labelAnchoredAttempt && labelAnchoredAttempt.recognizedCount >= 4)
-                    ? null
-                    : detectPanelLayout(prepared.normalized);
-            const detectedAttempt = detectedLayout
-                ? await evaluateLayout(detectedLayout)
-                : null;
-            const allAttempts = [
-                portraitAnchoredAttempt,
-                labelAnchoredAttempt,
-                fixedAttempt,
-                detectedAttempt,
-            ].filter((attempt) => attempt !== null);
-            const bestAttempt = allAttempts.reduce((best, current) =>
+            const allAttempts = [];
+
+            for (const prepared of preparedVariants) {
+                const portraitAnchoredLayout = detectPortraitAnchoredLayout(
+                    prepared.normalized
+                );
+                const portraitAnchoredAttempt = portraitAnchoredLayout
+                    ? await evaluateLayout(prepared, portraitAnchoredLayout)
+                    : null;
+                const labelAnchoredLayout = detectLabelAnchoredLayout(
+                    prepared.normalized
+                );
+                const labelAnchoredAttempt = labelAnchoredLayout
+                    ? await evaluateLayout(prepared, labelAnchoredLayout)
+                    : null;
+                const fixedAttempt = await evaluateLayout(
+                    prepared,
+                    getFixedLayout(prepared.normalized)
+                );
+                const detectedLayout =
+                    (portraitAnchoredAttempt &&
+                        portraitAnchoredAttempt.recognizedCount >= 4) ||
+                    (labelAnchoredAttempt &&
+                        labelAnchoredAttempt.recognizedCount >= 4)
+                        ? null
+                        : detectPanelLayout(prepared.normalized);
+                const detectedAttempt = detectedLayout
+                    ? await evaluateLayout(prepared, detectedLayout)
+                    : null;
+
+                allAttempts.push(
+                    portraitAnchoredAttempt,
+                    labelAnchoredAttempt,
+                    fixedAttempt,
+                    detectedAttempt
+                );
+            }
+
+            const resolvedAttempts = allAttempts.filter((attempt) => attempt !== null);
+            const bestAttempt = resolvedAttempts.reduce((best, current) =>
                 !best || current.recognizedCount > best.recognizedCount
                     ? current
                     : best
@@ -1592,13 +1705,16 @@ export default function IvImageImportPanel({
             }
 
             setDetectedPanelRegion(
-                mapRectToOriginalRegion(bestAttempt.layout.panelRect, prepared)
+                mapRectToOriginalRegion(bestAttempt.layout.panelRect, bestAttempt.prepared)
             );
             setDetectedRegions(
                 Object.fromEntries(
                     statKeys.map((key) => [
                         key,
-                        mapRectToOriginalRegion(bestAttempt.layout.statRects[key], prepared),
+                        mapRectToOriginalRegion(
+                            bestAttempt.layout.statRects[key],
+                            bestAttempt.prepared
+                        ),
                     ])
                 ) as Record<StatKey, RegionBox>
             );
