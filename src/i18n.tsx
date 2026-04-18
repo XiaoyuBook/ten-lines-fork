@@ -394,6 +394,40 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             settingsExtraButton: "Extra Button",
             matchingSynchronizeSuffix: "Synchronize",
         },
+        imageImport: {
+            title: "Import From Screenshot",
+            description:
+                "Paste or upload a Pokemon Skills screenshot. The tool reads the six stat values from the upper-right panel and lets you append them as a new IV line.",
+            queueHint:
+                "Current lines: {count}. Import will append line {nextCount}.",
+            imageLoaded:
+                "Screenshot loaded. Review the highlighted boxes, then start recognition.",
+            noImage: "Paste or upload a screenshot first.",
+            recognizing: "Recognizing...",
+            recognize: "Recognize Stats",
+            recognitionComplete:
+                "Recognition complete. Review the values below before appending.",
+            recognitionFailed:
+                "Recognition failed. Try a clearer screenshot or enter the values manually.",
+            noStatsFound:
+                "No stat values were detected in the highlighted regions.",
+            partialRecognition:
+                "Detected {count}/{total} values. Please review and fill in any missing fields.",
+            requiresNature:
+                "Select a Nature in the calibration form before appending a screenshot entry.",
+            invalidLevel: "Enter a valid level between 1 and 100.",
+            invalidStats: "Enter all six stat values before appending.",
+            appendAction: "Append As New Line",
+            appended: "Appended a new IV line. Total lines: {nextCount}.",
+            appendFailed:
+                "Could not append this screenshot entry. Please verify the values and try again.",
+            clear: "Clear",
+            dropzoneTitle:
+                "Click to upload, drag a screenshot here, or press Ctrl+V",
+            dropzoneHint:
+                "Suggested flow: set Nature, enter Level, paste a screenshot, recognize, then append.",
+            previewTitle: "Recognition Preview",
+        },
         errors: {
             invalidInput: "Invalid input",
             valueMustBeBetween: "Value must be between {min} and {max}",
@@ -652,6 +686,43 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             settingsSeedButton: "Seed \u6309\u952e",
             settingsExtraButton: "\u989d\u5916\u6309\u952e",
             matchingSynchronizeSuffix: "\u540c\u6b65",
+        },
+        imageImport: {
+            title: "\u4ece\u622a\u56fe\u5bfc\u5165",
+            description:
+                "\u7c98\u8d34\u6216\u4e0a\u4f20 Pokemon Skills \u754c\u9762\u622a\u56fe\u3002\u5de5\u5177\u4f1a\u8bfb\u53d6\u53f3\u4e0a\u89d2\u7684 6 \u4e2a\u80fd\u529b\u503c\uff0c\u5e76\u53ef\u4ee5\u5c06\u5b83\u4eec\u8ffd\u52a0\u5230 IV \u8f93\u5165\u7684\u65b0\u4e00\u884c\u3002",
+            queueHint:
+                "\u5f53\u524d\u5df2\u6709 {count} \u884c\uff0c\u5bfc\u5165\u540e\u4f1a\u8ffd\u52a0\u4e3a\u7b2c {nextCount} \u884c\u3002",
+            imageLoaded:
+                "\u622a\u56fe\u5df2\u8f7d\u5165\uff0c\u8bf7\u5148\u786e\u8ba4\u9ad8\u4eae\u6846\u533a\u57df\uff0c\u7136\u540e\u5f00\u59cb\u8bc6\u522b\u3002",
+            noImage: "\u8bf7\u5148\u7c98\u8d34\u6216\u4e0a\u4f20\u622a\u56fe\u3002",
+            recognizing: "\u6b63\u5728\u8bc6\u522b...",
+            recognize: "\u8bc6\u522b\u80fd\u529b\u503c",
+            recognitionComplete:
+                "\u8bc6\u522b\u5b8c\u6210\uff0c\u8bf7\u5148\u68c0\u67e5\u4e0b\u65b9\u6570\u503c\u518d\u8ffd\u52a0\u3002",
+            recognitionFailed:
+                "\u8bc6\u522b\u5931\u8d25\uff0c\u8bf7\u6362\u66f4\u6e05\u6670\u7684\u622a\u56fe\uff0c\u6216\u8005\u624b\u52a8\u586b\u5199\u6570\u503c\u3002",
+            noStatsFound:
+                "\u5728\u9ad8\u4eae\u533a\u57df\u5185\u6ca1\u6709\u8bc6\u522b\u5230\u80fd\u529b\u503c\u3002",
+            partialRecognition:
+                "\u5df2\u8bc6\u522b {count}/{total} \u4e2a\u6570\u503c\uff0c\u8bf7\u68c0\u67e5\u5e76\u8865\u5168\u7f3a\u5931\u9879\u3002",
+            requiresNature:
+                "\u8ffd\u52a0\u622a\u56fe\u6570\u636e\u524d\uff0c\u8bf7\u5148\u5728\u6821\u51c6\u8868\u5355\u91cc\u9009\u62e9\u6027\u683c\u3002",
+            invalidLevel:
+                "\u8bf7\u8f93\u5165 1 \u5230 100 \u4e4b\u95f4\u7684\u6709\u6548\u7b49\u7ea7\u3002",
+            invalidStats:
+                "\u8ffd\u52a0\u4e4b\u524d\uff0c\u8bf7\u786e\u8ba4 6 \u4e2a\u80fd\u529b\u503c\u90fd\u5df2\u586b\u5199\u3002",
+            appendAction: "\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c",
+            appended:
+                "\u5df2\u8ffd\u52a0\u65b0\u7684 IV \u8f93\u5165\u884c\uff0c\u5f53\u524d\u603b\u884c\u6570\uff1a{nextCount}\u3002",
+            appendFailed:
+                "\u65e0\u6cd5\u8ffd\u52a0\u8fd9\u6761\u622a\u56fe\u6570\u636e\uff0c\u8bf7\u68c0\u67e5\u6570\u503c\u540e\u91cd\u8bd5\u3002",
+            clear: "\u6e05\u7a7a",
+            dropzoneTitle:
+                "\u70b9\u51fb\u4e0a\u4f20\u3001\u62d6\u653e\u622a\u56fe\u5230\u6b64\u5904\uff0c\u6216\u76f4\u63a5\u6309 Ctrl+V",
+            dropzoneHint:
+                "\u5efa\u8bae\u6d41\u7a0b\uff1a\u5148\u9009\u6027\u683c\uff0c\u518d\u8f93\u5165\u7b49\u7ea7\uff0c\u7136\u540e\u7c98\u8d34\u622a\u56fe\u3001\u8bc6\u522b\uff0c\u6700\u540e\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c\u3002",
+            previewTitle: "\u8bc6\u522b\u9884\u89c8",
         },
         errors: {
             invalidInput: "\u8f93\u5165\u65e0\u6548",
