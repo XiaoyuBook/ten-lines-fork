@@ -40,6 +40,13 @@ type OverlayRegion = {
     height: number;
 };
 
+type PixelBand = {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+};
+
 type RegionBox = {
     x: number;
     y: number;
@@ -152,6 +159,146 @@ const prepareCropDataUrl = (
 const parseRecognizedValue = (rawText: string) => {
     const matches = rawText.replace(/\s/g, "").match(/\d{1,3}/g);
     return matches?.[0] ?? "";
+};
+
+const isLikelyValueBoxPixel = (red: number, green: number, blue: number) => {
+    const maxChannel = Math.max(red, green, blue);
+    const minChannel = Math.min(red, green, blue);
+    const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+    const saturation = maxChannel - minChannel;
+
+    return luminance > 200 && saturation < 35;
+};
+
+const detectStatValueRegions = (
+    image: HTMLImageElement,
+    statsRegion: RegionBox
+): OverlayRegion[] => {
+    const sourceX = Math.floor(image.width * statsRegion.x);
+    const sourceY = Math.floor(image.height * statsRegion.y);
+    const sourceWidth = Math.max(1, Math.floor(image.width * statsRegion.width));
+    const sourceHeight = Math.max(
+        1,
+        Math.floor(image.height * statsRegion.height)
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = sourceWidth;
+    canvas.height = sourceHeight;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+        return [];
+    }
+
+    context.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        sourceWidth,
+        sourceHeight
+    );
+
+    const imageData = context.getImageData(0, 0, sourceWidth, sourceHeight).data;
+    const searchStartX = Math.floor(sourceWidth * 0.48);
+    const rowScores = new Array<number>(sourceHeight).fill(0);
+    const rowBounds = new Array<{ left: number; right: number }>(sourceHeight)
+        .fill(null)
+        .map(() => ({ left: sourceWidth, right: -1 }));
+
+    for (let y = 0; y < sourceHeight; y++) {
+        for (let x = searchStartX; x < sourceWidth; x++) {
+            const index = (y * sourceWidth + x) * 4;
+            const red = imageData[index];
+            const green = imageData[index + 1];
+            const blue = imageData[index + 2];
+
+            if (!isLikelyValueBoxPixel(red, green, blue)) {
+                continue;
+            }
+
+            rowScores[y] += 1;
+            rowBounds[y].left = Math.min(rowBounds[y].left, x);
+            rowBounds[y].right = Math.max(rowBounds[y].right, x);
+        }
+    }
+
+    const smoothedScores = rowScores.map((_value, index) => {
+        const start = Math.max(0, index - 1);
+        const end = Math.min(sourceHeight - 1, index + 1);
+        let total = 0;
+        for (let cursor = start; cursor <= end; cursor++) {
+            total += rowScores[cursor];
+        }
+        return total / (end - start + 1);
+    });
+
+    const maxScore = smoothedScores.reduce((max, value) => Math.max(max, value), 0);
+    if (maxScore === 0) {
+        return [];
+    }
+
+    const threshold = Math.max(12, maxScore * 0.42);
+    const bands: PixelBand[] = [];
+    let currentBand: PixelBand | null = null;
+
+    for (let y = 0; y < sourceHeight; y++) {
+        if (smoothedScores[y] < threshold || rowBounds[y].right < rowBounds[y].left) {
+            if (currentBand) {
+                bands.push(currentBand);
+                currentBand = null;
+            }
+            continue;
+        }
+
+        if (!currentBand) {
+            currentBand = {
+                top: y,
+                bottom: y,
+                left: rowBounds[y].left,
+                right: rowBounds[y].right,
+            };
+            continue;
+        }
+
+        currentBand.bottom = y;
+        currentBand.left = Math.min(currentBand.left, rowBounds[y].left);
+        currentBand.right = Math.max(currentBand.right, rowBounds[y].right);
+    }
+
+    if (currentBand) {
+        bands.push(currentBand);
+    }
+
+    const filteredBands = bands
+        .filter((band) => band.bottom - band.top >= 6)
+        .sort((leftBand, rightBand) => leftBand.top - rightBand.top);
+
+    const selectedBands = filteredBands.slice(0, STAT_KEYS.length);
+    if (selectedBands.length === 0) {
+        return [];
+    }
+
+    return selectedBands.map((band, index) => {
+        const paddingX = Math.max(2, Math.round(sourceWidth * 0.01));
+        const paddingY = Math.max(2, Math.round(sourceHeight * 0.01));
+        const left = Math.max(searchStartX, band.left - paddingX);
+        const right = Math.min(sourceWidth, band.right + paddingX);
+        const top = Math.max(0, band.top - paddingY);
+        const bottom = Math.min(sourceHeight, band.bottom + paddingY);
+
+        return {
+            key: STAT_KEYS[index],
+            x: statsRegion.x + (left / sourceWidth) * statsRegion.width,
+            y: statsRegion.y + (top / sourceHeight) * statsRegion.height,
+            width: ((right - left) / sourceWidth) * statsRegion.width,
+            height: ((bottom - top) / sourceHeight) * statsRegion.height,
+        };
+    });
 };
 
 const clampRegion = (region: RegionBox): RegionBox => {
@@ -383,28 +530,30 @@ export default function IvImageImportPanel({
             const image = await loadImage(imageFile);
             const worker = await getWorker();
             const nextStats = getEmptyStats();
+            const detectedRegions = detectStatValueRegions(image, statsRegion);
 
-            const cropDataUrl = prepareCropDataUrl(image, {
-                key: "hp",
-                ...statsRegion,
-            });
-            const result = await worker.recognize(cropDataUrl);
-            const recognizedLines = result.data.text
-                .split("\n")
-                .map((line) => line.trim())
-                .filter((line) => line !== "")
-                .map((line) => parseRecognizedValue(line))
-                .filter((line) => line !== "");
+            if (detectedRegions.length === 0) {
+                setStats(nextStats);
+                setStatus(t("imageImport.noStatsFound"), "error");
+                return;
+            }
 
-            for (const [index, key] of statKeys.entries()) {
-                const line = recognizedLines[index] ?? "";
-                if (key === "hp" && line.includes("/")) {
-                    const hpParts = line.split("/").filter((entry) => entry !== "");
-                    nextStats[key] =
-                        hpParts.length > 0 ? hpParts[hpParts.length - 1] : "";
+            for (const region of detectedRegions) {
+                const cropDataUrl = prepareCropDataUrl(image, region);
+                const result = await worker.recognize(cropDataUrl);
+                const recognizedValue = parseRecognizedValue(result.data.text);
+
+                if (region.key === "hp" && result.data.text.includes("/")) {
+                    const hpParts = result.data.text
+                        .replace(/\s/g, "")
+                        .split("/")
+                        .filter((entry) => /^\d+$/.test(entry));
+                    nextStats[region.key] =
+                        hpParts.length > 0 ? hpParts[hpParts.length - 1] : recognizedValue;
                     continue;
                 }
-                nextStats[key] = line;
+
+                nextStats[region.key] = recognizedValue;
             }
 
             setStats(nextStats);
