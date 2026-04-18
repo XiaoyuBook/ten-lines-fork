@@ -462,6 +462,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             previewTitle: "Recognition Preview",
             adjustHint:
                 "The tool will auto-crop black borders, normalize the screenshot, and prioritize fixed layout slicing for the six stat boxes. Structure or color detection is only used as a fallback.",
+            startRoiSelection: "Select ROI",
+            roiSelectionModeActive:
+                "ROI selection mode is active. Click once for the top-left corner, then click again for the bottom-right corner.",
+            roiFirstPointSet:
+                "Top-left corner recorded. Click again to set the bottom-right corner.",
+            roiApplied:
+                "ROI applied. Recognition will prioritize this selected region.",
         },
         errors: {
             invalidInput: "Invalid input",
@@ -796,6 +803,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             previewTitle: "\u8bc6\u522b\u9884\u89c8",
             adjustHint:
                 "\u5de5\u5177\u4f1a\u81ea\u52a8\u88c1\u6389\u9ed1\u8fb9\uff0c\u7edf\u4e00\u622a\u56fe\u5c3a\u5bf8\uff0c\u4f18\u5148\u6309\u56fa\u5b9a\u5e03\u5c40\u76f4\u63a5\u5207\u51fa 6 \u4e2a\u6570\u503c\u6846\uff0c\u53ea\u5728\u5fc5\u8981\u65f6\u624d\u518d\u4f7f\u7528\u7ed3\u6784/\u989c\u8272\u68c0\u6d4b\u515c\u5e95\u3002",
+            startRoiSelection: "\u6846\u9009 ROI",
+            roiSelectionModeActive:
+                "\u5df2\u8fdb\u5165 ROI \u6846\u9009\u6a21\u5f0f\uff0c\u8bf7\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002",
+            roiFirstPointSet:
+                "\u5de6\u4e0a\u89d2\u5df2\u8bb0\u5f55\uff0c\u8bf7\u518d\u70b9\u4e00\u4e0b\u53f3\u4e0b\u89d2\u3002",
+            roiApplied:
+                "ROI \u5df2\u5e94\u7528\uff0c\u540e\u7eed\u8bc6\u522b\u4f1a\u4f18\u5148\u4f7f\u7528\u8fd9\u4e2a\u9009\u5b9a\u533a\u57df\u3002",
         },
         errors: {
             invalidInput: "\u8f93\u5165\u65e0\u6548",

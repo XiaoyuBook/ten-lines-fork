@@ -63,6 +63,11 @@ type DetectedLayout = {
     score: number;
 };
 
+type SelectionStart = {
+    startX: number;
+    startY: number;
+};
+
 const STAT_KEYS: StatKey[] = [
     "hp",
     "attack",
@@ -628,6 +633,52 @@ const prepareImageVariants = (image: HTMLImageElement): PreparedImage[] => {
     };
 
     return [buildPrepared(cropped.image, cropped.crop), buildPrepared(trimmed.image, trimmed.crop)];
+};
+
+const prepareManualRoiVariant = (
+    image: HTMLImageElement,
+    region: RegionBox
+): PreparedImage => {
+    const original = createCanvasFromImage(image);
+    const crop = clampRect(
+        {
+            left: Math.round(region.x * image.width),
+            top: Math.round(region.y * image.height),
+            right: Math.round((region.x + region.width) * image.width),
+            bottom: Math.round((region.y + region.height) * image.height),
+        },
+        image.width,
+        image.height
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = rectWidth(crop);
+    canvas.height = rectHeight(crop);
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+        throw new Error("Canvas is unavailable");
+    }
+
+    context.drawImage(
+        original.canvas,
+        crop.left,
+        crop.top,
+        rectWidth(crop),
+        rectHeight(crop),
+        0,
+        0,
+        rectWidth(crop),
+        rectHeight(crop)
+    );
+
+    const resized = resizeCanvasImage(snapshotCanvas(canvas), TARGET_IMAGE_WIDTH);
+    return {
+        normalized: resized.image,
+        crop,
+        scale: resized.scale,
+        originalWidth: image.width,
+        originalHeight: image.height,
+    };
 };
 
 const detectValueRectNearLabel = (
@@ -1461,10 +1512,17 @@ export default function IvImageImportPanel({
 }) {
     const { locale, t } = useI18n();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const previewContainerRef = useRef<HTMLDivElement | null>(null);
     const workerRef = useRef<TesseractWorker | null>(null);
     const [level, setLevel] = useState("");
     const [previewUrl, setPreviewUrl] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [roiSelectionMode, setRoiSelectionMode] = useState(false);
+    const [roiSelectionStart, setRoiSelectionStart] = useState<SelectionStart | null>(
+        null
+    );
+    const [draftRoiRegion, setDraftRoiRegion] = useState<RegionBox | null>(null);
+    const [manualRoiRegion, setManualRoiRegion] = useState<RegionBox | null>(null);
     const [detectedPanelRegion, setDetectedPanelRegion] = useState<RegionBox | null>(
         null
     );
@@ -1568,6 +1626,10 @@ export default function IvImageImportPanel({
         }
         setImageFile(file);
         setPreviewUrl(URL.createObjectURL(file));
+        setRoiSelectionMode(false);
+        setRoiSelectionStart(null);
+        setDraftRoiRegion(null);
+        setManualRoiRegion(null);
         setDetectedPanelRegion(null);
         setDetectedRegions({});
         setStats(getEmptyStats());
@@ -1581,6 +1643,10 @@ export default function IvImageImportPanel({
         }
         setPreviewUrl("");
         setImageFile(null);
+        setRoiSelectionMode(false);
+        setRoiSelectionStart(null);
+        setDraftRoiRegion(null);
+        setManualRoiRegion(null);
         setDetectedPanelRegion(null);
         setDetectedRegions({});
         setStats(getEmptyStats());
@@ -1597,6 +1663,54 @@ export default function IvImageImportPanel({
         }
         void loadSelectedImage(file);
         event.target.value = "";
+    };
+
+    const startRoiSelection = () => {
+        setRoiSelectionMode(true);
+        setRoiSelectionStart(null);
+        setDraftRoiRegion(null);
+        setManualRoiRegion(null);
+        setStatus(t("imageImport.roiSelectionModeActive"), "info");
+    };
+
+    const handlePreviewPointerDown = (
+        event: React.PointerEvent<HTMLDivElement>
+    ) => {
+        if (!roiSelectionMode || !previewContainerRef.current) {
+            return;
+        }
+
+        const rect = previewContainerRef.current.getBoundingClientRect();
+        const currentX = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
+        const currentY = Math.min(Math.max(event.clientY - rect.top, 0), rect.height);
+
+        if (!roiSelectionStart) {
+            setRoiSelectionStart({
+                startX: currentX,
+                startY: currentY,
+            });
+            setDraftRoiRegion({
+                x: currentX / rect.width,
+                y: currentY / rect.height,
+                width: 0.001,
+                height: 0.001,
+            });
+            setStatus(t("imageImport.roiFirstPointSet"), "info");
+            return;
+        }
+
+        const nextRegion = {
+            x: Math.min(roiSelectionStart.startX, currentX) / rect.width,
+            y: Math.min(roiSelectionStart.startY, currentY) / rect.height,
+            width: Math.abs(currentX - roiSelectionStart.startX) / rect.width,
+            height: Math.abs(currentY - roiSelectionStart.startY) / rect.height,
+        };
+
+        setManualRoiRegion(nextRegion);
+        setDraftRoiRegion(null);
+        setRoiSelectionStart(null);
+        setRoiSelectionMode(false);
+        setStatus(t("imageImport.roiApplied"), "success");
     };
 
     const recognizeRegion = async (
@@ -1676,7 +1790,9 @@ export default function IvImageImportPanel({
         try {
             const image = await loadImage(imageFile);
             const worker = await getWorker();
-            const preparedVariants = prepareImageVariants(image);
+            const preparedVariants = manualRoiRegion
+                ? [prepareManualRoiVariant(image, manualRoiRegion), ...prepareImageVariants(image)]
+                : prepareImageVariants(image);
             const evaluateLayout = async (
                 prepared: PreparedImage,
                 layout: DetectedLayout
@@ -1919,10 +2035,19 @@ export default function IvImageImportPanel({
 
             {previewUrl !== "" && (
                 <Box sx={{ mt: 2 }}>
+                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
+                        <Button
+                            variant={roiSelectionMode ? "contained" : "outlined"}
+                            onClick={startRoiSelection}
+                        >
+                            {t("imageImport.startRoiSelection")}
+                        </Button>
+                    </Box>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                         {t("imageImport.previewTitle")}
                     </Typography>
                     <Box
+                        ref={previewContainerRef}
                         sx={{
                             position: "relative",
                             borderRadius: 2,
@@ -1930,7 +2055,9 @@ export default function IvImageImportPanel({
                             border: "1px solid",
                             borderColor: "divider",
                             backgroundColor: "common.black",
+                            cursor: roiSelectionMode ? "crosshair" : "default",
                         }}
+                        onPointerDown={handlePreviewPointerDown}
                     >
                         <Box
                             component="img"
@@ -1938,6 +2065,22 @@ export default function IvImageImportPanel({
                             alt={t("imageImport.previewTitle")}
                             sx={{ display: "block", width: "100%", height: "auto" }}
                         />
+                        {(manualRoiRegion ?? draftRoiRegion) && (
+                            <Box
+                                sx={{
+                                    position: "absolute",
+                                    left: `${(manualRoiRegion ?? draftRoiRegion)!.x * 100}%`,
+                                    top: `${(manualRoiRegion ?? draftRoiRegion)!.y * 100}%`,
+                                    width: `${(manualRoiRegion ?? draftRoiRegion)!.width * 100}%`,
+                                    height: `${(manualRoiRegion ?? draftRoiRegion)!.height * 100}%`,
+                                    border: "2px solid rgba(244, 67, 54, 0.95)",
+                                    borderRadius: 1.5,
+                                    boxSizing: "border-box",
+                                    backgroundColor: "rgba(244, 67, 54, 0.06)",
+                                    pointerEvents: "none",
+                                }}
+                            />
+                        )}
                         {detectedPanelRegion && (
                             <Box
                                 sx={{
