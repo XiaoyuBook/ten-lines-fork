@@ -872,19 +872,6 @@ export default function CalibrationForm({
 
     const dynamicToolPanel = <CalibrationDynamicToolPanel />;
 
-    const inlinePanels =
-        compareSettings.enabled && !compareFloating
-            ? compareSettings.position === "left"
-                ? [
-                      <React.Fragment key="compare">{comparePanel}</React.Fragment>,
-                      <React.Fragment key="tool">{dynamicToolPanel}</React.Fragment>,
-                  ]
-                : [
-                      <React.Fragment key="tool">{dynamicToolPanel}</React.Fragment>,
-                      <React.Fragment key="compare">{comparePanel}</React.Fragment>,
-                  ]
-            : [<React.Fragment key="tool">{dynamicToolPanel}</React.Fragment>];
-
     return (
         <Box
             sx={{
@@ -897,24 +884,26 @@ export default function CalibrationForm({
             <Box
                 sx={{
                     width: "100%",
+                    display: "grid",
+                    gap: 2,
+                    alignItems: "start",
+                    gridTemplateColumns: {
+                        xs: "1fr",
+                        xl: compareSettings.enabled
+                            ? "minmax(300px, 360px) minmax(0, 1fr) minmax(340px, 420px)"
+                            : "minmax(300px, 360px) minmax(0, 1fr)",
+                    },
                 }}
             >
                 <Box
                     sx={{
-                        display: "grid",
-                        gap: 2,
-                        gridTemplateColumns: {
-                            xs: "1fr",
-                            xl:
-                                compareSettings.enabled && !compareFloating
-                                    ? "minmax(0, 1fr) minmax(0, 1fr)"
-                                    : "1fr",
-                        },
-                        alignItems: "start",
-                        mb: 2,
+                        order: { xs: 1, xl: 1 },
+                        position: { xl: "sticky" },
+                        top: { xl: 16 },
+                        alignSelf: "start",
                     }}
                 >
-                    {inlinePanels}
+                    {dynamicToolPanel}
                 </Box>
 
                 {compareSettings.enabled && compareFloating && (
@@ -987,6 +976,7 @@ export default function CalibrationForm({
                 <Paper
                     variant="outlined"
                     sx={{
+                        order: { xs: 2, xl: 2 },
                         width: "100%",
                         minWidth: 0,
                         borderRadius: 4,
@@ -1614,6 +1604,19 @@ export default function CalibrationForm({
                         />
                     </Box>
                 </Paper>
+
+                {compareSettings.enabled && !compareFloating && (
+                    <Box
+                        sx={{
+                            order: { xs: 3, xl: 3 },
+                            position: { xl: "sticky" },
+                            top: { xl: 16 },
+                            alignSelf: "start",
+                        }}
+                    >
+                        {comparePanel}
+                    </Box>
+                )}
             </Box>
 
             <Dialog
