@@ -472,6 +472,37 @@ const pickPrimaryRows = (components: PixelRect[], count: number) =>
         .sort((leftRect, rightRect) => rectCenterY(leftRect) - rectCenterY(rightRect))
         .slice(0, count);
 
+const countBrightPixels = (image: CanvasImage, rect: PixelRect) => {
+    let count = 0;
+    const clamped = clampRect(rect, image.width, image.height);
+    for (let y = clamped.top; y < clamped.bottom; y++) {
+        for (let x = clamped.left; x < clamped.right; x++) {
+            const [red, green, blue] = getPixel(image, x, y);
+            const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+            if (luminance >= 205) {
+                count += 1;
+            }
+        }
+    }
+    return count;
+};
+
+const hasLikelyLabelText = (image: CanvasImage, rect: PixelRect) => {
+    const inner = clampRect(
+        {
+            left: rect.left + Math.round(rectWidth(rect) * 0.12),
+            top: rect.top + Math.round(rectHeight(rect) * 0.12),
+            right: rect.left + Math.round(rectWidth(rect) * 0.74),
+            bottom: rect.bottom - Math.round(rectHeight(rect) * 0.12),
+        },
+        image.width,
+        image.height
+    );
+    const brightPixels = countBrightPixels(image, inner);
+    const area = Math.max(1, rectWidth(inner) * rectHeight(inner));
+    return brightPixels / area >= 0.08;
+};
+
 const prepareImageForDetection = (image: HTMLImageElement): PreparedImage => {
     const original = createCanvasFromImage(image);
     const cropped = cropBlackBorder(original);
@@ -483,6 +514,243 @@ const prepareImageForDetection = (image: HTMLImageElement): PreparedImage => {
         scale: resized.scale,
         originalWidth: image.width,
         originalHeight: image.height,
+    };
+};
+
+const detectValueRectNearLabel = (
+    image: CanvasImage,
+    labelRect: PixelRect
+): PixelRect | null => {
+    const labelHeight = rectHeight(labelRect);
+    const searchBounds = clampRect(
+        {
+            left: labelRect.right + Math.round(image.width * 0.04),
+            top: Math.round(rectCenterY(labelRect) - labelHeight * 0.75),
+            right: Math.min(image.width, labelRect.right + Math.round(image.width * 0.34)),
+            bottom: Math.round(rectCenterY(labelRect) + labelHeight * 0.75),
+        },
+        image.width,
+        image.height
+    );
+
+    const valueMask = closeAndOpenMask(
+        buildMask(image, (red, green, blue, x, y) => {
+            if (
+                x < searchBounds.left ||
+                x >= searchBounds.right ||
+                y < searchBounds.top ||
+                y >= searchBounds.bottom
+            ) {
+                return false;
+            }
+
+            const hsv = rgbToHsv(red, green, blue);
+            const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+            const warmLight =
+                red >= 180 &&
+                green >= 175 &&
+                blue >= 145;
+
+            return (
+                (hsv.value >= 0.72 &&
+                    hsv.saturation <= 0.38 &&
+                    luminance >= 170) ||
+                warmLight
+            );
+        }, searchBounds),
+        image.width,
+        image.height
+    );
+
+    const candidates = findConnectedComponents(
+        valueMask,
+        image.width,
+        image.height,
+        searchBounds,
+        Math.max(8, Math.floor(rectWidth(searchBounds) * rectHeight(searchBounds) * 0.04))
+    ).filter((rect) => {
+        const width = rectWidth(rect);
+        const height = rectHeight(rect);
+        return (
+            width >= rectWidth(searchBounds) * 0.18 &&
+            height >= labelHeight * 0.45 &&
+            height <= labelHeight * 1.35 &&
+            width / Math.max(height, 1) >= 1.1
+        );
+    });
+
+    if (candidates.length === 0) {
+        return null;
+    }
+
+    const best = [...candidates].sort((leftRect, rightRect) => {
+        const leftScore =
+            Math.abs(rectCenterY(leftRect) - rectCenterY(labelRect)) +
+            rectCenterX(leftRect) * -0.02;
+        const rightScore =
+            Math.abs(rectCenterY(rightRect) - rectCenterY(labelRect)) +
+            rectCenterX(rightRect) * -0.02;
+        return leftScore - rightScore;
+    })[0];
+
+    return expandRect(best, 2, 2, image.width, image.height);
+};
+
+const detectLabelAnchoredLayout = (image: CanvasImage): DetectedLayout | null => {
+    const bounds = {
+        left: Math.floor(image.width * 0.5),
+        top: Math.floor(image.height * 0.08),
+        right: Math.floor(image.width * 0.8),
+        bottom: Math.floor(image.height * 0.7),
+    };
+
+    const labelMask = closeAndOpenMask(
+        buildMask(image, (red, green, blue, x, y) => {
+            if (
+                x < bounds.left ||
+                x >= bounds.right ||
+                y < bounds.top ||
+                y >= bounds.bottom
+            ) {
+                return false;
+            }
+
+            const hsv = rgbToHsv(red, green, blue);
+            const maxChannel = Math.max(red, green, blue);
+            const minChannel = Math.min(red, green, blue);
+            const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+            return (
+                hsv.value >= 0.28 &&
+                hsv.value <= 0.82 &&
+                hsv.saturation <= 0.3 &&
+                luminance >= 75 &&
+                luminance <= 195 &&
+                blue >= red - 18 &&
+                blue >= green - 18 &&
+                maxChannel - minChannel <= 85
+            );
+        }, bounds),
+        image.width,
+        image.height
+    );
+
+    const labelCandidates = findConnectedComponents(
+        labelMask,
+        image.width,
+        image.height,
+        bounds,
+        Math.floor(image.width * image.height * 0.0005)
+    ).filter((rect) => {
+        const width = rectWidth(rect);
+        const height = rectHeight(rect);
+        return (
+            width >= image.width * 0.08 &&
+            width <= image.width * 0.22 &&
+            height >= image.height * 0.025 &&
+            height <= image.height * 0.085 &&
+            width / Math.max(height, 1) >= 1.6 &&
+            hasLikelyLabelText(image, rect)
+        );
+    });
+
+    if (labelCandidates.length < 6) {
+        return null;
+    }
+
+    const sorted = [...labelCandidates].sort(
+        (leftRect, rightRect) => rectCenterY(leftRect) - rectCenterY(rightRect)
+    );
+
+    let bestSequence: PixelRect[] | null = null;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    for (let index = 0; index <= sorted.length - 6; index++) {
+        const sequence = sorted.slice(index, index + 6);
+        const centers = sequence.map((rect) => rectCenterY(rect));
+        const gaps = centers.slice(1).map((center, gapIndex) => center - centers[gapIndex]);
+        const regularGaps = gaps.slice(1);
+        const averageGap =
+            regularGaps.reduce((total, gap) => total + gap, 0) /
+            Math.max(1, regularGaps.length);
+        const gapVariance =
+            regularGaps.reduce(
+                (total, gap) => total + Math.abs(gap - averageGap),
+                0
+            ) / Math.max(1, regularGaps.length);
+        const averageLeft =
+            sequence.reduce((total, rect) => total + rect.left, 0) / sequence.length;
+        const leftVariance =
+            sequence.reduce((total, rect) => total + Math.abs(rect.left - averageLeft), 0) /
+            sequence.length;
+        const bottomPenalty =
+            sequence[5].bottom > image.height * 0.68 ? 80 : 0;
+
+        const score =
+            sequence.length * 100 -
+            gapVariance * 2.5 -
+            leftVariance * 1.2 -
+            bottomPenalty -
+            Math.abs(gaps[0] - averageGap) * 0.5;
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestSequence = sequence;
+        }
+    }
+
+    if (!bestSequence) {
+        return null;
+    }
+
+    const statRects = {} as Record<StatKey, PixelRect>;
+    let matchedValues = 0;
+
+    for (let index = 0; index < STAT_KEYS.length; index++) {
+        const key = STAT_KEYS[index];
+        const labelRect = bestSequence[index];
+        const detectedValueRect = detectValueRectNearLabel(image, labelRect);
+
+        if (detectedValueRect) {
+            statRects[key] = detectedValueRect;
+            matchedValues += 1;
+            continue;
+        }
+
+        const labelHeight = rectHeight(labelRect);
+        const fallbackLeft = labelRect.right + Math.round(image.width * 0.045);
+        const fallbackRight = labelRect.right + Math.round(image.width * 0.23);
+        const fallbackHalfHeight = Math.round(labelHeight * 0.52);
+        statRects[key] = clampRect(
+            {
+                left: fallbackLeft,
+                top: Math.round(rectCenterY(labelRect) - fallbackHalfHeight),
+                right: fallbackRight,
+                bottom: Math.round(rectCenterY(labelRect) + fallbackHalfHeight),
+            },
+            image.width,
+            image.height
+        );
+    }
+
+    const allRects = [...bestSequence, ...Object.values(statRects)];
+    const panelRect = clampRect(
+        {
+            left: Math.min(...allRects.map((rect) => rect.left)) - 6,
+            top: Math.min(...allRects.map((rect) => rect.top)) - 6,
+            right: Math.max(...allRects.map((rect) => rect.right)) + 6,
+            bottom: Math.min(
+                Math.max(...allRects.map((rect) => rect.bottom)) + 6,
+                Math.floor(image.height * 0.7)
+            ),
+        },
+        image.width,
+        image.height
+    );
+
+    return {
+        panelRect,
+        statRects,
+        score: bestScore + matchedValues * 15,
     };
 };
 
@@ -1144,23 +1412,32 @@ export default function IvImageImportPanel({
                 };
             };
 
+            const labelAnchoredLayout = detectLabelAnchoredLayout(prepared.normalized);
+            const labelAnchoredAttempt = labelAnchoredLayout
+                ? await evaluateLayout(labelAnchoredLayout)
+                : null;
             const fixedAttempt = await evaluateLayout(
                 getFixedLayout(prepared.normalized)
             );
             const detectedLayout =
-                fixedAttempt.recognizedCount >= 4
+                labelAnchoredAttempt && labelAnchoredAttempt.recognizedCount >= 4
                     ? null
                     : detectPanelLayout(prepared.normalized);
             const detectedAttempt = detectedLayout
                 ? await evaluateLayout(detectedLayout)
                 : null;
-            const bestAttempt =
-                detectedAttempt &&
-                detectedAttempt.recognizedCount > fixedAttempt.recognizedCount
-                    ? detectedAttempt
-                    : fixedAttempt;
+            const allAttempts = [
+                labelAnchoredAttempt,
+                fixedAttempt,
+                detectedAttempt,
+            ].filter((attempt) => attempt !== null);
+            const bestAttempt = allAttempts.reduce((best, current) =>
+                !best || current.recognizedCount > best.recognizedCount
+                    ? current
+                    : best
+            );
 
-            if (bestAttempt.recognizedCount === 0) {
+            if (!bestAttempt || bestAttempt.recognizedCount === 0) {
                 setDetectedPanelRegion(null);
                 setDetectedRegions({});
                 setStats(getEmptyStats());
