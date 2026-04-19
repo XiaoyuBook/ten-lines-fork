@@ -270,6 +270,7 @@ export default function CalibrationForm({
         ExtendedGeneratorState[] | ExtendedWildGeneratorState[]
     >([]);
     const [searching, setSearching] = useState(false);
+    const [hasSubmittedSearch, setHasSubmittedSearch] = useState(false);
     const [storedCompareSettings, setCompareSettings] =
         useLocalStorage<CalibrationCompareSettings>(
             "calibration-compare-settings",
@@ -722,6 +723,7 @@ export default function CalibrationForm({
         const submit = async () => {
             const tenLines = await fetchTenLines();
             setRows([]);
+            setHasSubmittedSearch(true);
             setSearching(true);
             if (isStatic) {
                 await tenLines.check_seeds_static(
@@ -1512,6 +1514,27 @@ export default function CalibrationForm({
                             {searching ? t("common.searching") : t("common.submit")}
                         </Button>
                     </Box>
+
+                    {!searching && hasSubmittedSearch && rows.length === 0 && (
+                        <Alert severity="warning" sx={{ mt: 2, textAlign: "left" }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                {t("messages.calibrationNoResultsTitle")}
+                            </Typography>
+                            <Box
+                                component="ol"
+                                sx={{
+                                    m: 0,
+                                    pl: 2.5,
+                                    display: "grid",
+                                    gap: 0.5,
+                                }}
+                            >
+                                <li>{t("messages.calibrationNoResultsCheck1")}</li>
+                                <li>{t("messages.calibrationNoResultsCheck2")}</li>
+                                <li>{t("messages.calibrationNoResultsCheck3")}</li>
+                            </Box>
+                        </Alert>
+                    )}
 
                     <Box
                         sx={{

@@ -440,6 +440,14 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "No matching static targets found for the selected filters.",
             noMatchingAdvances:
                 "No matching targets fall within the selected advances range.",
+            calibrationNoResultsTitle:
+                "No calibration results were found. Please check:",
+            calibrationNoResultsCheck1:
+                "Whether sound, button mode, seed button, extra button, and device all match each other.",
+            calibrationNoResultsCheck2:
+                "Whether the Pokemon's gender or IV values were entered incorrectly.",
+            calibrationNoResultsCheck3:
+                "Whether the seed range and advance range should be expanded. If TeachyTV / TV advances are being used, expand the advance search range further.",
             exactIdSummary:
                 "Found {candidateCount} matching target seed(s), {tsvCount} unique TSV(s), and {resultCount} matching target(s) for the selected TID/SID.",
             comboSummary:
@@ -818,6 +826,14 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u6240\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u7684\u9759\u6001\u76ee\u6807\u3002",
             noMatchingAdvances:
                 "\u6ca1\u6709\u76ee\u6807\u843d\u5728\u6240\u9009\u6d88\u8017\u5e27\u8303\u56f4\u5185\u3002",
+            calibrationNoResultsTitle:
+                "\u672a\u641c\u7d22\u5230\u6821\u51c6\u7ed3\u679c\uff0c\u8bf7\u68c0\u67e5\uff1a",
+            calibrationNoResultsCheck1:
+                "1.\u58f0\u97f3\u3001\u6309\u952e\u6a21\u5f0f\u3001seed\u6309\u952e\u3001\u989d\u5916\u6309\u952e\u548c\u8bbe\u5907\u662f\u5426\u4e00\u4e00\u5bf9\u5e94",
+            calibrationNoResultsCheck2:
+                "2.\u5b9d\u53ef\u68a6\u7684\u6027\u522b\u3001\u80fd\u529b\u503c\u662f\u5426\u586b\u5199\u9519\u8bef",
+            calibrationNoResultsCheck3:
+                "3.seed\u548c\u5e27\u6570\u662f\u5426\u9700\u8981\u6269\u5927\u8303\u56f4\uff0c\u5982\u679c\u4f7f\u7528\u4e86tv\u8fc7\u5e27\u5219\u9700\u8981\u8fdb\u4e00\u6b65\u6269\u5927\u5e27\u6570\u641c\u7d22\u8303\u56f4",
             exactIdSummary:
                 "\u627e\u5230 {candidateCount} \u4e2a\u5339\u914d\u76ee\u6807 Seed\u3001{tsvCount} \u4e2a\u552f\u4e00 TSV\uff0c\u4ee5\u53ca {resultCount} \u4e2a\u7b26\u5408\u6240\u9009 TID/SID \u7684\u5339\u914d\u76ee\u6807\u3002",
             comboSummary:
