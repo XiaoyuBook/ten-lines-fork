@@ -249,6 +249,13 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
             MAX_HISTORY_ITEMS
         );
 
+    const tvHistory = state.history.filter(
+        (entry: DynamicToolHistoryEntry) => entry.mode === "tv"
+    );
+    const noTvHistory = state.history.filter(
+        (entry: DynamicToolHistoryEntry) => entry.mode === "no-tv"
+    );
+
     const handleCalculate = () => {
         const targetAdv = parseNumber(state.targetAdv);
         const parityTime = parseNumber(state.parityTime);
@@ -718,98 +725,211 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             {t("dynamicTool.emptyHistory")}
                         </Typography>
                     ) : (
-                        <Box
-                            sx={{
-                                border: "1px solid rgba(255,255,255,0.08)",
-                                borderRadius: 2,
-                                overflow: "hidden",
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    display: "grid",
-                                    gridTemplateColumns:
-                                        "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr) minmax(96px, 1fr)",
-                                    gap: 0,
-                                    backgroundColor: "rgba(255,255,255,0.05)",
-                                    borderBottom: "1px solid rgba(255,255,255,0.08)",
-                                }}
-                            >
-                                <Box sx={{ px: 1.5, py: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {t("dynamicTool.historyRound")}
+                        <Box sx={{ display: "grid", gap: 2 }}>
+                            {tvHistory.length > 0 ? (
+                                <Box>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ mb: 1 }}
+                                    >
+                                        {t("dynamicTool.modeTv")}
                                     </Typography>
-                                </Box>
-                                <Box sx={{ px: 1.5, py: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {t("dynamicTool.historyTvShort")}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ px: 1.5, py: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {t("dynamicTool.historyWaitShort")}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ px: 1.5, py: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {t("dynamicTool.historyParityShort")}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ px: 1.5, py: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {t("dynamicTool.historyMode")}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            {state.history.map(
-                                (entry: DynamicToolHistoryEntry, index: number) => (
                                     <Box
-                                        key={entry.id}
                                         sx={{
-                                            display: "grid",
-                                            gridTemplateColumns:
-                                                "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr) minmax(96px, 1fr)",
-                                            gap: 0,
-                                            borderBottom:
-                                                index === state.history.length - 1
-                                                    ? "none"
-                                                    : "1px solid rgba(255,255,255,0.06)",
-                                            backgroundColor:
-                                                index % 2 === 0
-                                                    ? "rgba(255,255,255,0.02)"
-                                                    : "rgba(255,255,255,0.035)",
+                                            border: "1px solid rgba(255,255,255,0.08)",
+                                            borderRadius: 2,
+                                            overflow: "hidden",
                                         }}
                                     >
-                                        <Box sx={{ px: 1.5, py: 1.25 }}>
-                                            <Typography variant="body2">
-                                                #{state.history.length - index}
-                                            </Typography>
+                                        <Box
+                                            sx={{
+                                                display: "grid",
+                                                gridTemplateColumns:
+                                                    "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)",
+                                                gap: 0,
+                                                backgroundColor: "rgba(255,255,255,0.05)",
+                                                borderBottom:
+                                                    "1px solid rgba(255,255,255,0.08)",
+                                            }}
+                                        >
+                                            <Box sx={{ px: 1.5, py: 1 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    {t("dynamicTool.historyRound")}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ px: 1.5, py: 1 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    {t("dynamicTool.historyTvShort")}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ px: 1.5, py: 1 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    {t("dynamicTool.historyWaitShort")}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ px: 1.5, py: 1 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    {t("dynamicTool.historyParityShort")}
+                                                </Typography>
+                                            </Box>
                                         </Box>
-                                        <Box sx={{ px: 1.5, py: 1.25 }}>
-                                            <Typography variant="body2">
-                                                {entry.mode === "tv" ? entry.tv : "-"}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ px: 1.5, py: 1.25 }}>
-                                            <Typography variant="body2">
-                                                {entry.wait}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ px: 1.5, py: 1.25 }}>
-                                            <Typography variant="body2">
-                                                {entry.parity}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ px: 1.5, py: 1.25 }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {entry.mode === "tv"
-                                                    ? t("dynamicTool.modeTv")
-                                                    : t("dynamicTool.modeNoTv")}
-                                            </Typography>
-                                        </Box>
+                                        {tvHistory.map(
+                                            (
+                                                entry: DynamicToolHistoryEntry,
+                                                index: number
+                                            ) => (
+                                                <Box
+                                                    key={entry.id}
+                                                    sx={{
+                                                        display: "grid",
+                                                        gridTemplateColumns:
+                                                            "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)",
+                                                        gap: 0,
+                                                        borderBottom:
+                                                            index === tvHistory.length - 1
+                                                                ? "none"
+                                                                : "1px solid rgba(255,255,255,0.06)",
+                                                        backgroundColor:
+                                                            index % 2 === 0
+                                                                ? "rgba(255,255,255,0.02)"
+                                                                : "rgba(255,255,255,0.035)",
+                                                    }}
+                                                >
+                                                    <Box sx={{ px: 1.5, py: 1.25 }}>
+                                                        <Typography variant="body2">
+                                                            #{tvHistory.length - index}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ px: 1.5, py: 1.25 }}>
+                                                        <Typography variant="body2">
+                                                            {entry.tv}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ px: 1.5, py: 1.25 }}>
+                                                        <Typography variant="body2">
+                                                            {entry.wait}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ px: 1.5, py: 1.25 }}>
+                                                        <Typography variant="body2">
+                                                            {entry.parity}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            )
+                                        )}
                                     </Box>
-                                )
-                            )}
+                                </Box>
+                            ) : null}
+
+                            {noTvHistory.length > 0 ? (
+                                <Box>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ mb: 1 }}
+                                    >
+                                        {t("dynamicTool.modeNoTv")}
+                                    </Typography>
+                                    <Box
+                                        sx={{
+                                            border: "1px solid rgba(255,255,255,0.08)",
+                                            borderRadius: 2,
+                                            overflow: "hidden",
+                                        }}
+                                    >
+                                        <Box
+                                            sx={{
+                                                display: "grid",
+                                                gridTemplateColumns:
+                                                    "72px minmax(88px, 1fr) minmax(88px, 1fr)",
+                                                gap: 0,
+                                                backgroundColor: "rgba(255,255,255,0.05)",
+                                                borderBottom:
+                                                    "1px solid rgba(255,255,255,0.08)",
+                                            }}
+                                        >
+                                            <Box sx={{ px: 1.5, py: 1 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    {t("dynamicTool.historyRound")}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ px: 1.5, py: 1 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    {t("dynamicTool.historyWaitShort")}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ px: 1.5, py: 1 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    {t("dynamicTool.historyParityShort")}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                        {noTvHistory.map(
+                                            (
+                                                entry: DynamicToolHistoryEntry,
+                                                index: number
+                                            ) => (
+                                                <Box
+                                                    key={entry.id}
+                                                    sx={{
+                                                        display: "grid",
+                                                        gridTemplateColumns:
+                                                            "72px minmax(88px, 1fr) minmax(88px, 1fr)",
+                                                        gap: 0,
+                                                        borderBottom:
+                                                            index === noTvHistory.length - 1
+                                                                ? "none"
+                                                                : "1px solid rgba(255,255,255,0.06)",
+                                                        backgroundColor:
+                                                            index % 2 === 0
+                                                                ? "rgba(255,255,255,0.02)"
+                                                                : "rgba(255,255,255,0.035)",
+                                                    }}
+                                                >
+                                                    <Box sx={{ px: 1.5, py: 1.25 }}>
+                                                        <Typography variant="body2">
+                                                            #{noTvHistory.length - index}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ px: 1.5, py: 1.25 }}>
+                                                        <Typography variant="body2">
+                                                            {entry.wait}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ px: 1.5, py: 1.25 }}>
+                                                        <Typography variant="body2">
+                                                            {entry.parity}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            )
+                                        )}
+                                    </Box>
+                                </Box>
+                            ) : null}
                         </Box>
                     )}
                 </Paper>

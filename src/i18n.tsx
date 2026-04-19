@@ -424,7 +424,6 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             historyTvShort: "_TV",
             historyWaitShort: "_Remaining",
             historyParityShort: "_Parity",
-            historyMode: "Mode",
             emptyHistory:
                 "Each calculation will append the current _TV and _Remaining Wait here.",
         },
@@ -799,7 +798,6 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             historyTvShort: "_TV",
             historyWaitShort: "_\u5269\u4f59",
             historyParityShort: "_\u5947\u5076",
-            historyMode: "\u6a21\u5f0f",
             emptyHistory:
                 "\u6bcf\u6b21\u8ba1\u7b97\u540e\uff0c\u672c\u6b21\u7684 _TV\u8fc7\u5e27\u65f6\u95f4 \u548c _\u5269\u4f59\u5e27\u6570\u65f6\u95f4\u90fd\u4f1a\u8bb0\u5f55\u5728\u8fd9\u91cc\u3002",
         },
