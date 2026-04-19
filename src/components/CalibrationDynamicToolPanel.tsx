@@ -398,24 +398,34 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     <>
                         <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
                             <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                                {t("dynamicTool.correctSection")}
+                                {t("dynamicTool.currentResultSection")}
                             </Typography>
-                            <Box sx={{ display: "grid", gap: 1.5 }}>
-                                <TextField
-                                    label={t("dynamicTool.actualHit")}
-                                    value={state.actualHit}
-                                    onChange={(event) =>
-                                        setField("actualHit", event.target.value)
-                                    }
-                                    fullWidth
+                            <Box
+                                sx={{
+                                    display: "grid",
+                                    gridTemplateColumns:
+                                        "repeat(auto-fit, minmax(160px, 1fr))",
+                                    gap: 1.5,
+                                }}
+                            >
+                                <ReadonlyValue
+                                    label={t("dynamicTool.currentTvLabel")}
+                                    value={state.currentTv}
                                 />
-                                <Button
-                                    variant="contained"
-                                    onClick={handleCorrectRate}
-                                >
-                                    {t("dynamicTool.correctAction")}
-                                </Button>
+                                <ReadonlyValue
+                                    label={t("dynamicTool.currentWaitLabel")}
+                                    value={state.currentWait}
+                                />
                             </Box>
+                            {state.currentTotal ? (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{ mt: 1.5 }}
+                                >
+                                    {t("dynamicTool.physicalTotal")}: {state.currentTotal} ms
+                                </Typography>
+                            ) : null}
                         </Paper>
 
                         <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
@@ -450,44 +460,59 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                 />
                             </Box>
                         </Paper>
+
+                        <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                                {t("dynamicTool.correctSection")}
+                            </Typography>
+                            <Box sx={{ display: "grid", gap: 1.5 }}>
+                                <TextField
+                                    label={t("dynamicTool.actualHit")}
+                                    value={state.actualHit}
+                                    onChange={(event) =>
+                                        setField("actualHit", event.target.value)
+                                    }
+                                    fullWidth
+                                />
+                                <Button
+                                    variant="contained"
+                                    onClick={handleCorrectRate}
+                                >
+                                    {t("dynamicTool.correctAction")}
+                                </Button>
+                            </Box>
+                        </Paper>
                     </>
                 )}
 
-                <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                        {t("dynamicTool.currentResultSection")}
-                    </Typography>
-                    <Box
-                        sx={{
-                            display: "grid",
-                            gridTemplateColumns:
-                                state.useTv === "tv"
-                                    ? "repeat(auto-fit, minmax(160px, 1fr))"
-                                    : "1fr",
-                            gap: 1.5,
-                        }}
-                    >
-                        {state.useTv === "tv" && (
-                            <ReadonlyValue
-                                label={t("dynamicTool.currentTvLabel")}
-                                value={state.currentTv}
-                            />
-                        )}
-                        <ReadonlyValue
-                            label={t("dynamicTool.currentWaitLabel")}
-                            value={state.currentWait}
-                        />
-                    </Box>
-                    {state.currentTotal ? (
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mt: 1.5 }}
-                        >
-                            {t("dynamicTool.physicalTotal")}: {state.currentTotal} ms
+                {state.useTv !== "tv" && (
+                    <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                            {t("dynamicTool.currentResultSection")}
                         </Typography>
-                    ) : null}
-                </Paper>
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr",
+                                gap: 1.5,
+                            }}
+                        >
+                            <ReadonlyValue
+                                label={t("dynamicTool.currentWaitLabel")}
+                                value={state.currentWait}
+                            />
+                        </Box>
+                        {state.currentTotal ? (
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ mt: 1.5 }}
+                            >
+                                {t("dynamicTool.physicalTotal")}: {state.currentTotal} ms
+                            </Typography>
+                        ) : null}
+                    </Paper>
+                )}
 
                 <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
                     <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
