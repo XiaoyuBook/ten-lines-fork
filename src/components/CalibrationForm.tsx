@@ -41,7 +41,6 @@ import type {
     ExtendedGeneratorState,
     ExtendedWildGeneratorState,
     FRLGContiguousSeedEntry,
-    IVRange,
 } from "../tenLines/generated";
 import { fetchBingo, getBingoActive, useBingoBoard } from "./BingoPage";
 import CalibrationComparePanel, {
@@ -61,7 +60,6 @@ import RangeInput from "./RangeInput";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import WildEncounterSelector from "./WildEncounterSelector";
 import { filterNatureOptions } from "../utils/natureSearch";
-import IvImageImportPanel from "./IvImageImportPanel";
 
 const CALIBRATION_COMPARE_COLUMN_OPTIONS: CalibrationCompareColumn[] = [
     "seed",
@@ -261,10 +259,6 @@ export default function CalibrationForm({
 
     const isStatic = calibrationFormState.method <= STATIC_4;
     const isFRLG = game.startsWith("fr") || game.startsWith("lg");
-    const ivObservationLineCount = calibrationFormState.ivCalculatorText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line !== "").length;
     const isFRLGE = isFRLG || game.startsWith("e_");
     const isSwitch = game.endsWith("nx");
 
@@ -795,51 +789,6 @@ export default function CalibrationForm({
         stringify: (option: FRLGContiguousSeedEntry) =>
             `${hexSeed(option.initialSeed, 16)}`,
     });
-
-    const appendIvObservationLine = async (
-        level: number,
-        stats: number[]
-    ) => {
-        const nextLine = [level, ...stats].join(" ");
-        const nextText = [
-            ...calibrationFormState.ivCalculatorText
-                .split("\n")
-                .map((line) => line.trim())
-                .filter((line) => line !== ""),
-            nextLine,
-        ].join("\n");
-        const parsedLines = nextText.split("\n").map((line) =>
-            line.split(" ").map((entry) => parseInt(entry, 10))
-        );
-        const tenLines = await fetchTenLines();
-        const ivRanges = isStatic
-            ? await tenLines.calc_ivs_static(
-                  calibrationFormState.staticCategory,
-                  calibrationFormState.staticPokemon,
-                  parsedLines,
-                  calibrationFormState.nature
-              )
-            : await tenLines.calc_ivs_generic(
-                  calibrationFormState.wildPokemon & 0x7ff,
-                  calibrationFormState.wildPokemon >> 11,
-                  parsedLines,
-                  calibrationFormState.nature
-              );
-
-        if (ivRanges.some((range: IVRange) => range.min === 32)) {
-            throw new Error("No possible IV result");
-        }
-
-        setIvRangesAreValid(true);
-        setCalibrationFormState((data) => ({
-            ...data,
-            ivCalculatorText: nextText,
-            ivRangeStrings: ivRanges.map((range: IVRange) => [
-                range.min.toString(),
-                range.max.toString(),
-            ]),
-        }));
-    };
 
     if (hidden) {
         return null;
@@ -1462,13 +1411,6 @@ export default function CalibrationForm({
                         </TextField>
                         {calibrationFormState.nature !== -1 ? (
                             <React.Fragment>
-                                <IvImageImportPanel
-                                    currentLineCount={ivObservationLineCount}
-                                    natureSelected={
-                                        calibrationFormState.nature !== -1
-                                    }
-                                    onAppendLine={appendIvObservationLine}
-                                />
                                 <IvCalculator
                                     onChange={(_event, value) => {
                                         setCalibrationFormState((data) => ({
