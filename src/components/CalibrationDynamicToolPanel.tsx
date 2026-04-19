@@ -13,13 +13,16 @@ import { memo, useMemo, useState } from "react";
 import useLocalStorage from "../hooks/useLocalStorage";
 import { useI18n } from "../i18n";
 
+const RATE_1X1 = 0.06;
 const RATE_2X2 = 0.12;
 const REFRESH_MS = 16.66667;
 const TV_STEP = 314;
-const DEFAULT_PARITY_FRAMES = 180;
+const LONG_PRESS_BONUS = 88.8;
+const PARITY_SHIFT_MS = 17;
 const DEFAULT_BASE_TIME = 34600;
 const DEFAULT_GOAL_WAIT = 5000;
 const DEFAULT_TV_RATE = 18.71;
+const DEFAULT_PARITY_TIME = 1520;
 const MAX_HISTORY_ITEMS = 8;
 const STORAGE_KEY = "calibration-dynamic-tool";
 
@@ -29,6 +32,7 @@ interface DynamicToolHistoryEntry {
     id: string;
     tv: string;
     wait: string;
+    parity: string;
     mode: DynamicToolMode;
 }
 
@@ -36,12 +40,16 @@ interface DynamicToolStoredState {
     targetAdv: string;
     actualHit: string;
     tvRate: string;
+    parityTime: string;
     lastTv: string;
     lastWait: string;
+    lastParity: string;
     currentTv: string;
     currentWait: string;
+    currentParity: string;
     currentTotal: string;
     lockedTv: string;
+    badTvSpot: string;
     useTv: DynamicToolMode;
     forceShift: boolean;
     history: DynamicToolHistoryEntry[];
@@ -50,17 +58,80 @@ interface DynamicToolStoredState {
 const DEFAULT_STATE: DynamicToolStoredState = {
     targetAdv: "",
     actualHit: "",
-    tvRate: DEFAULT_TV_RATE.toFixed(4),
+    tvRate: DEFAULT_TV_RATE.toFixed(6),
+    parityTime: DEFAULT_PARITY_TIME.toFixed(0),
     lastTv: "",
     lastWait: "",
+    lastParity: "",
     currentTv: "",
     currentWait: "",
+    currentParity: "",
     currentTotal: "",
     lockedTv: "",
+    badTvSpot: "",
     useTv: "tv",
     forceShift: false,
     history: [],
 };
+
+function normalizeState(value: unknown): DynamicToolStoredState {
+    const current =
+        value && typeof value === "object"
+            ? (value as Partial<DynamicToolStoredState>)
+            : {};
+
+    const history = Array.isArray(current.history)
+        ? current.history.map((entry) => {
+              const nextEntry =
+                  entry && typeof entry === "object"
+                      ? (entry as Partial<DynamicToolHistoryEntry>)
+                      : {};
+
+              return {
+                  id:
+                      typeof nextEntry.id === "string" && nextEntry.id
+                          ? nextEntry.id
+                          : globalThis.crypto?.randomUUID?.() ??
+                            `${Date.now()}-${Math.random()}`,
+                  tv:
+                      typeof nextEntry.tv === "string"
+                          ? nextEntry.tv
+                          : "",
+                  wait:
+                      typeof nextEntry.wait === "string"
+                          ? nextEntry.wait
+                          : "",
+                  parity:
+                      typeof nextEntry.parity === "string"
+                          ? nextEntry.parity
+                          : "",
+                  mode:
+                      nextEntry.mode === "no-tv"
+                          ? ("no-tv" as DynamicToolMode)
+                          : ("tv" as DynamicToolMode),
+              };
+          })
+        : [];
+
+    return {
+        ...DEFAULT_STATE,
+        ...current,
+        parityTime:
+            typeof current.parityTime === "string"
+                ? current.parityTime
+                : DEFAULT_STATE.parityTime,
+        lastParity:
+            typeof current.lastParity === "string" ? current.lastParity : "",
+        currentParity:
+            typeof current.currentParity === "string"
+                ? current.currentParity
+                : "",
+        badTvSpot:
+            typeof current.badTvSpot === "string" ? current.badTvSpot : "",
+        useTv: current.useTv === "no-tv" ? "no-tv" : "tv",
+        history,
+    };
+}
 
 function parseNumber(value: string) {
     const trimmed = value.trim();
@@ -70,24 +141,28 @@ function parseNumber(value: string) {
     return Number(trimmed);
 }
 
+function getParityFrames(ms: number) {
+    return ms * RATE_1X1 + LONG_PRESS_BONUS;
+}
+
 function isPerfectStable(ms: number) {
     const cycles = ms / REFRESH_MS;
     const fraction = cycles - Math.floor(cycles);
-    return fraction >= 0.45 && fraction <= 0.55;
+    return fraction >= 0.43 && fraction <= 0.57;
 }
 
-function findPerfectTv(rawMs: number, mustShift: boolean, oldTv: number) {
-    let target = Math.round(rawMs);
-    if (mustShift && Math.abs(target - oldTv) < 5) {
-        target += 8;
-    }
+function findSafeTv(rawMs: number, badSpot: number) {
+    const target = Math.round(rawMs);
 
-    for (let i = 0; i < 20; i += 1) {
-        if (isPerfectStable(target + i)) {
-            return target + i;
+    for (let i = 0; i < 50; i += 1) {
+        const positive = target + i;
+        if (isPerfectStable(positive) && Math.abs(positive - badSpot) > 4) {
+            return positive;
         }
-        if (isPerfectStable(target - i)) {
-            return target - i;
+
+        const negative = target - i;
+        if (isPerfectStable(negative) && Math.abs(negative - badSpot) > 4) {
+            return negative;
         }
     }
 
@@ -97,12 +172,14 @@ function findPerfectTv(rawMs: number, mustShift: boolean, oldTv: number) {
 function createHistoryEntry(
     tv: string,
     wait: string,
+    parity: string,
     mode: DynamicToolMode
 ): DynamicToolHistoryEntry {
     return {
         id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
         tv,
         wait,
+        parity,
         mode,
     };
 }
@@ -129,7 +206,7 @@ function ReadonlyValue({
 
 const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() {
     const { t } = useI18n();
-    const [state, setState] = useLocalStorage<DynamicToolStoredState>(
+    const [storedState, setState] = useLocalStorage<DynamicToolStoredState>(
         STORAGE_KEY,
         DEFAULT_STATE
     );
@@ -138,6 +215,11 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         "success" | "warning"
     >("success");
 
+    const state = useMemo(
+        () => normalizeState(storedState),
+        [storedState]
+    );
+
     const currentTvRate = useMemo(() => {
         const parsed = parseNumber(state.tvRate);
         return Number.isNaN(parsed) ? DEFAULT_TV_RATE : parsed;
@@ -145,7 +227,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
 
     const setField = (key: keyof DynamicToolStoredState, value: string) => {
         setState((current: DynamicToolStoredState) => ({
-            ...current,
+            ...normalizeState(current),
             [key]: value,
         }));
     };
@@ -153,93 +235,137 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
     const appendHistory = (
         current: DynamicToolStoredState,
         tv: string,
-        wait: string
+        wait: string,
+        parity: string
     ) => [
-        createHistoryEntry(tv, wait, current.useTv),
+        createHistoryEntry(tv, wait, parity, current.useTv),
         ...current.history,
     ].slice(0, MAX_HISTORY_ITEMS);
 
     const handleCalculate = () => {
         const targetAdv = parseNumber(state.targetAdv);
+        const parityTime = parseNumber(state.parityTime);
 
-        if (Number.isNaN(targetAdv)) {
+        if (Number.isNaN(targetAdv) || Number.isNaN(parityTime)) {
             setFeedbackSeverity("warning");
             setFeedback(t("dynamicTool.invalidCalculation"));
             return;
         }
 
         if (state.useTv === "no-tv") {
-            const needed =
-                targetAdv -
-                DEFAULT_PARITY_FRAMES -
-                DEFAULT_BASE_TIME * RATE_2X2;
-            const finalWait = Math.round(needed / RATE_2X2);
+            const finalWait = Math.round(
+                (targetAdv -
+                    getParityFrames(parityTime) -
+                    DEFAULT_BASE_TIME * RATE_2X2) /
+                    RATE_2X2
+            );
 
-            setState((current: DynamicToolStoredState) => ({
-                ...current,
-                currentTv: t("dynamicTool.notUsedShort"),
-                currentWait: finalWait.toString(),
-                currentTotal: (DEFAULT_BASE_TIME + finalWait).toFixed(0),
-                lastTv: "0",
-                lastWait: finalWait.toString(),
-                history: appendHistory(current, "0", finalWait.toString()),
-                forceShift: false,
-            }));
+            setState((current: DynamicToolStoredState) => {
+                const next = normalizeState(current);
+                return {
+                    ...next,
+                    currentTv: t("dynamicTool.notUsedShort"),
+                    currentWait: finalWait.toString(),
+                    currentParity: parityTime.toFixed(0),
+                    currentTotal: (DEFAULT_BASE_TIME + finalWait).toFixed(0),
+                    lastTv: "0",
+                    lastWait: finalWait.toString(),
+                    lastParity: parityTime.toFixed(0),
+                    history: appendHistory(
+                        next,
+                        "0",
+                        finalWait.toString(),
+                        parityTime.toFixed(0)
+                    ),
+                    forceShift: false,
+                    badTvSpot: "",
+                };
+            });
             setFeedbackSeverity("success");
             setFeedback(t("dynamicTool.savedPreviousRound"));
             return;
         }
 
+        const parityFrames = getParityFrames(parityTime);
+        const baseFrames = DEFAULT_BASE_TIME * RATE_2X2;
         const lockedTv = parseNumber(state.lockedTv);
-        const finalTv =
-            lockedTv > 0 && !state.forceShift
-                ? lockedTv
-                : findPerfectTv(
-                      (targetAdv -
-                          DEFAULT_PARITY_FRAMES -
-                          (DEFAULT_BASE_TIME + DEFAULT_GOAL_WAIT) * RATE_2X2) /
-                          currentTvRate,
-                      state.forceShift,
-                      lockedTv > 0 ? lockedTv : 0
-                  );
+        const badTvSpot = parseNumber(state.badTvSpot);
+        let finalTv = 0;
+        let finalWait = 0;
+        let needsShift = state.forceShift;
 
-        const actualTvAdv = finalTv * currentTvRate;
-        const remainingAdv =
-            targetAdv -
-            DEFAULT_PARITY_FRAMES -
-            DEFAULT_BASE_TIME * RATE_2X2 -
-            actualTvAdv;
-        const finalWait = Math.round(remainingAdv / RATE_2X2);
+        if (lockedTv > 0 && !state.forceShift) {
+            const remainNeeded =
+                targetAdv - parityFrames - baseFrames - lockedTv * currentTvRate;
+            finalWait = Math.round(remainNeeded / RATE_2X2);
 
-        setState((current: DynamicToolStoredState) => ({
-            ...current,
-            currentTv: finalTv.toString(),
-            currentWait: finalWait.toString(),
-            currentTotal: (DEFAULT_BASE_TIME + finalTv + finalWait).toFixed(0),
-            lastTv: finalTv.toString(),
-            lastWait: finalWait.toString(),
-            lockedTv: finalTv.toString(),
-            history: appendHistory(
-                current,
-                finalTv.toString(),
-                finalWait.toString()
-            ),
-            forceShift: false,
-        }));
+            if (finalWait >= 2000 && finalWait <= 10000) {
+                finalTv = lockedTv;
+            } else {
+                needsShift = true;
+            }
+        }
+
+        if (lockedTv <= 0 || needsShift) {
+            const rawTv =
+                (targetAdv -
+                    parityFrames -
+                    baseFrames -
+                    DEFAULT_GOAL_WAIT * RATE_2X2) /
+                currentTvRate;
+            finalTv = findSafeTv(
+                rawTv,
+                Number.isNaN(badTvSpot) ? 0 : badTvSpot
+            );
+            finalWait = Math.round(
+                (targetAdv - parityFrames - baseFrames - finalTv * currentTvRate) /
+                    RATE_2X2
+            );
+        }
+
+        setState((current: DynamicToolStoredState) => {
+            const next = normalizeState(current);
+            return {
+                ...next,
+                currentTv: finalTv.toString(),
+                currentWait: finalWait.toString(),
+                currentParity: parityTime.toFixed(0),
+                currentTotal: (DEFAULT_BASE_TIME + finalTv + finalWait).toFixed(0),
+                lastTv: finalTv.toString(),
+                lastWait: finalWait.toString(),
+                lastParity: parityTime.toFixed(0),
+                lockedTv: finalTv.toString(),
+                history: appendHistory(
+                    next,
+                    finalTv.toString(),
+                    finalWait.toString(),
+                    parityTime.toFixed(0)
+                ),
+                forceShift: false,
+                badTvSpot: "",
+            };
+        });
+
         setFeedbackSeverity("success");
         setFeedback(
-            lockedTv > 0 && !state.forceShift
+            lockedTv > 0 && !needsShift
                 ? t("dynamicTool.savedPreviousRoundLocked")
                 : t("dynamicTool.savedPreviousRound")
         );
     };
 
     const handleCorrectRate = () => {
+        const targetAdv = parseNumber(state.targetAdv);
         const lastTv = parseNumber(state.lastTv);
         const lastWait = parseNumber(state.lastWait);
+        const lastParity = parseNumber(state.lastParity);
         let actualHit = parseNumber(state.actualHit);
 
-        if ([lastTv, lastWait, actualHit].some((value) => Number.isNaN(value))) {
+        if (
+            [targetAdv, lastTv, lastWait, lastParity, actualHit].some((value) =>
+                Number.isNaN(value)
+            )
+        ) {
             setFeedbackSeverity("warning");
             setFeedback(t("dynamicTool.invalidCorrection"));
             return;
@@ -251,34 +377,55 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
             return;
         }
 
+        let nextParityTime = parseNumber(state.parityTime);
+        let nextForceShift = false;
+        let nextBadTvSpot = "";
+        let feedbackKey = "dynamicTool.rateUpdated";
+
+        if (actualHit % 2 !== targetAdv % 2) {
+            nextParityTime = lastParity + PARITY_SHIFT_MS;
+            nextForceShift = true;
+            feedbackKey = "dynamicTool.parityAdjusted";
+        }
+
         const expected =
-            DEFAULT_PARITY_FRAMES +
+            getParityFrames(lastParity) +
             (DEFAULT_BASE_TIME + lastWait) * RATE_2X2 +
             lastTv * currentTvRate;
         const diff = actualHit - expected;
-        let nextForceShift = false;
-        let feedbackKey = "dynamicTool.rateUpdated";
 
-        if (Math.abs(diff) >= 200) {
-            nextForceShift = true;
+        if (Math.abs(diff) >= 214 && Math.abs(diff) <= 414) {
             actualHit = diff > 0 ? actualHit - TV_STEP : actualHit + TV_STEP;
+            nextBadTvSpot = Math.round(lastTv).toString();
+            nextForceShift = true;
             feedbackKey = "dynamicTool.detectedShift";
-        } else if (Math.abs(diff) < 1000) {
-            feedbackKey = "dynamicTool.keepLockedTv";
+        } else {
+            if (Math.abs(diff) > 800) {
+                nextForceShift = true;
+            }
+            if (feedbackKey !== "dynamicTool.parityAdjusted") {
+                feedbackKey = "dynamicTool.keepLockedTv";
+            }
         }
 
         const nextTvRate =
             (actualHit -
-                (DEFAULT_PARITY_FRAMES +
+                (getParityFrames(nextParityTime) +
                     (DEFAULT_BASE_TIME + lastWait) * RATE_2X2)) /
             lastTv;
 
-        setState((current: DynamicToolStoredState) => ({
-            ...current,
-            tvRate: nextTvRate.toFixed(4),
-            forceShift: nextForceShift,
-            lockedTv: Math.round(lastTv).toString(),
-        }));
+        setState((current: DynamicToolStoredState) => {
+            const next = normalizeState(current);
+            return {
+                ...next,
+                tvRate: nextTvRate.toFixed(6),
+                parityTime: nextParityTime.toFixed(0),
+                forceShift: nextForceShift,
+                lockedTv: Math.round(lastTv).toString(),
+                badTvSpot: nextBadTvSpot,
+            };
+        });
+
         setFeedbackSeverity("success");
         setFeedback(t(feedbackKey));
     };
@@ -339,7 +486,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         variant={state.useTv === "tv" ? "contained" : "outlined"}
                         onClick={() => {
                             setState((current: DynamicToolStoredState) => ({
-                                ...current,
+                                ...normalizeState(current),
                                 useTv: "tv",
                             }));
                         }}
@@ -352,7 +499,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         }
                         onClick={() => {
                             setState((current: DynamicToolStoredState) => ({
-                                ...current,
+                                ...normalizeState(current),
                                 useTv: "no-tv",
                             }));
                         }}
@@ -365,7 +512,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     color="text.secondary"
                     sx={{ mt: 1.25 }}
                 >
-                    {t("dynamicTool.currentRate")}: {currentTvRate.toFixed(4)}
+                    {t("dynamicTool.currentRate")}: {currentTvRate.toFixed(6)}
                 </Typography>
             </Paper>
 
@@ -385,8 +532,16 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         />
                         <ReadonlyValue
                             label={t("dynamicTool.baseTime")}
-                            value={DEFAULT_BASE_TIME.toString()}
+                            value={DEFAULT_BASE_TIME.toFixed(0)}
                             helperText={t("dynamicTool.baseTimeHint")}
+                        />
+                        <TextField
+                            label={t("dynamicTool.parityTime")}
+                            value={state.parityTime}
+                            onChange={(event) =>
+                                setField("parityTime", event.target.value)
+                            }
+                            fullWidth
                         />
                         <Button variant="contained" onClick={handleCalculate}>
                             {t("dynamicTool.calculateAction")}
@@ -415,6 +570,10 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                 <ReadonlyValue
                                     label={t("dynamicTool.currentWaitLabel")}
                                     value={state.currentWait}
+                                />
+                                <ReadonlyValue
+                                    label={t("dynamicTool.currentParityLabel")}
+                                    value={state.currentParity}
                                 />
                             </Box>
                             {state.currentTotal ? (
@@ -458,6 +617,15 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                     helperText={t("dynamicTool.lastWaitHint")}
                                     fullWidth
                                 />
+                                <TextField
+                                    label={t("dynamicTool.lastParity")}
+                                    value={state.lastParity}
+                                    onChange={(event) =>
+                                        setField("lastParity", event.target.value)
+                                    }
+                                    helperText={t("dynamicTool.lastParityHint")}
+                                    fullWidth
+                                />
                             </Box>
                         </Paper>
 
@@ -493,13 +661,18 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         <Box
                             sx={{
                                 display: "grid",
-                                gridTemplateColumns: "1fr",
+                                gridTemplateColumns:
+                                    "repeat(auto-fit, minmax(160px, 1fr))",
                                 gap: 1.5,
                             }}
                         >
                             <ReadonlyValue
                                 label={t("dynamicTool.currentWaitLabel")}
                                 value={state.currentWait}
+                            />
+                            <ReadonlyValue
+                                label={t("dynamicTool.currentParityLabel")}
+                                value={state.currentParity}
                             />
                         </Box>
                         {state.currentTotal ? (
@@ -554,6 +727,9 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                     )}
                                     <Typography variant="body2">
                                         _剩余: {entry.wait} ms
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        _奇偶: {entry.parity} ms
                                     </Typography>
                                     <Typography
                                         variant="caption"

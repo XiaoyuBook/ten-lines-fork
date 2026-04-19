@@ -382,16 +382,20 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             targetAdv: "Target Advances",
             baseTime: "Base Time (ms)",
             baseTimeHint: "Fixed internal base time for this tool",
+            parityTime: "Parity Time (ms)",
             calculateAction: "Calculate",
             actualHit: "Actual Hit Advances",
             correctAction: "Correct TV Rate",
             currentRate: "Current TV Rate",
             lastTv: "Previous _TV Time",
             lastWait: "Previous _Remaining Wait",
+            lastParity: "Previous _Parity Time",
             lastTvHint: "Filled automatically after each calculation",
             lastWaitHint: "Filled automatically after each calculation",
+            lastParityHint: "Enter or review the previous parity time here",
             currentTvLabel: "Current _TV Time",
             currentWaitLabel: "Current _Remaining Wait",
+            currentParityLabel: "Current _Parity Time",
             physicalTotal: "Physical Total Time",
             invalidCalculation: "Please enter valid values before calculating.",
             needAdvNegative:
@@ -403,10 +407,12 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "This round's _TV Time and _Remaining Wait were saved for the next correction.",
             savedPreviousRoundLocked:
                 "Current result calculated with locked TV time and saved as the next previous round.",
+            parityAdjusted:
+                "Parity lane adjusted. The next calculation will use the shifted parity time.",
             detectedShift:
                 "Detected a 314 shift. The next round will force a physical phase shift.",
             keepLockedTv:
-                "Deviation is small. The next round will keep the previous TV time locked.",
+                "Deviation recorded. TV rate was updated and the next round will reuse the previous TV time when safe.",
             clearedState: "All cached state has been cleared.",
             clearAll: "Clear All",
             notUsedShort: "Not used",
@@ -735,16 +741,21 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             targetAdv: "\u76ee\u6807\u5e27\u6570",
             baseTime: "\u57fa\u7840\u4fdd\u5e95\u65f6\u95f4 (ms)",
             baseTimeHint: "\u6b64\u5de5\u5177\u5185\u90e8\u4f7f\u7528\u56fa\u5b9a\u4fdd\u5e95\u65f6\u95f4",
+            parityTime: "\u5947\u5076\u65f6\u95f4 (ms)",
             calculateAction: "\u8ba1\u7b97",
             actualHit: "\u5b9e\u9645\u547d\u4e2d\u5e27\u6570",
             correctAction: "\u4fee\u6b63 TV \u500d\u7387",
             currentRate: "\u5f53\u524d TV \u500d\u7387",
             lastTv: "\u4e0a\u4e00\u8f6e _TV\u8fc7\u5e27\u65f6\u95f4",
             lastWait: "\u4e0a\u4e00\u8f6e _\u5269\u4f59\u5e27\u6570\u65f6\u95f4",
+            lastParity: "\u4e0a\u4e00\u8f6e _\u5947\u5076\u65f6\u95f4",
             lastTvHint: "\u6bcf\u6b21\u8ba1\u7b97\u540e\u4f1a\u81ea\u52a8\u56de\u586b",
             lastWaitHint: "\u6bcf\u6b21\u8ba1\u7b97\u540e\u4f1a\u81ea\u52a8\u56de\u586b",
+            lastParityHint:
+                "\u5728\u8fd9\u91cc\u67e5\u770b\u6216\u8f93\u5165\u4e0a\u4e00\u8f6e\u7684\u5947\u5076\u65f6\u95f4",
             currentTvLabel: "\u672c\u6b21 _TV\u8fc7\u5e27\u65f6\u95f4",
             currentWaitLabel: "\u672c\u6b21 _\u5269\u4f59\u5e27\u6570\u65f6\u95f4",
+            currentParityLabel: "\u672c\u6b21 _\u5947\u5076\u65f6\u95f4",
             physicalTotal: "\u7269\u7406\u603b\u65f6\u95f4",
             invalidCalculation: "\u8bf7\u5148\u8f93\u5165\u6709\u6548\u7684\u8ba1\u7b97\u53c2\u6570\u3002",
             needAdvNegative:
@@ -759,10 +770,12 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u672c\u8f6e\u7684 _TV\u8fc7\u5e27\u65f6\u95f4 \u548c _\u5269\u4f59\u5e27\u6570\u65f6\u95f4\u5df2\u4fdd\u5b58\uff0c\u4e0b\u4e00\u8f6e\u4fee\u6b63\u53ef\u76f4\u63a5\u4f7f\u7528\u3002",
             savedPreviousRoundLocked:
                 "\u672c\u6b21\u7ed3\u679c\u4f7f\u7528\u4e86\u9501\u5b9a\u7684 TV \u65f6\u95f4\uff0c\u5e76\u5df2\u4f5c\u4e3a\u4e0b\u4e00\u8f6e\u7684\u4e0a\u4e00\u8f6e\u6570\u636e\u4fdd\u5b58\u3002",
+            parityAdjusted:
+                "\u5947\u5076\u8f68\u9053\u5df2\u8c03\u6574\uff0c\u4e0b\u4e00\u8f6e\u4f1a\u4f7f\u7528\u65b0\u7684\u5947\u5076\u65f6\u95f4\u3002",
             detectedShift:
                 "\u68c0\u6d4b\u5230 314 \u6ce2\u52a8\uff0c\u4e0b\u4e00\u8f6e\u4f1a\u5f3a\u5236\u8fdb\u884c\u7269\u7406\u76f8\u4f4d\u4f4d\u79fb\u3002",
             keepLockedTv:
-                "\u504f\u5dee\u8f83\u5c0f\uff0c\u4e0b\u4e00\u8f6e\u4f1a\u4fdd\u6301\u4e0a\u4e00\u8f6e TV \u65f6\u95f4\u4e0d\u53d8\u3002",
+                "\u5df2\u8bb0\u5f55\u504f\u5dee\uff0cTV \u500d\u7387\u5df2\u66f4\u65b0\uff0c\u4e14\u4e0b\u4e00\u8f6e\u4f1a\u5728\u5b89\u5168\u65f6\u5c3d\u91cf\u6cbf\u7528\u4e0a\u4e00\u8f6e TV \u65f6\u95f4\u3002",
             clearedState:
                 "\u6240\u6709\u5de5\u5177\u72b6\u6001\u5df2\u6e05\u7a7a\uff0c\u4e0d\u4f1a\u518d\u53d7\u4e0a\u6b21\u4f7f\u7528\u5f71\u54cd\u3002",
             clearAll: "\u6e05\u7a7a\u5168\u90e8\u72b6\u6001",
