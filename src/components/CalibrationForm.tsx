@@ -53,6 +53,7 @@ import CalibrationComparePanel, {
 } from "./CalibrationComparePanel";
 import CalibrationTable from "./CalibrationTable";
 import CalibrationDynamicToolPanel from "./CalibrationDynamicToolPanel";
+import { setDynamicToolTargetAdv } from "./calibrationDynamicToolStorage";
 import IvCalculator from "./IvCalculator";
 import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";
@@ -440,10 +441,11 @@ export default function CalibrationForm({
         ),
     }), [compareFloatingMinHeight]);
 
-    const addCompareTarget = (row: CalibrationCompareRow) => {
+    const addCompareTarget = useCallback((row: CalibrationCompareRow) => {
         setCompareTarget(createCompareEntry(row));
+        setDynamicToolTargetAdv(row.advances);
         setCompareFeedback(t("compare.addedTarget"));
-    };
+    }, [setCompareTarget, setCompareFeedback, t]);
 
     const addCompareHistory = (row: CalibrationResultRow) => {
         setCompareHistory((history: CalibrationCompareEntry[]) => [
@@ -457,6 +459,7 @@ export default function CalibrationForm({
         row: CalibrationResultRow,
         destination: "target" | "history"
     ) => {
+        setDynamicToolTargetAdv(row.advances);
         if (destination === "target") {
             addCompareTarget(row);
             return;
@@ -669,12 +672,12 @@ export default function CalibrationForm({
         ) {
             return;
         }
-        setCompareTarget(createCompareEntry(rows[0]));
+        addCompareTarget(rows[0]);
     }, [
+        addCompareTarget,
         compareSettings.autoAddTarget,
         compareTarget,
         rows,
-        setCompareTarget,
     ]);
 
     useEffect(() => {

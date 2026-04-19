@@ -19,6 +19,7 @@ import {
     createStoredCompareEntry,
     SEARCHER_COMPARE_TARGET_KEY,
 } from "./CalibrationForm";
+import { setDynamicToolTargetAdv } from "./calibrationDynamicToolStorage";
 import type { CalibrationCompareSettings, CalibrationStoredTarget } from "./CalibrationComparePanel";
 
 dayjs.extend(duration);
@@ -94,6 +95,7 @@ const InitialSeedTable = memo(function InitialSeedTable({
             COMPARE_TARGET_STORAGE_KEY,
             createStoredCompareEntry(compareTarget)
         );
+        setDynamicToolTargetAdv(row.advances);
         localStorage.removeItem(SEARCHER_COMPARE_TARGET_KEY);
     }
 
