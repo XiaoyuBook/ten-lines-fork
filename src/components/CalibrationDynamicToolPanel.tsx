@@ -202,7 +202,16 @@ function ReadonlyValue({
             label={label}
             value={value}
             helperText={helperText}
-            InputProps={{ readOnly: true }}
+            InputProps={{
+                readOnly: true,
+            }}
+            onFocus={(event) => {
+                event.target.select();
+            }}
+            onClick={(event) => {
+                const input = event.currentTarget.querySelector("input");
+                input?.select();
+            }}
             fullWidth
         />
     );
@@ -312,7 +321,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 };
             });
             setFeedbackSeverity("success");
-            setFeedback(t("dynamicTool.savedPreviousRound"));
+            setFeedback(t("dynamicTool.calculateCompleted"));
             return;
         }
 
@@ -383,11 +392,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         });
 
         setFeedbackSeverity("success");
-        setFeedback(
-            lockedTv > 0 && !needsShift
-                ? t("dynamicTool.savedPreviousRoundLocked")
-                : t("dynamicTool.savedPreviousRound")
-        );
+        setFeedback(t("dynamicTool.calculateCompleted"));
     };
 
     const handleCorrectRate = () => {
@@ -417,12 +422,12 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         let nextParityTime = parseNumber(state.parityTime);
         let nextForceShift = false;
         let nextBadTvSpot = "";
-        let feedbackKey = "dynamicTool.rateUpdated";
+        let feedbackNoteKey = "";
 
         if (actualHit % 2 !== targetAdv % 2) {
             nextParityTime = lastParity + PARITY_SHIFT_MS;
             nextForceShift = true;
-            feedbackKey = "dynamicTool.parityAdjusted";
+            feedbackNoteKey = "dynamicTool.parityAdjusted";
         }
 
         const expected =
@@ -435,27 +440,31 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
             actualHit = diff > 0 ? actualHit - TV_STEP : actualHit + TV_STEP;
             nextBadTvSpot = Math.round(lastTv).toString();
             nextForceShift = true;
-            feedbackKey = "dynamicTool.detectedShift";
+            feedbackNoteKey = "dynamicTool.detectedShift";
         } else {
             if (Math.abs(diff) > 800) {
                 nextForceShift = true;
             }
-            if (feedbackKey !== "dynamicTool.parityAdjusted") {
-                feedbackKey = "dynamicTool.keepLockedTv";
+            if (!feedbackNoteKey) {
+                feedbackNoteKey = "dynamicTool.keepLockedTv";
             }
         }
+
+        const nextTvRateValue = usingTvForCorrection
+            ? (
+                  (actualHit -
+                      (getParityFrames(nextParityTime) +
+                          (baseTime + lastWait) * RATE_2X2)) /
+                  lastTv
+              )
+            : currentTvRate;
 
         setState((current: DynamicToolStoredState) => {
             const next = normalizeState(current);
             return {
                 ...next,
                 tvRate: usingTvForCorrection
-                    ? (
-                          (actualHit -
-                              (getParityFrames(nextParityTime) +
-                                  (baseTime + lastWait) * RATE_2X2)) /
-                          lastTv
-                      ).toFixed(6)
+                    ? nextTvRateValue.toFixed(6)
                     : next.tvRate,
                 parityTime: nextParityTime.toFixed(0),
                 forceShift: nextForceShift,
@@ -469,7 +478,10 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         setFeedbackSeverity("success");
         setFeedback(
             usingTvForCorrection
-                ? t(feedbackKey)
+                ? `${t("dynamicTool.rateChanged", {
+                      from: currentTvRate.toFixed(6),
+                      to: nextTvRateValue.toFixed(6),
+                  })}${feedbackNoteKey ? ` ${t(feedbackNoteKey)}` : ""}`
                 : t("dynamicTool.noTvCorrectionRecorded")
         );
     };
@@ -639,48 +651,6 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             {t("dynamicTool.physicalTotal")}: {state.currentTotal} ms
                         </Typography>
                     ) : null}
-                </Paper>
-
-                <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                        {t("dynamicTool.lastRoundSection")}
-                    </Typography>
-                    <Box
-                        sx={{
-                            display: "grid",
-                            gridTemplateColumns:
-                                "repeat(auto-fit, minmax(160px, 1fr))",
-                            gap: 1.5,
-                        }}
-                    >
-                        <TextField
-                            label={t("dynamicTool.lastTv")}
-                            value={state.lastTv}
-                            onChange={(event) =>
-                                setField("lastTv", event.target.value)
-                            }
-                            helperText={t("dynamicTool.lastTvHint")}
-                            fullWidth
-                        />
-                        <TextField
-                            label={t("dynamicTool.lastWait")}
-                            value={state.lastWait}
-                            onChange={(event) =>
-                                setField("lastWait", event.target.value)
-                            }
-                            helperText={t("dynamicTool.lastWaitHint")}
-                            fullWidth
-                        />
-                        <TextField
-                            label={t("dynamicTool.lastParity")}
-                            value={state.lastParity}
-                            onChange={(event) =>
-                                setField("lastParity", event.target.value)
-                            }
-                            helperText={t("dynamicTool.lastParityHint")}
-                            fullWidth
-                        />
-                    </Box>
                 </Paper>
 
                 <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>

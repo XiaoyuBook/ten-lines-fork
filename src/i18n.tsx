@@ -404,6 +404,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             invalidCorrection: "Please enter valid previous-round and hit values.",
             invalidLastTv: "Previous _TV Time must be greater than 0.",
             rateUpdated: "TV rate updated. You can calculate the next round now.",
+            rateChanged: "TV rate changed from {from} to {to}.",
+            calculateCompleted: "Calculation completed.",
             savedPreviousRound:
                 "This round's _TV Time and _Remaining Wait were saved for the next correction.",
             savedPreviousRoundLocked:
@@ -785,6 +787,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u4e0a\u4e00\u8f6e _TV\u8fc7\u5e27\u65f6\u95f4\u5fc5\u987b\u5927\u4e8e 0\u3002",
             rateUpdated:
                 "TV \u500d\u7387\u5df2\u66f4\u65b0\uff0c\u73b0\u5728\u53ef\u4ee5\u76f4\u63a5\u8fdb\u884c\u4e0b\u4e00\u8f6e\u8ba1\u7b97\u3002",
+            rateChanged:
+                "TV \u500d\u7387\u5df2\u4ece {from} \u53d8\u4e3a {to}\u3002",
+            calculateCompleted:
+                "\u8ba1\u7b97\u5b8c\u6210\u3002",
             savedPreviousRound:
                 "\u672c\u8f6e\u7684 _TV\u8fc7\u5e27\u65f6\u95f4 \u548c _\u5269\u4f59\u5e27\u6570\u65f6\u95f4\u5df2\u4fdd\u5b58\uff0c\u4e0b\u4e00\u8f6e\u4fee\u6b63\u53ef\u76f4\u63a5\u4f7f\u7528\u3002",
             savedPreviousRoundLocked:
