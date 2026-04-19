@@ -47,6 +47,7 @@ add_executable(ten_lines
     src/iv_calc.cpp
     src/pokefinder_glue.cpp
     src/searcher.cpp
+    src/stats_ocr.cpp
 
     src/generated/ten_lines_precalc.cpp
 )

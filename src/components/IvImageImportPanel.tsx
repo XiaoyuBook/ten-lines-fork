@@ -10,6 +10,8 @@ import {
 } from "@mui/material";
 
 import { useI18n } from "../i18n";
+import fetchTenLines from "../tenLines";
+import type { MainModule, StatsOcrResult } from "../tenLines/generated";
 
 type TesseractModule = NonNullable<Window["Tesseract"]>;
 type TesseractWorker = Awaited<ReturnType<TesseractModule["createWorker"]>>;
@@ -1410,59 +1412,26 @@ const isValidStatValue = (value: string) => {
 };
 
 const extractRoiColumnStats = async (
-    worker: TesseractWorker,
+    tenLines: MainModule,
     image: CanvasImage
 ): Promise<StatValueMap | null> => {
-    await worker.setParameters({
-        tessedit_char_whitelist: "0123456789/\n",
-        preserve_interword_spaces: "1",
-        user_defined_dpi: "300",
-    });
-
-    const fullRect = {
-        left: 0,
-        top: 0,
-        right: image.width,
-        bottom: image.height,
-    };
-    const result = await worker.recognize(createBinaryCropDataUrl(image, fullRect, 5));
-    const tokens =
-        result.data.text
-            .replace(/[|]/g, "/")
-            .match(/\d{1,3}\/\d{1,3}|\d{1,3}/g) ?? [];
-
-    if (tokens.length < 6) {
-        return null;
-    }
-
-    let hpValue = "";
-    let statTokens = tokens.slice(1, 6);
-
-    const slashTokenIndex = tokens.findIndex((token) => token.includes("/"));
-    if (slashTokenIndex >= 0) {
-        const hpParts = tokens[slashTokenIndex]
-            .split("/")
-            .filter((part) => /^\d+$/.test(part));
-        hpValue = hpParts.length > 0 ? hpParts[hpParts.length - 1] : "";
-        statTokens = tokens.slice(slashTokenIndex + 1, slashTokenIndex + 6);
-    } else if (tokens.length >= 7) {
-        hpValue = tokens[1] ?? "";
-        statTokens = tokens.slice(2, 7);
-    } else {
-        hpValue = tokens[0] ?? "";
-    }
-
-    if (statTokens.length < 5) {
+    const result = await tenLines.recognize_stats_roi(
+        Uint8Array.from(image.data),
+        image.width,
+        image.height
+    );
+    const parsedResult = result as StatsOcrResult;
+    if ((parsedResult.recognizedCount ?? 0) <= 0) {
         return null;
     }
 
     const nextStats = getEmptyStats();
-    nextStats.hp = hpValue;
-    nextStats.attack = statTokens[0] ?? "";
-    nextStats.defense = statTokens[1] ?? "";
-    nextStats.specialAttack = statTokens[2] ?? "";
-    nextStats.specialDefense = statTokens[3] ?? "";
-    nextStats.speed = statTokens[4] ?? "";
+    nextStats.hp = parsedResult.hp ?? "";
+    nextStats.attack = parsedResult.attack ?? "";
+    nextStats.defense = parsedResult.defense ?? "";
+    nextStats.specialAttack = parsedResult.specialAttack ?? "";
+    nextStats.specialDefense = parsedResult.specialDefense ?? "";
+    nextStats.speed = parsedResult.speed ?? "";
 
     return nextStats;
 };
@@ -1591,6 +1560,7 @@ export default function IvImageImportPanel({
             }
         };
     }, []);
+    void workerRef;
 
     useEffect(() => {
         const handlePaste = (event: ClipboardEvent) => {
@@ -1635,6 +1605,7 @@ export default function IvImageImportPanel({
         workerRef.current = worker;
         return worker;
     };
+    void getWorker;
 
     const loadSelectedImage = async (file: File) => {
         if (previewUrl !== "") {
@@ -1650,6 +1621,7 @@ export default function IvImageImportPanel({
         setRecognitionProgress(0);
         setStatus(t("imageImport.imageLoaded"), "info");
     };
+    void loadTesseractRuntime;
 
     const clearAll = () => {
         if (previewUrl !== "") {
@@ -1665,6 +1637,7 @@ export default function IvImageImportPanel({
         setRecognitionProgress(0);
         setFeedback("");
     };
+    void createBinaryCropDataUrl;
 
     const handleFileSelection = (
         event: React.ChangeEvent<HTMLInputElement>
@@ -1806,9 +1779,12 @@ export default function IvImageImportPanel({
 
         try {
             const image = await loadImage(imageFile);
-            const worker = await getWorker();
+            const tenLines = await fetchTenLines();
             const prepared = prepareManualRoiVariant(image, manualRoiRegion);
-            const nextStats = await extractRoiColumnStats(worker, prepared.normalized);
+            const nextStats = await extractRoiColumnStats(
+                tenLines as unknown as MainModule,
+                prepared.normalized
+            );
 
             if (!nextStats) {
                 setStats(getEmptyStats());
