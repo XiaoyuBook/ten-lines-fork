@@ -85,7 +85,7 @@ int otsu_threshold(const std::vector<int>& grayscale)
     return std::clamp(threshold + 8, 60, 210);
 }
 
-std::vector<uint8_t> binarize(const emscripten::typed_array<uint8_t>& rgbaPixels, int width, int height)
+std::vector<uint8_t> binarize(emscripten::typed_array<uint8_t> rgbaPixels, int width, int height)
 {
     std::vector<int> grayscale;
     grayscale.reserve(width * height);
