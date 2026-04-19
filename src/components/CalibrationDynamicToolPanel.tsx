@@ -275,20 +275,31 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
 
             setState((current: DynamicToolStoredState) => {
                 const next = normalizeState(current);
+                const nextCurrentTv = t("dynamicTool.notUsedShort");
+                const nextCurrentWait = finalWait.toString();
+                const nextCurrentParity = parityTime.toFixed(0);
+                const nextCurrentTotal = (baseTimeNoTv + finalWait).toFixed(0);
+                const hasPreviousCurrent =
+                    next.currentWait.trim() !== "" || next.currentParity.trim() !== "";
+
                 return {
                     ...next,
-                    currentTv: t("dynamicTool.notUsedShort"),
-                    currentWait: finalWait.toString(),
-                    currentParity: parityTime.toFixed(0),
-                    currentTotal: (baseTimeNoTv + finalWait).toFixed(0),
-                    lastTv: "0",
-                    lastWait: finalWait.toString(),
-                    lastParity: parityTime.toFixed(0),
+                    currentTv: nextCurrentTv,
+                    currentWait: nextCurrentWait,
+                    currentParity: nextCurrentParity,
+                    currentTotal: nextCurrentTotal,
+                    lastTv: hasPreviousCurrent
+                        ? next.currentTv === t("dynamicTool.notUsedShort")
+                            ? "0"
+                            : next.currentTv
+                        : next.lastTv,
+                    lastWait: hasPreviousCurrent ? next.currentWait : next.lastWait,
+                    lastParity: hasPreviousCurrent ? next.currentParity : next.lastParity,
                     history: appendHistory(
                         next,
                         "0",
-                        finalWait.toString(),
-                        parityTime.toFixed(0)
+                        nextCurrentWait,
+                        nextCurrentParity
                     ),
                     forceShift: false,
                     badTvSpot: "",
@@ -335,21 +346,30 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
 
         setState((current: DynamicToolStoredState) => {
             const next = normalizeState(current);
+            const nextCurrentTv = finalTv.toString();
+            const nextCurrentWait = finalWait.toString();
+            const nextCurrentParity = parityTime.toFixed(0);
+            const nextCurrentTotal = (baseTimeTv + finalTv + finalWait).toFixed(0);
+            const hasPreviousCurrent =
+                next.currentTv.trim() !== "" ||
+                next.currentWait.trim() !== "" ||
+                next.currentParity.trim() !== "";
+
             return {
                 ...next,
-                currentTv: finalTv.toString(),
-                currentWait: finalWait.toString(),
-                currentParity: parityTime.toFixed(0),
-                currentTotal: (baseTimeTv + finalTv + finalWait).toFixed(0),
-                lastTv: finalTv.toString(),
-                lastWait: finalWait.toString(),
-                lastParity: parityTime.toFixed(0),
-                lockedTv: finalTv.toString(),
+                currentTv: nextCurrentTv,
+                currentWait: nextCurrentWait,
+                currentParity: nextCurrentParity,
+                currentTotal: nextCurrentTotal,
+                lastTv: hasPreviousCurrent ? next.currentTv : next.lastTv,
+                lastWait: hasPreviousCurrent ? next.currentWait : next.lastWait,
+                lastParity: hasPreviousCurrent ? next.currentParity : next.lastParity,
+                lockedTv: nextCurrentTv,
                 history: appendHistory(
                     next,
-                    finalTv.toString(),
-                    finalWait.toString(),
-                    parityTime.toFixed(0)
+                    nextCurrentTv,
+                    nextCurrentWait,
+                    nextCurrentParity
                 ),
                 forceShift: false,
                 badTvSpot: "",
