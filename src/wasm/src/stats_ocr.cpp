@@ -1,9 +1,8 @@
+#include "util.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
-#include <emscripten.h>
-#include <emscripten/bind.h>
 #include <string>
 #include <vector>
 
@@ -154,6 +153,7 @@ Rect find_content_bounds(const std::vector<uint8_t>& binary, int width, int heig
 
 std::vector<Rect> find_row_bands(const std::vector<uint8_t>& binary, int width, int height, const Rect& bounds)
 {
+    (void)height;
     std::vector<Rect> bands;
     const int min_active = std::max(1, (bounds.right - bounds.left) / 24);
     const int max_gap = std::max(1, (bounds.bottom - bounds.top) / 60);
