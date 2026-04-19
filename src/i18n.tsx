@@ -371,15 +371,17 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             title: "Dynamic Calibration Tool",
             subtitle:
                 "Keep the previous round's TV and remaining wait values here for the next TV-rate correction.",
+            modeSection: "Mode",
+            modeTv: "Use TV Pass",
+            modeNoTv: "No TV Pass",
             calculateSection: "Calculate Parameters",
             correctSection: "Correct TV Rate",
             lastRoundSection: "Previous Round",
+            currentResultSection: "Current Result",
+            historySection: "History",
             targetAdv: "Target Advances",
             baseTime: "Base Time (ms)",
-            baseTimeHint: "TV mode usually starts from 44250 ms",
-            parityFrames: "Parity Frames",
-            goalWait: "Target Remaining Wait (ms)",
-            tvRate: "TV Rate",
+            baseTimeHint: "Fixed internal base time for this tool",
             calculateAction: "Calculate",
             actualHit: "Actual Hit Advances",
             correctAction: "Correct TV Rate",
@@ -388,8 +390,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             lastWait: "Previous _Remaining Wait",
             lastTvHint: "Filled automatically after each calculation",
             lastWaitHint: "Filled automatically after each calculation",
-            lastTvSaved: "Saved _TV Time",
-            lastWaitSaved: "Saved _Remaining Wait",
+            currentTvLabel: "Current _TV Time",
+            currentWaitLabel: "Current _Remaining Wait",
             physicalTotal: "Physical Total Time",
             invalidCalculation: "Please enter valid values before calculating.",
             needAdvNegative:
@@ -399,6 +401,17 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             rateUpdated: "TV rate updated. You can calculate the next round now.",
             savedPreviousRound:
                 "This round's _TV Time and _Remaining Wait were saved for the next correction.",
+            savedPreviousRoundLocked:
+                "Current result calculated with locked TV time and saved as the next previous round.",
+            detectedShift:
+                "Detected a 314 shift. The next round will force a physical phase shift.",
+            keepLockedTv:
+                "Deviation is small. The next round will keep the previous TV time locked.",
+            clearedState: "All cached state has been cleared.",
+            clearAll: "Clear All",
+            notUsedShort: "Not used",
+            emptyHistory:
+                "Each calculation will append the current _TV and _Remaining Wait here.",
         },
         messages: {
             noKnownSeeds: "No known seeds for this game & settings",
@@ -711,15 +724,17 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             title: "\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
             subtitle:
                 "\u8fd9\u91cc\u4f1a\u4fdd\u7559\u4e0a\u4e00\u8f6e\u7684 _TV\u8fc7\u5e27\u65f6\u95f4 \u548c _\u5269\u4f59\u5e27\u6570\u65f6\u95f4\uff0c\u4e0b\u4e00\u8f6e\u4fee\u6b63 TV \u500d\u7387\u65f6\u53ef\u4ee5\u76f4\u63a5\u4f7f\u7528\u3002",
+            modeSection: "\u6a21\u5f0f",
+            modeTv: "\u4f7f\u7528 TV\u8fc7\u5e27",
+            modeNoTv: "\u4e0d\u4f7f\u7528 TV\u8fc7\u5e27",
             calculateSection: "\u8ba1\u7b97\u53c2\u6570",
             correctSection: "\u4fee\u6b63 TV \u500d\u7387",
             lastRoundSection: "\u4e0a\u4e00\u8f6e",
+            currentResultSection: "\u672c\u6b21\u7ed3\u679c",
+            historySection: "\u5386\u53f2\u8bb0\u5f55",
             targetAdv: "\u76ee\u6807\u5e27\u6570",
             baseTime: "\u57fa\u7840\u4fdd\u5e95\u65f6\u95f4 (ms)",
-            baseTimeHint: "TV \u6a21\u5f0f\u4e0b\u901a\u5e38\u4ece 44250 ms \u5f00\u59cb",
-            parityFrames: "\u5947\u5076\u6821\u6b63\u5e27",
-            goalWait: "\u76ee\u6807\u5269\u4f59\u7b49\u5f85\u65f6\u95f4 (ms)",
-            tvRate: "TV \u500d\u7387",
+            baseTimeHint: "\u6b64\u5de5\u5177\u5185\u90e8\u4f7f\u7528\u56fa\u5b9a\u4fdd\u5e95\u65f6\u95f4",
             calculateAction: "\u8ba1\u7b97",
             actualHit: "\u5b9e\u9645\u547d\u4e2d\u5e27\u6570",
             correctAction: "\u4fee\u6b63 TV \u500d\u7387",
@@ -728,8 +743,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             lastWait: "\u4e0a\u4e00\u8f6e _\u5269\u4f59\u5e27\u6570\u65f6\u95f4",
             lastTvHint: "\u6bcf\u6b21\u8ba1\u7b97\u540e\u4f1a\u81ea\u52a8\u56de\u586b",
             lastWaitHint: "\u6bcf\u6b21\u8ba1\u7b97\u540e\u4f1a\u81ea\u52a8\u56de\u586b",
-            lastTvSaved: "\u5df2\u4fdd\u5b58\u7684 _TV\u8fc7\u5e27\u65f6\u95f4",
-            lastWaitSaved: "\u5df2\u4fdd\u5b58\u7684 _\u5269\u4f59\u5e27\u6570\u65f6\u95f4",
+            currentTvLabel: "\u672c\u6b21 _TV\u8fc7\u5e27\u65f6\u95f4",
+            currentWaitLabel: "\u672c\u6b21 _\u5269\u4f59\u5e27\u6570\u65f6\u95f4",
             physicalTotal: "\u7269\u7406\u603b\u65f6\u95f4",
             invalidCalculation: "\u8bf7\u5148\u8f93\u5165\u6709\u6548\u7684\u8ba1\u7b97\u53c2\u6570\u3002",
             needAdvNegative:
@@ -742,6 +757,18 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "TV \u500d\u7387\u5df2\u66f4\u65b0\uff0c\u73b0\u5728\u53ef\u4ee5\u76f4\u63a5\u8fdb\u884c\u4e0b\u4e00\u8f6e\u8ba1\u7b97\u3002",
             savedPreviousRound:
                 "\u672c\u8f6e\u7684 _TV\u8fc7\u5e27\u65f6\u95f4 \u548c _\u5269\u4f59\u5e27\u6570\u65f6\u95f4\u5df2\u4fdd\u5b58\uff0c\u4e0b\u4e00\u8f6e\u4fee\u6b63\u53ef\u76f4\u63a5\u4f7f\u7528\u3002",
+            savedPreviousRoundLocked:
+                "\u672c\u6b21\u7ed3\u679c\u4f7f\u7528\u4e86\u9501\u5b9a\u7684 TV \u65f6\u95f4\uff0c\u5e76\u5df2\u4f5c\u4e3a\u4e0b\u4e00\u8f6e\u7684\u4e0a\u4e00\u8f6e\u6570\u636e\u4fdd\u5b58\u3002",
+            detectedShift:
+                "\u68c0\u6d4b\u5230 314 \u6ce2\u52a8\uff0c\u4e0b\u4e00\u8f6e\u4f1a\u5f3a\u5236\u8fdb\u884c\u7269\u7406\u76f8\u4f4d\u4f4d\u79fb\u3002",
+            keepLockedTv:
+                "\u504f\u5dee\u8f83\u5c0f\uff0c\u4e0b\u4e00\u8f6e\u4f1a\u4fdd\u6301\u4e0a\u4e00\u8f6e TV \u65f6\u95f4\u4e0d\u53d8\u3002",
+            clearedState:
+                "\u6240\u6709\u5de5\u5177\u72b6\u6001\u5df2\u6e05\u7a7a\uff0c\u4e0d\u4f1a\u518d\u53d7\u4e0a\u6b21\u4f7f\u7528\u5f71\u54cd\u3002",
+            clearAll: "\u6e05\u7a7a\u5168\u90e8\u72b6\u6001",
+            notUsedShort: "\u4e0d\u4f7f\u7528",
+            emptyHistory:
+                "\u6bcf\u6b21\u8ba1\u7b97\u540e\uff0c\u672c\u6b21\u7684 _TV\u8fc7\u5e27\u65f6\u95f4 \u548c _\u5269\u4f59\u5e27\u6570\u65f6\u95f4\u90fd\u4f1a\u8bb0\u5f55\u5728\u8fd9\u91cc\u3002",
         },
         messages: {
             noKnownSeeds:
