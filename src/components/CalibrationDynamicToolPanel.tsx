@@ -488,7 +488,10 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         </Typography>
                     ) : (
                         <Box sx={{ display: "grid", gap: 1 }}>
-                            {state.history.map((entry, index) => (
+                            {state.history.map((
+                                entry: DynamicToolHistoryEntry,
+                                index: number
+                            ) => (
                                 <Box
                                     key={entry.id}
                                     sx={{
