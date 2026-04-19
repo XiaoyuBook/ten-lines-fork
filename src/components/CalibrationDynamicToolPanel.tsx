@@ -609,13 +609,10 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                     : t("dynamicTool.baseTimeNoTvHint")
                             }
                         />
-                        <TextField
+                        <ReadonlyValue
                             label={t("dynamicTool.parityTime")}
                             value={state.parityTime}
-                            onChange={(event) =>
-                                setField("parityTime", event.target.value)
-                            }
-                            fullWidth
+                            helperText={t("dynamicTool.parityAutoHint")}
                         />
                         <Button variant="contained" onClick={handleCalculate}>
                             {t("dynamicTool.calculateAction")}

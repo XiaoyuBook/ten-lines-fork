@@ -384,6 +384,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             baseTimeTvHint: "TV mode uses the TV base time",
             baseTimeNoTvHint: "Non-TV mode uses the normal base time",
             parityTime: "Parity Time (ms)",
+            parityAutoHint:
+                "Automatically maintained by the tool. It stays the same on matching parity and shifts by +17 when parity changes.",
             calculateAction: "Calculate",
             actualHit: "Actual Hit Advances",
             correctAction: "Correct TV Rate",
@@ -763,6 +765,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             baseTimeNoTvHint:
                 "\u975e TV \u6a21\u5f0f\u4f7f\u7528\u666e\u901a\u4fdd\u5e95\u65f6\u95f4",
             parityTime: "\u5947\u5076\u65f6\u95f4 (ms)",
+            parityAutoHint:
+                "\u7531\u5de5\u5177\u81ea\u52a8\u7ef4\u62a4\uff0c\u5947\u5076\u5bf9\u4e0a\u65f6\u4fdd\u6301\u4e0d\u53d8\uff0c\u5947\u5076\u5207\u6362\u65f6\u4f1a\u81ea\u52a8 +17ms\u3002",
             calculateAction: "\u8ba1\u7b97",
             actualHit: "\u5b9e\u9645\u547d\u4e2d\u5e27\u6570",
             correctAction: "\u4fee\u6b63 TV \u500d\u7387",
