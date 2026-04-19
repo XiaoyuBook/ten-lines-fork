@@ -23,6 +23,7 @@ Original upstream project:
 - Chinese UI terminology was cleaned up to better match common community naming and PokeWiki usage
 - ID Combo search now supports **multi-select nature filters** and shows **example IV spreads** in the result table
 - Calibration now includes a **target / history comparison panel** with quick-add workflow, column visibility controls, delta display, floating window mode, and an optional calculator
+- Calibration now also includes a **dynamic correction tool** intended to be used together with [Xuan Yelin](https://space.bilibili.com/29039016?spm_id_from=333.1387.fans.user_card.click)'s script workflow
 - Calibration search now runs **manually on submit**, avoiding repeated automatic reruns while users are still entering values
 - Searcher and Initial Seed can now **carry a chosen target forward into Calibration compare automatically**
 - Calibration compare settings now include an **auto-add target** toggle, enabled by default
@@ -48,6 +49,7 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - ID Combo search with multi-nature filtering and sample IV display
 - Calibration tools
 - Calibration compare panel with target/history tracking, delta readouts, floating mode, optional calculator, and automatic target carry-over from earlier steps
+- Dynamic correction tool for use alongside [Xuan Yelin](https://space.bilibili.com/29039016?spm_id_from=333.1387.fans.user_card.click)'s script, with TV / non-TV support, preserved previous-round values, and split history tables
 - Reachable-advance prefiltering in Searcher
 - Searcher perfect-IV-count filtering for `1V` to `6V`
 - FRLG reachable-search sound filtering with an `Any` option
@@ -76,6 +78,10 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - Compare panel settings include an **Auto-add target** switch so this behavior can be disabled if you want a manual workflow
 - Compare target seed values are shown as `SEED (xxx ms)` for easier timing reference
 - Bingo confirmations now sync into compare history automatically, so confirmed hits can be kept as a running calibration log
+- The dynamic correction tool is designed to be used together with [Xuan Yelin](https://space.bilibili.com/29039016?spm_id_from=333.1387.fans.user_card.click)'s FRLG script workflow
+- Quick-add behavior now routes **Add to Target** into the dynamic tool's `Target Advances` field, while **Add to History** routes into `Actual Hit Advances`
+- Opening Calibration from Initial Seed and auto-adding the compare target also syncs that target's advances into the dynamic tool's `Target Advances`
+- The dynamic correction tool supports editable TV / non-TV base times, previous-round carry-over, and separate TV / non-TV history tables with `ms` units
 
 ## Searcher Notes
 
