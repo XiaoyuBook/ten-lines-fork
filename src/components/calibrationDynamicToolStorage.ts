@@ -2,7 +2,7 @@ import { setLocalStorageValue } from "../hooks/useLocalStorage";
 
 const DYNAMIC_TOOL_STORAGE_KEY = "calibration-dynamic-tool";
 
-export function setDynamicToolTargetAdv(targetAdv: number | string) {
+function updateDynamicToolStorage(updates: Record<string, unknown>) {
     const rawValue = localStorage.getItem(DYNAMIC_TOOL_STORAGE_KEY);
     let current: Record<string, unknown> = {};
 
@@ -14,6 +14,18 @@ export function setDynamicToolTargetAdv(targetAdv: number | string) {
 
     setLocalStorageValue(DYNAMIC_TOOL_STORAGE_KEY, {
         ...current,
+        ...updates,
+    });
+}
+
+export function setDynamicToolTargetAdv(targetAdv: number | string) {
+    updateDynamicToolStorage({
         targetAdv: String(targetAdv),
+    });
+}
+
+export function setDynamicToolActualHit(actualHit: number | string) {
+    updateDynamicToolStorage({
+        actualHit: String(actualHit),
     });
 }

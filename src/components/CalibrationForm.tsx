@@ -53,7 +53,10 @@ import CalibrationComparePanel, {
 } from "./CalibrationComparePanel";
 import CalibrationTable from "./CalibrationTable";
 import CalibrationDynamicToolPanel from "./CalibrationDynamicToolPanel";
-import { setDynamicToolTargetAdv } from "./calibrationDynamicToolStorage";
+import {
+    setDynamicToolActualHit,
+    setDynamicToolTargetAdv,
+} from "./calibrationDynamicToolStorage";
 import IvCalculator from "./IvCalculator";
 import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";
@@ -459,11 +462,11 @@ export default function CalibrationForm({
         row: CalibrationResultRow,
         destination: "target" | "history"
     ) => {
-        setDynamicToolTargetAdv(row.advances);
         if (destination === "target") {
             addCompareTarget(row);
             return;
         }
+        setDynamicToolActualHit(row.advances);
         addCompareHistory(row);
     };
 
