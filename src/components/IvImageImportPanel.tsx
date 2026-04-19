@@ -1413,11 +1413,6 @@ const extractRoiColumnStats = async (
     worker: TesseractWorker,
     image: CanvasImage
 ): Promise<StatValueMap | null> => {
-    const aspectRatio = image.width / Math.max(image.height, 1);
-    if (aspectRatio > 0.42) {
-        return null;
-    }
-
     await worker.setParameters({
         tessedit_char_whitelist: "0123456789/\n",
         preserve_interword_spaces: "1",
@@ -1440,24 +1435,51 @@ const extractRoiColumnStats = async (
         return null;
     }
 
-    const hpToken = tokens[0] ?? "";
-    const hpParts = hpToken.split("/").filter((part) => /^\d+$/.test(part));
-    const hpValue = hpToken.includes("/")
-        ? hpParts.length > 0
-            ? hpParts[hpParts.length - 1]
-            : ""
-        : hpToken;
+    let hpValue = "";
+    let statTokens = tokens.slice(1, 6);
+
+    const slashTokenIndex = tokens.findIndex((token) => token.includes("/"));
+    if (slashTokenIndex >= 0) {
+        const hpParts = tokens[slashTokenIndex]
+            .split("/")
+            .filter((part) => /^\d+$/.test(part));
+        hpValue = hpParts.length > 0 ? hpParts[hpParts.length - 1] : "";
+        statTokens = tokens.slice(slashTokenIndex + 1, slashTokenIndex + 6);
+    } else if (tokens.length >= 7) {
+        hpValue = tokens[1] ?? "";
+        statTokens = tokens.slice(2, 7);
+    } else {
+        hpValue = tokens[0] ?? "";
+    }
+
+    if (statTokens.length < 5) {
+        return null;
+    }
 
     const nextStats = getEmptyStats();
     nextStats.hp = hpValue;
-    nextStats.attack = tokens[1] ?? "";
-    nextStats.defense = tokens[2] ?? "";
-    nextStats.specialAttack = tokens[3] ?? "";
-    nextStats.specialDefense = tokens[4] ?? "";
-    nextStats.speed = tokens[5] ?? "";
+    nextStats.attack = statTokens[0] ?? "";
+    nextStats.defense = statTokens[1] ?? "";
+    nextStats.specialAttack = statTokens[2] ?? "";
+    nextStats.specialDefense = statTokens[3] ?? "";
+    nextStats.speed = statTokens[4] ?? "";
 
     return nextStats;
 };
+
+const LEGACY_AUTO_DETECTION_HELPERS = {
+    TARGET_IMAGE_WIDTH,
+    FIXED_STAT_LAYOUT,
+    EXPECTED_LABEL_CENTER_Y,
+    PORTRAIT_STATS_X,
+    detectPortraitAnchoredLayout,
+    detectLabelAnchoredLayout,
+    detectPanelLayout,
+    getFixedLayout,
+    prepareImageVariants,
+    mapRectToOriginalRegion,
+};
+void LEGACY_AUTO_DETECTION_HELPERS;
 
 const loadTesseractRuntime = () =>
     new Promise<TesseractModule>((resolve, reject) => {
@@ -1523,12 +1545,6 @@ export default function IvImageImportPanel({
     );
     const [draftRoiRegion, setDraftRoiRegion] = useState<RegionBox | null>(null);
     const [manualRoiRegion, setManualRoiRegion] = useState<RegionBox | null>(null);
-    const [detectedPanelRegion, setDetectedPanelRegion] = useState<RegionBox | null>(
-        null
-    );
-    const [detectedRegions, setDetectedRegions] = useState<
-        Partial<Record<StatKey, RegionBox>>
-    >({});
     const [stats, setStats] = useState<StatValueMap>(getEmptyStats);
     const [feedback, setFeedback] = useState("");
     const [feedbackSeverity, setFeedbackSeverity] = useState<
@@ -1630,8 +1646,6 @@ export default function IvImageImportPanel({
         setRoiSelectionStart(null);
         setDraftRoiRegion(null);
         setManualRoiRegion(null);
-        setDetectedPanelRegion(null);
-        setDetectedRegions({});
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setStatus(t("imageImport.imageLoaded"), "info");
@@ -1647,8 +1661,6 @@ export default function IvImageImportPanel({
         setRoiSelectionStart(null);
         setDraftRoiRegion(null);
         setManualRoiRegion(null);
-        setDetectedPanelRegion(null);
-        setDetectedRegions({});
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setFeedback("");
@@ -1776,10 +1788,15 @@ export default function IvImageImportPanel({
 
         return fallbackValue;
     };
+    void recognizeRegion;
 
     const recognizeStats = async () => {
         if (!imageFile) {
             setStatus(t("imageImport.noImage"), "warning");
+            return;
+        }
+        if (!manualRoiRegion) {
+            setStatus(t("imageImport.requiresRoi"), "warning");
             return;
         }
 
@@ -1790,126 +1807,23 @@ export default function IvImageImportPanel({
         try {
             const image = await loadImage(imageFile);
             const worker = await getWorker();
-            const preparedVariants = manualRoiRegion
-                ? [prepareManualRoiVariant(image, manualRoiRegion), ...prepareImageVariants(image)]
-                : prepareImageVariants(image);
-            const evaluateLayout = async (
-                prepared: PreparedImage,
-                layout: DetectedLayout
-            ) => {
-                const nextStats = getEmptyStats();
-                for (const key of statKeys) {
-                    nextStats[key] = await recognizeRegion(
-                        worker,
-                        prepared.normalized,
-                        layout.statRects[key],
-                        key === "hp"
-                    );
-                }
+            const prepared = prepareManualRoiVariant(image, manualRoiRegion);
+            const nextStats = await extractRoiColumnStats(worker, prepared.normalized);
 
-                return {
-                    prepared,
-                    layout,
-                    stats: nextStats,
-                    recognizedCount: statKeys.filter((key) =>
-                        isValidStatValue(nextStats[key])
-                    ).length,
-                };
-            };
-            const evaluateRoiColumn = async (prepared: PreparedImage) => {
-                const nextStats = await extractRoiColumnStats(
-                    worker,
-                    prepared.normalized
-                );
-                if (!nextStats) {
-                    return null;
-                }
-
-                return {
-                    prepared,
-                    layout: getFixedLayout(prepared.normalized),
-                    stats: nextStats,
-                    recognizedCount: statKeys.filter((key) =>
-                        isValidStatValue(nextStats[key])
-                    ).length,
-                };
-            };
-
-            const allAttempts = [];
-
-            for (const prepared of preparedVariants) {
-                const roiColumnAttempt = await evaluateRoiColumn(prepared);
-                const portraitAnchoredLayout = detectPortraitAnchoredLayout(
-                    prepared.normalized
-                );
-                const portraitAnchoredAttempt = portraitAnchoredLayout
-                    ? await evaluateLayout(prepared, portraitAnchoredLayout)
-                    : null;
-                const labelAnchoredLayout = detectLabelAnchoredLayout(
-                    prepared.normalized
-                );
-                const labelAnchoredAttempt = labelAnchoredLayout
-                    ? await evaluateLayout(prepared, labelAnchoredLayout)
-                    : null;
-                const fixedAttempt = await evaluateLayout(
-                    prepared,
-                    getFixedLayout(prepared.normalized)
-                );
-                const detectedLayout =
-                    (portraitAnchoredAttempt &&
-                        portraitAnchoredAttempt.recognizedCount >= 4) ||
-                    (labelAnchoredAttempt &&
-                        labelAnchoredAttempt.recognizedCount >= 4)
-                        ? null
-                        : detectPanelLayout(prepared.normalized);
-                const detectedAttempt = detectedLayout
-                    ? await evaluateLayout(prepared, detectedLayout)
-                    : null;
-
-                allAttempts.push(
-                    roiColumnAttempt,
-                    portraitAnchoredAttempt,
-                    labelAnchoredAttempt,
-                    fixedAttempt,
-                    detectedAttempt
-                );
-            }
-
-            const resolvedAttempts = allAttempts.filter((attempt) => attempt !== null);
-            const bestAttempt = resolvedAttempts.reduce((best, current) =>
-                !best || current.recognizedCount > best.recognizedCount
-                    ? current
-                    : best
-            );
-
-            if (!bestAttempt || bestAttempt.recognizedCount === 0) {
-                setDetectedPanelRegion(null);
-                setDetectedRegions({});
+            if (!nextStats) {
                 setStats(getEmptyStats());
                 setStatus(t("imageImport.noStatsFound"), "error");
                 return;
             }
+            const recognizedCount = statKeys.filter((key) =>
+                isValidStatValue(nextStats[key])
+            ).length;
+            setStats(nextStats);
 
-            setDetectedPanelRegion(
-                mapRectToOriginalRegion(bestAttempt.layout.panelRect, bestAttempt.prepared)
-            );
-            setDetectedRegions(
-                Object.fromEntries(
-                    statKeys.map((key) => [
-                        key,
-                        mapRectToOriginalRegion(
-                            bestAttempt.layout.statRects[key],
-                            bestAttempt.prepared
-                        ),
-                    ])
-                ) as Record<StatKey, RegionBox>
-            );
-            setStats(bestAttempt.stats);
-
-            if (bestAttempt.recognizedCount < statKeys.length) {
+            if (recognizedCount < statKeys.length) {
                 setStatus(
                     t("imageImport.partialRecognition", {
-                        count: `${bestAttempt.recognizedCount}`,
+                        count: `${recognizedCount}`,
                         total: `${statKeys.length}`,
                     }),
                     "warning"
@@ -2081,62 +1995,6 @@ export default function IvImageImportPanel({
                                 }}
                             />
                         )}
-                        {detectedPanelRegion && (
-                            <Box
-                                sx={{
-                                    position: "absolute",
-                                    left: `${detectedPanelRegion.x * 100}%`,
-                                    top: `${detectedPanelRegion.y * 100}%`,
-                                    width: `${detectedPanelRegion.width * 100}%`,
-                                    height: `${detectedPanelRegion.height * 100}%`,
-                                    border: "2px solid rgba(255, 152, 0, 0.95)",
-                                    borderRadius: 1.5,
-                                    boxSizing: "border-box",
-                                    backgroundColor: "rgba(255, 152, 0, 0.06)",
-                                    pointerEvents: "none",
-                                }}
-                            />
-                        )}
-                        {statKeys.map((key) => {
-                            const region = detectedRegions[key];
-                            if (!region) {
-                                return null;
-                            }
-
-                            return (
-                                <Box
-                                    key={key}
-                                    sx={{
-                                        position: "absolute",
-                                        left: `${region.x * 100}%`,
-                                        top: `${region.y * 100}%`,
-                                        width: `${region.width * 100}%`,
-                                        height: `${region.height * 100}%`,
-                                        border: "2px solid rgba(33, 150, 243, 0.95)",
-                                        borderRadius: 1.5,
-                                        boxSizing: "border-box",
-                                        backgroundColor: "rgba(33, 150, 243, 0.08)",
-                                        pointerEvents: "none",
-                                    }}
-                                >
-                                    <Typography
-                                        variant="caption"
-                                        sx={{
-                                            position: "absolute",
-                                            top: 4,
-                                            left: 6,
-                                            px: 0.75,
-                                            borderRadius: 0.75,
-                                            color: "common.white",
-                                            backgroundColor:
-                                                "rgba(33, 150, 243, 0.95)",
-                                        }}
-                                    >
-                                        {statLabels[key]}
-                                    </Typography>
-                                </Box>
-                            );
-                        })}
                     </Box>
                 </Box>
             )}
