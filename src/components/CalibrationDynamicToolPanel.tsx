@@ -394,57 +394,64 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     </Box>
                 </Paper>
 
-                <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                        {t("dynamicTool.correctSection")}
-                    </Typography>
-                    <Box sx={{ display: "grid", gap: 1.5 }}>
-                        <TextField
-                            label={t("dynamicTool.actualHit")}
-                            value={state.actualHit}
-                            onChange={(event) =>
-                                setField("actualHit", event.target.value)
-                            }
-                            fullWidth
-                        />
-                        <Button variant="contained" onClick={handleCorrectRate}>
-                            {t("dynamicTool.correctAction")}
-                        </Button>
-                    </Box>
-                </Paper>
+                {state.useTv === "tv" && (
+                    <>
+                        <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                                {t("dynamicTool.correctSection")}
+                            </Typography>
+                            <Box sx={{ display: "grid", gap: 1.5 }}>
+                                <TextField
+                                    label={t("dynamicTool.actualHit")}
+                                    value={state.actualHit}
+                                    onChange={(event) =>
+                                        setField("actualHit", event.target.value)
+                                    }
+                                    fullWidth
+                                />
+                                <Button
+                                    variant="contained"
+                                    onClick={handleCorrectRate}
+                                >
+                                    {t("dynamicTool.correctAction")}
+                                </Button>
+                            </Box>
+                        </Paper>
 
-                <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                        {t("dynamicTool.lastRoundSection")}
-                    </Typography>
-                    <Box
-                        sx={{
-                            display: "grid",
-                            gridTemplateColumns:
-                                "repeat(auto-fit, minmax(160px, 1fr))",
-                            gap: 1.5,
-                        }}
-                    >
-                        <TextField
-                            label={t("dynamicTool.lastTv")}
-                            value={state.lastTv}
-                            onChange={(event) =>
-                                setField("lastTv", event.target.value)
-                            }
-                            helperText={t("dynamicTool.lastTvHint")}
-                            fullWidth
-                        />
-                        <TextField
-                            label={t("dynamicTool.lastWait")}
-                            value={state.lastWait}
-                            onChange={(event) =>
-                                setField("lastWait", event.target.value)
-                            }
-                            helperText={t("dynamicTool.lastWaitHint")}
-                            fullWidth
-                        />
-                    </Box>
-                </Paper>
+                        <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                                {t("dynamicTool.lastRoundSection")}
+                            </Typography>
+                            <Box
+                                sx={{
+                                    display: "grid",
+                                    gridTemplateColumns:
+                                        "repeat(auto-fit, minmax(160px, 1fr))",
+                                    gap: 1.5,
+                                }}
+                            >
+                                <TextField
+                                    label={t("dynamicTool.lastTv")}
+                                    value={state.lastTv}
+                                    onChange={(event) =>
+                                        setField("lastTv", event.target.value)
+                                    }
+                                    helperText={t("dynamicTool.lastTvHint")}
+                                    fullWidth
+                                />
+                                <TextField
+                                    label={t("dynamicTool.lastWait")}
+                                    value={state.lastWait}
+                                    onChange={(event) =>
+                                        setField("lastWait", event.target.value)
+                                    }
+                                    helperText={t("dynamicTool.lastWaitHint")}
+                                    fullWidth
+                                />
+                            </Box>
+                        </Paper>
+                    </>
+                )}
 
                 <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
                     <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
@@ -454,14 +461,18 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         sx={{
                             display: "grid",
                             gridTemplateColumns:
-                                "repeat(auto-fit, minmax(160px, 1fr))",
+                                state.useTv === "tv"
+                                    ? "repeat(auto-fit, minmax(160px, 1fr))"
+                                    : "1fr",
                             gap: 1.5,
                         }}
                     >
-                        <ReadonlyValue
-                            label={t("dynamicTool.currentTvLabel")}
-                            value={state.currentTv}
-                        />
+                        {state.useTv === "tv" && (
+                            <ReadonlyValue
+                                label={t("dynamicTool.currentTvLabel")}
+                                value={state.currentTv}
+                            />
+                        )}
                         <ReadonlyValue
                             label={t("dynamicTool.currentWaitLabel")}
                             value={state.currentWait}
@@ -511,9 +522,11 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                         label={`#${state.history.length - index}`}
                                         variant="outlined"
                                     />
-                                    <Typography variant="body2">
-                                        _TV: {entry.tv} ms
-                                    </Typography>
+                                    {entry.mode === "tv" && (
+                                        <Typography variant="body2">
+                                            _TV: {entry.tv} ms
+                                        </Typography>
+                                    )}
                                     <Typography variant="body2">
                                         _剩余: {entry.wait} ms
                                     </Typography>
