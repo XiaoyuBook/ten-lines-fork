@@ -1384,8 +1384,17 @@ const createBinaryCropDataUrl = (
 };
 
 const parseNumericValue = (rawText: string) => {
-    const matches = rawText.replace(/\s/g, "").match(/\d{1,3}/g);
-    return matches?.[0] ?? "";
+    const matches = rawText.replace(/\s/g, "").match(/\d{1,3}/g) ?? [];
+    if (matches.length === 0) {
+        return "";
+    }
+
+    return matches.reduce((best, current) => {
+        if (current.length > best.length) {
+            return current;
+        }
+        return current.length === best.length ? current : best;
+    });
 };
 
 const extractHpValue = (rawText: string) => {
@@ -1436,12 +1445,12 @@ const extractRoiColumnStats = async (
         const bandBottom = Math.round((index + 1) * bandHeight);
         const rawRect = clampRect(
             {
-                left: 0,
-                top: Math.max(0, bandTop - Math.round(bandHeight * 0.12)),
+                left: Math.max(0, Math.round(image.width * 0.58)),
+                top: Math.max(0, bandTop - Math.round(bandHeight * 0.1)),
                 right: image.width,
                 bottom: Math.min(
                     image.height,
-                    bandBottom + Math.round(bandHeight * 0.12)
+                    bandBottom + Math.round(bandHeight * 0.1)
                 ),
             },
             image.width,
@@ -1749,6 +1758,7 @@ export default function IvImageImportPanel({
         allowSlash: boolean
     ) => {
         const attemptOffsets = [0, -2, 2, -4, 4];
+        const attemptScales = allowSlash ? [4, 5, 6] : [5, 6, 7];
         let fallbackValue = "";
 
         await worker.setParameters({
@@ -1770,36 +1780,38 @@ export default function IvImageImportPanel({
             );
             const innerRect = insetRect(
                 shiftedRect,
-                allowSlash ? 2 : 3,
-                allowSlash ? 1 : 2
+                allowSlash ? 1 : 1,
+                allowSlash ? 1 : 1
             );
             const cropRect =
                 rectWidth(innerRect) > 4 && rectHeight(innerRect) > 4
                     ? innerRect
                     : shiftedRect;
 
-            const result = await worker.recognize(
-                createBinaryCropDataUrl(image, cropRect, allowSlash ? 4 : 5)
-            );
-            const rawText = result.data.text;
+            for (const scale of attemptScales) {
+                const result = await worker.recognize(
+                    createBinaryCropDataUrl(image, cropRect, scale)
+                );
+                const rawText = result.data.text;
 
-            if (allowSlash) {
-                const hpCandidate = extractHpValue(rawText);
-                if (fallbackValue === "" && hpCandidate.value !== "") {
-                    fallbackValue = hpCandidate.value;
+                if (allowSlash) {
+                    const hpCandidate = extractHpValue(rawText);
+                    if (fallbackValue === "" && hpCandidate.value !== "") {
+                        fallbackValue = hpCandidate.value;
+                    }
+                    if (hpCandidate.strong && isValidStatValue(hpCandidate.value)) {
+                        return hpCandidate.value;
+                    }
+                    continue;
                 }
-                if (hpCandidate.strong && isValidStatValue(hpCandidate.value)) {
-                    return hpCandidate.value;
-                }
-                continue;
-            }
 
-            const numericValue = parseNumericValue(rawText);
-            if (fallbackValue === "" && numericValue !== "") {
-                fallbackValue = numericValue;
-            }
-            if (isValidStatValue(numericValue)) {
-                return numericValue;
+                const numericValue = parseNumericValue(rawText);
+                if (fallbackValue === "" && numericValue !== "") {
+                    fallbackValue = numericValue;
+                }
+                if (isValidStatValue(numericValue)) {
+                    return numericValue;
+                }
             }
         }
 
