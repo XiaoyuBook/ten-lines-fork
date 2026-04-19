@@ -42,6 +42,8 @@ interface DynamicToolStoredState {
     actualHit: string;
     tvRate: string;
     parityTime: string;
+    baseTimeTv: string;
+    baseTimeNoTv: string;
     lastTv: string;
     lastWait: string;
     lastParity: string;
@@ -61,6 +63,8 @@ const DEFAULT_STATE: DynamicToolStoredState = {
     actualHit: "",
     tvRate: DEFAULT_TV_RATE.toFixed(6),
     parityTime: DEFAULT_PARITY_TIME.toFixed(0),
+    baseTimeTv: DEFAULT_BASE_TIME_TV.toFixed(0),
+    baseTimeNoTv: DEFAULT_BASE_TIME_NO_TV.toFixed(0),
     lastTv: "",
     lastWait: "",
     lastParity: "",
@@ -113,6 +117,14 @@ function normalizeState(value: unknown): DynamicToolStoredState {
             typeof current.parityTime === "string"
                 ? current.parityTime
                 : DEFAULT_STATE.parityTime,
+        baseTimeTv:
+            typeof current.baseTimeTv === "string"
+                ? current.baseTimeTv
+                : DEFAULT_STATE.baseTimeTv,
+        baseTimeNoTv:
+            typeof current.baseTimeNoTv === "string"
+                ? current.baseTimeNoTv
+                : DEFAULT_STATE.baseTimeNoTv,
         lastParity:
             typeof current.lastParity === "string" ? current.lastParity : "",
         currentParity:
@@ -216,7 +228,9 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
     }, [state.tvRate]);
 
     const currentBaseTime =
-        state.useTv === "tv" ? DEFAULT_BASE_TIME_TV : DEFAULT_BASE_TIME_NO_TV;
+        state.useTv === "tv"
+            ? state.baseTimeTv
+            : state.baseTimeNoTv;
 
     const setField = (key: keyof DynamicToolStoredState, value: string) => {
         setState((current: DynamicToolStoredState) => ({
@@ -239,8 +253,15 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
     const handleCalculate = () => {
         const targetAdv = parseNumber(state.targetAdv);
         const parityTime = parseNumber(state.parityTime);
+        const baseTimeTv = parseNumber(state.baseTimeTv);
+        const baseTimeNoTv = parseNumber(state.baseTimeNoTv);
 
-        if (Number.isNaN(targetAdv) || Number.isNaN(parityTime)) {
+        if (
+            Number.isNaN(targetAdv) ||
+            Number.isNaN(parityTime) ||
+            Number.isNaN(baseTimeTv) ||
+            Number.isNaN(baseTimeNoTv)
+        ) {
             setFeedbackSeverity("warning");
             setFeedback(t("dynamicTool.invalidCalculation"));
             return;
@@ -249,7 +270,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         const parityFrames = getParityFrames(parityTime);
 
         if (state.useTv === "no-tv") {
-            const baseFrames = DEFAULT_BASE_TIME_NO_TV * RATE_2X2;
+            const baseFrames = baseTimeNoTv * RATE_2X2;
             const finalWait = Math.round((targetAdv - parityFrames - baseFrames) / RATE_2X2);
 
             setState((current: DynamicToolStoredState) => {
@@ -259,7 +280,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     currentTv: t("dynamicTool.notUsedShort"),
                     currentWait: finalWait.toString(),
                     currentParity: parityTime.toFixed(0),
-                    currentTotal: (DEFAULT_BASE_TIME_NO_TV + finalWait).toFixed(0),
+                    currentTotal: (baseTimeNoTv + finalWait).toFixed(0),
                     lastTv: "0",
                     lastWait: finalWait.toString(),
                     lastParity: parityTime.toFixed(0),
@@ -278,7 +299,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
             return;
         }
 
-        const baseFrames = DEFAULT_BASE_TIME_TV * RATE_2X2;
+        const baseFrames = baseTimeTv * RATE_2X2;
         const lockedTv = parseNumber(state.lockedTv);
         const badTvSpot = parseNumber(state.badTvSpot);
         let finalTv = 0;
@@ -318,7 +339,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 currentTv: finalTv.toString(),
                 currentWait: finalWait.toString(),
                 currentParity: parityTime.toFixed(0),
-                currentTotal: (DEFAULT_BASE_TIME_TV + finalTv + finalWait).toFixed(0),
+                currentTotal: (baseTimeTv + finalTv + finalWait).toFixed(0),
                 lastTv: finalTv.toString(),
                 lastWait: finalWait.toString(),
                 lastParity: parityTime.toFixed(0),
@@ -347,10 +368,12 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         const lastTv = parseNumber(state.lastTv);
         const lastWait = parseNumber(state.lastWait);
         const lastParity = parseNumber(state.lastParity);
+        const baseTimeTv = parseNumber(state.baseTimeTv);
+        const baseTimeNoTv = parseNumber(state.baseTimeNoTv);
         let actualHit = parseNumber(state.actualHit);
 
         if (
-            [targetAdv, lastTv, lastWait, lastParity, actualHit].some((value) =>
+            [targetAdv, lastTv, lastWait, lastParity, actualHit, baseTimeTv, baseTimeNoTv].some((value) =>
                 Number.isNaN(value)
             )
         ) {
@@ -361,8 +384,8 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
 
         const usingTvForCorrection = lastTv > 0;
         const baseTime = usingTvForCorrection
-            ? DEFAULT_BASE_TIME_TV
-            : DEFAULT_BASE_TIME_NO_TV;
+            ? baseTimeTv
+            : baseTimeNoTv;
 
         let nextParityTime = parseNumber(state.parityTime);
         let nextForceShift = false;
@@ -522,9 +545,17 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             }
                             fullWidth
                         />
-                        <ReadonlyValue
+                        <TextField
                             label={t("dynamicTool.baseTime")}
-                            value={currentBaseTime.toFixed(0)}
+                            value={currentBaseTime}
+                            onChange={(event) =>
+                                setField(
+                                    state.useTv === "tv"
+                                        ? "baseTimeTv"
+                                        : "baseTimeNoTv",
+                                    event.target.value
+                                )
+                            }
                             helperText={
                                 state.useTv === "tv"
                                     ? t("dynamicTool.baseTimeTvHint")
