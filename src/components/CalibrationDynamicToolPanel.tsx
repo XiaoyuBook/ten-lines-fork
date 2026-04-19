@@ -397,9 +397,17 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
 
     const handleCorrectRate = () => {
         const targetAdv = parseNumber(state.targetAdv);
-        const lastTv = parseNumber(state.lastTv);
-        const lastWait = parseNumber(state.lastWait);
-        const lastParity = parseNumber(state.lastParity);
+        const fallbackTv =
+            state.lastTv.trim() !== "" ? state.lastTv : state.currentTv;
+        const fallbackWait =
+            state.lastWait.trim() !== "" ? state.lastWait : state.currentWait;
+        const fallbackParity =
+            state.lastParity.trim() !== ""
+                ? state.lastParity
+                : state.currentParity;
+        const lastTv = parseNumber(fallbackTv);
+        const lastWait = parseNumber(fallbackWait);
+        const lastParity = parseNumber(fallbackParity);
         const baseTimeTv = parseNumber(state.baseTimeTv);
         const baseTimeNoTv = parseNumber(state.baseTimeNoTv);
         let actualHit = parseNumber(state.actualHit);
