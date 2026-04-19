@@ -300,7 +300,8 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         }
 
         const baseFrames = baseTimeTv * RATE_2X2;
-        const lockedTv = parseNumber(state.lockedTv);
+        const parsedLockedTv = parseNumber(state.lockedTv);
+        const lockedTv = Number.isNaN(parsedLockedTv) ? 0 : parsedLockedTv;
         const badTvSpot = parseNumber(state.badTvSpot);
         let finalTv = 0;
         let finalWait = 0;
