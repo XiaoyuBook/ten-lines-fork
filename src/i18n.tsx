@@ -381,7 +381,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             historySection: "History",
             targetAdv: "Target Advances",
             baseTime: "Base Time (ms)",
-            baseTimeHint: "Fixed internal base time for this tool",
+            baseTimeTvHint: "TV mode uses the TV base time",
+            baseTimeNoTvHint: "Non-TV mode uses the normal base time",
             parityTime: "Parity Time (ms)",
             calculateAction: "Calculate",
             actualHit: "Actual Hit Advances",
@@ -413,9 +414,14 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "Detected a 314 shift. The next round will force a physical phase shift.",
             keepLockedTv:
                 "Deviation recorded. TV rate was updated and the next round will reuse the previous TV time when safe.",
+            noTvCorrectionRecorded:
+                "Deviation recorded. Parity and phase state were updated for non-TV mode.",
             clearedState: "All cached state has been cleared.",
             clearAll: "Clear All",
             notUsedShort: "Not used",
+            historyTvShort: "_TV",
+            historyWaitShort: "_Remaining",
+            historyParityShort: "_Parity",
             emptyHistory:
                 "Each calculation will append the current _TV and _Remaining Wait here.",
         },
@@ -740,7 +746,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             historySection: "\u5386\u53f2\u8bb0\u5f55",
             targetAdv: "\u76ee\u6807\u5e27\u6570",
             baseTime: "\u57fa\u7840\u4fdd\u5e95\u65f6\u95f4 (ms)",
-            baseTimeHint: "\u6b64\u5de5\u5177\u5185\u90e8\u4f7f\u7528\u56fa\u5b9a\u4fdd\u5e95\u65f6\u95f4",
+            baseTimeTvHint:
+                "TV \u6a21\u5f0f\u4f7f\u7528 TV \u4fdd\u5e95\u65f6\u95f4",
+            baseTimeNoTvHint:
+                "\u975e TV \u6a21\u5f0f\u4f7f\u7528\u666e\u901a\u4fdd\u5e95\u65f6\u95f4",
             parityTime: "\u5947\u5076\u65f6\u95f4 (ms)",
             calculateAction: "\u8ba1\u7b97",
             actualHit: "\u5b9e\u9645\u547d\u4e2d\u5e27\u6570",
@@ -776,10 +785,15 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u68c0\u6d4b\u5230 314 \u6ce2\u52a8\uff0c\u4e0b\u4e00\u8f6e\u4f1a\u5f3a\u5236\u8fdb\u884c\u7269\u7406\u76f8\u4f4d\u4f4d\u79fb\u3002",
             keepLockedTv:
                 "\u5df2\u8bb0\u5f55\u504f\u5dee\uff0cTV \u500d\u7387\u5df2\u66f4\u65b0\uff0c\u4e14\u4e0b\u4e00\u8f6e\u4f1a\u5728\u5b89\u5168\u65f6\u5c3d\u91cf\u6cbf\u7528\u4e0a\u4e00\u8f6e TV \u65f6\u95f4\u3002",
+            noTvCorrectionRecorded:
+                "\u5df2\u8bb0\u5f55\u504f\u5dee\uff0c\u975e TV \u6a21\u5f0f\u7684\u5947\u5076\u4e0e\u76f8\u4f4d\u72b6\u6001\u5df2\u540c\u6b65\u66f4\u65b0\u3002",
             clearedState:
                 "\u6240\u6709\u5de5\u5177\u72b6\u6001\u5df2\u6e05\u7a7a\uff0c\u4e0d\u4f1a\u518d\u53d7\u4e0a\u6b21\u4f7f\u7528\u5f71\u54cd\u3002",
             clearAll: "\u6e05\u7a7a\u5168\u90e8\u72b6\u6001",
             notUsedShort: "\u4e0d\u4f7f\u7528",
+            historyTvShort: "_TV",
+            historyWaitShort: "_\u5269\u4f59",
+            historyParityShort: "_\u5947\u5076",
             emptyHistory:
                 "\u6bcf\u6b21\u8ba1\u7b97\u540e\uff0c\u672c\u6b21\u7684 _TV\u8fc7\u5e27\u65f6\u95f4 \u548c _\u5269\u4f59\u5e27\u6570\u65f6\u95f4\u90fd\u4f1a\u8bb0\u5f55\u5728\u8fd9\u91cc\u3002",
         },

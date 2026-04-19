@@ -19,7 +19,8 @@ const REFRESH_MS = 16.66667;
 const TV_STEP = 314;
 const LONG_PRESS_BONUS = 88.8;
 const PARITY_SHIFT_MS = 17;
-const DEFAULT_BASE_TIME = 34600;
+const DEFAULT_BASE_TIME_TV = 34600;
+const DEFAULT_BASE_TIME_NO_TV = 15100;
 const DEFAULT_GOAL_WAIT = 5000;
 const DEFAULT_TV_RATE = 18.71;
 const DEFAULT_PARITY_TIME = 1520;
@@ -93,18 +94,10 @@ function normalizeState(value: unknown): DynamicToolStoredState {
                           ? nextEntry.id
                           : globalThis.crypto?.randomUUID?.() ??
                             `${Date.now()}-${Math.random()}`,
-                  tv:
-                      typeof nextEntry.tv === "string"
-                          ? nextEntry.tv
-                          : "",
-                  wait:
-                      typeof nextEntry.wait === "string"
-                          ? nextEntry.wait
-                          : "",
+                  tv: typeof nextEntry.tv === "string" ? nextEntry.tv : "",
+                  wait: typeof nextEntry.wait === "string" ? nextEntry.wait : "",
                   parity:
-                      typeof nextEntry.parity === "string"
-                          ? nextEntry.parity
-                          : "",
+                      typeof nextEntry.parity === "string" ? nextEntry.parity : "",
                   mode:
                       nextEntry.mode === "no-tv"
                           ? ("no-tv" as DynamicToolMode)
@@ -215,15 +208,15 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         "success" | "warning"
     >("success");
 
-    const state = useMemo(
-        () => normalizeState(storedState),
-        [storedState]
-    );
+    const state = useMemo(() => normalizeState(storedState), [storedState]);
 
     const currentTvRate = useMemo(() => {
         const parsed = parseNumber(state.tvRate);
         return Number.isNaN(parsed) ? DEFAULT_TV_RATE : parsed;
     }, [state.tvRate]);
+
+    const currentBaseTime =
+        state.useTv === "tv" ? DEFAULT_BASE_TIME_TV : DEFAULT_BASE_TIME_NO_TV;
 
     const setField = (key: keyof DynamicToolStoredState, value: string) => {
         setState((current: DynamicToolStoredState) => ({
@@ -237,10 +230,11 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         tv: string,
         wait: string,
         parity: string
-    ) => [
-        createHistoryEntry(tv, wait, parity, current.useTv),
-        ...current.history,
-    ].slice(0, MAX_HISTORY_ITEMS);
+    ) =>
+        [createHistoryEntry(tv, wait, parity, current.useTv), ...current.history].slice(
+            0,
+            MAX_HISTORY_ITEMS
+        );
 
     const handleCalculate = () => {
         const targetAdv = parseNumber(state.targetAdv);
@@ -252,13 +246,11 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
             return;
         }
 
+        const parityFrames = getParityFrames(parityTime);
+
         if (state.useTv === "no-tv") {
-            const finalWait = Math.round(
-                (targetAdv -
-                    getParityFrames(parityTime) -
-                    DEFAULT_BASE_TIME * RATE_2X2) /
-                    RATE_2X2
-            );
+            const baseFrames = DEFAULT_BASE_TIME_NO_TV * RATE_2X2;
+            const finalWait = Math.round((targetAdv - parityFrames - baseFrames) / RATE_2X2);
 
             setState((current: DynamicToolStoredState) => {
                 const next = normalizeState(current);
@@ -267,7 +259,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     currentTv: t("dynamicTool.notUsedShort"),
                     currentWait: finalWait.toString(),
                     currentParity: parityTime.toFixed(0),
-                    currentTotal: (DEFAULT_BASE_TIME + finalWait).toFixed(0),
+                    currentTotal: (DEFAULT_BASE_TIME_NO_TV + finalWait).toFixed(0),
                     lastTv: "0",
                     lastWait: finalWait.toString(),
                     lastParity: parityTime.toFixed(0),
@@ -286,8 +278,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
             return;
         }
 
-        const parityFrames = getParityFrames(parityTime);
-        const baseFrames = DEFAULT_BASE_TIME * RATE_2X2;
+        const baseFrames = DEFAULT_BASE_TIME_TV * RATE_2X2;
         const lockedTv = parseNumber(state.lockedTv);
         const badTvSpot = parseNumber(state.badTvSpot);
         let finalTv = 0;
@@ -299,7 +290,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 targetAdv - parityFrames - baseFrames - lockedTv * currentTvRate;
             finalWait = Math.round(remainNeeded / RATE_2X2);
 
-            if (finalWait >= 2000 && finalWait <= 10000) {
+            if (finalWait >= 1500 && finalWait <= 12000) {
                 finalTv = lockedTv;
             } else {
                 needsShift = true;
@@ -313,10 +304,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     baseFrames -
                     DEFAULT_GOAL_WAIT * RATE_2X2) /
                 currentTvRate;
-            finalTv = findSafeTv(
-                rawTv,
-                Number.isNaN(badTvSpot) ? 0 : badTvSpot
-            );
+            finalTv = findSafeTv(rawTv, Number.isNaN(badTvSpot) ? 0 : badTvSpot);
             finalWait = Math.round(
                 (targetAdv - parityFrames - baseFrames - finalTv * currentTvRate) /
                     RATE_2X2
@@ -330,7 +318,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 currentTv: finalTv.toString(),
                 currentWait: finalWait.toString(),
                 currentParity: parityTime.toFixed(0),
-                currentTotal: (DEFAULT_BASE_TIME + finalTv + finalWait).toFixed(0),
+                currentTotal: (DEFAULT_BASE_TIME_TV + finalTv + finalWait).toFixed(0),
                 lastTv: finalTv.toString(),
                 lastWait: finalWait.toString(),
                 lastParity: parityTime.toFixed(0),
@@ -371,11 +359,10 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
             return;
         }
 
-        if (lastTv <= 0) {
-            setFeedbackSeverity("warning");
-            setFeedback(t("dynamicTool.invalidLastTv"));
-            return;
-        }
+        const usingTvForCorrection = lastTv > 0;
+        const baseTime = usingTvForCorrection
+            ? DEFAULT_BASE_TIME_TV
+            : DEFAULT_BASE_TIME_NO_TV;
 
         let nextParityTime = parseNumber(state.parityTime);
         let nextForceShift = false;
@@ -390,11 +377,11 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
 
         const expected =
             getParityFrames(lastParity) +
-            (DEFAULT_BASE_TIME + lastWait) * RATE_2X2 +
+            (baseTime + lastWait) * RATE_2X2 +
             lastTv * currentTvRate;
         const diff = actualHit - expected;
 
-        if (Math.abs(diff) >= 214 && Math.abs(diff) <= 414) {
+        if (usingTvForCorrection && Math.abs(diff) >= 214 && Math.abs(diff) <= 414) {
             actualHit = diff > 0 ? actualHit - TV_STEP : actualHit + TV_STEP;
             nextBadTvSpot = Math.round(lastTv).toString();
             nextForceShift = true;
@@ -408,26 +395,33 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
             }
         }
 
-        const nextTvRate =
-            (actualHit -
-                (getParityFrames(nextParityTime) +
-                    (DEFAULT_BASE_TIME + lastWait) * RATE_2X2)) /
-            lastTv;
-
         setState((current: DynamicToolStoredState) => {
             const next = normalizeState(current);
             return {
                 ...next,
-                tvRate: nextTvRate.toFixed(6),
+                tvRate: usingTvForCorrection
+                    ? (
+                          (actualHit -
+                              (getParityFrames(nextParityTime) +
+                                  (baseTime + lastWait) * RATE_2X2)) /
+                          lastTv
+                      ).toFixed(6)
+                    : next.tvRate,
                 parityTime: nextParityTime.toFixed(0),
                 forceShift: nextForceShift,
-                lockedTv: Math.round(lastTv).toString(),
+                lockedTv: usingTvForCorrection
+                    ? Math.round(lastTv).toString()
+                    : next.lockedTv,
                 badTvSpot: nextBadTvSpot,
             };
         });
 
         setFeedbackSeverity("success");
-        setFeedback(t(feedbackKey));
+        setFeedback(
+            usingTvForCorrection
+                ? t(feedbackKey)
+                : t("dynamicTool.noTvCorrectionRecorded")
+        );
     };
 
     const handleReset = () => {
@@ -494,9 +488,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         {t("dynamicTool.modeTv")}
                     </Button>
                     <Button
-                        variant={
-                            state.useTv === "no-tv" ? "contained" : "outlined"
-                        }
+                        variant={state.useTv === "no-tv" ? "contained" : "outlined"}
                         onClick={() => {
                             setState((current: DynamicToolStoredState) => ({
                                 ...normalizeState(current),
@@ -532,8 +524,12 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         />
                         <ReadonlyValue
                             label={t("dynamicTool.baseTime")}
-                            value={DEFAULT_BASE_TIME.toFixed(0)}
-                            helperText={t("dynamicTool.baseTimeHint")}
+                            value={currentBaseTime.toFixed(0)}
+                            helperText={
+                                state.useTv === "tv"
+                                    ? t("dynamicTool.baseTimeTvHint")
+                                    : t("dynamicTool.baseTimeNoTvHint")
+                            }
                         />
                         <TextField
                             label={t("dynamicTool.parityTime")}
@@ -549,143 +545,104 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     </Box>
                 </Paper>
 
-                {state.useTv === "tv" && (
-                    <>
-                        <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                                {t("dynamicTool.currentResultSection")}
-                            </Typography>
-                            <Box
-                                sx={{
-                                    display: "grid",
-                                    gridTemplateColumns:
-                                        "repeat(auto-fit, minmax(160px, 1fr))",
-                                    gap: 1.5,
-                                }}
-                            >
-                                <ReadonlyValue
-                                    label={t("dynamicTool.currentTvLabel")}
-                                    value={state.currentTv}
-                                />
-                                <ReadonlyValue
-                                    label={t("dynamicTool.currentWaitLabel")}
-                                    value={state.currentWait}
-                                />
-                                <ReadonlyValue
-                                    label={t("dynamicTool.currentParityLabel")}
-                                    value={state.currentParity}
-                                />
-                            </Box>
-                            {state.currentTotal ? (
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    sx={{ mt: 1.5 }}
-                                >
-                                    {t("dynamicTool.physicalTotal")}: {state.currentTotal} ms
-                                </Typography>
-                            ) : null}
-                        </Paper>
-
-                        <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                                {t("dynamicTool.lastRoundSection")}
-                            </Typography>
-                            <Box
-                                sx={{
-                                    display: "grid",
-                                    gridTemplateColumns:
-                                        "repeat(auto-fit, minmax(160px, 1fr))",
-                                    gap: 1.5,
-                                }}
-                            >
-                                <TextField
-                                    label={t("dynamicTool.lastTv")}
-                                    value={state.lastTv}
-                                    onChange={(event) =>
-                                        setField("lastTv", event.target.value)
-                                    }
-                                    helperText={t("dynamicTool.lastTvHint")}
-                                    fullWidth
-                                />
-                                <TextField
-                                    label={t("dynamicTool.lastWait")}
-                                    value={state.lastWait}
-                                    onChange={(event) =>
-                                        setField("lastWait", event.target.value)
-                                    }
-                                    helperText={t("dynamicTool.lastWaitHint")}
-                                    fullWidth
-                                />
-                                <TextField
-                                    label={t("dynamicTool.lastParity")}
-                                    value={state.lastParity}
-                                    onChange={(event) =>
-                                        setField("lastParity", event.target.value)
-                                    }
-                                    helperText={t("dynamicTool.lastParityHint")}
-                                    fullWidth
-                                />
-                            </Box>
-                        </Paper>
-
-                        <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                                {t("dynamicTool.correctSection")}
-                            </Typography>
-                            <Box sx={{ display: "grid", gap: 1.5 }}>
-                                <TextField
-                                    label={t("dynamicTool.actualHit")}
-                                    value={state.actualHit}
-                                    onChange={(event) =>
-                                        setField("actualHit", event.target.value)
-                                    }
-                                    fullWidth
-                                />
-                                <Button
-                                    variant="contained"
-                                    onClick={handleCorrectRate}
-                                >
-                                    {t("dynamicTool.correctAction")}
-                                </Button>
-                            </Box>
-                        </Paper>
-                    </>
-                )}
-
-                {state.useTv !== "tv" && (
-                    <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                            {t("dynamicTool.currentResultSection")}
-                        </Typography>
-                        <Box
-                            sx={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(160px, 1fr))",
-                                gap: 1.5,
-                            }}
-                        >
+                <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                        {t("dynamicTool.currentResultSection")}
+                    </Typography>
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns:
+                                "repeat(auto-fit, minmax(160px, 1fr))",
+                            gap: 1.5,
+                        }}
+                    >
+                        {state.useTv === "tv" ? (
                             <ReadonlyValue
-                                label={t("dynamicTool.currentWaitLabel")}
-                                value={state.currentWait}
+                                label={t("dynamicTool.currentTvLabel")}
+                                value={state.currentTv}
                             />
-                            <ReadonlyValue
-                                label={t("dynamicTool.currentParityLabel")}
-                                value={state.currentParity}
-                            />
-                        </Box>
-                        {state.currentTotal ? (
-                            <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{ mt: 1.5 }}
-                            >
-                                {t("dynamicTool.physicalTotal")}: {state.currentTotal} ms
-                            </Typography>
                         ) : null}
-                    </Paper>
-                )}
+                        <ReadonlyValue
+                            label={t("dynamicTool.currentWaitLabel")}
+                            value={state.currentWait}
+                        />
+                        <ReadonlyValue
+                            label={t("dynamicTool.currentParityLabel")}
+                            value={state.currentParity}
+                        />
+                    </Box>
+                    {state.currentTotal ? (
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mt: 1.5 }}
+                        >
+                            {t("dynamicTool.physicalTotal")}: {state.currentTotal} ms
+                        </Typography>
+                    ) : null}
+                </Paper>
+
+                <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                        {t("dynamicTool.lastRoundSection")}
+                    </Typography>
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns:
+                                "repeat(auto-fit, minmax(160px, 1fr))",
+                            gap: 1.5,
+                        }}
+                    >
+                        <TextField
+                            label={t("dynamicTool.lastTv")}
+                            value={state.lastTv}
+                            onChange={(event) =>
+                                setField("lastTv", event.target.value)
+                            }
+                            helperText={t("dynamicTool.lastTvHint")}
+                            fullWidth
+                        />
+                        <TextField
+                            label={t("dynamicTool.lastWait")}
+                            value={state.lastWait}
+                            onChange={(event) =>
+                                setField("lastWait", event.target.value)
+                            }
+                            helperText={t("dynamicTool.lastWaitHint")}
+                            fullWidth
+                        />
+                        <TextField
+                            label={t("dynamicTool.lastParity")}
+                            value={state.lastParity}
+                            onChange={(event) =>
+                                setField("lastParity", event.target.value)
+                            }
+                            helperText={t("dynamicTool.lastParityHint")}
+                            fullWidth
+                        />
+                    </Box>
+                </Paper>
+
+                <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                        {t("dynamicTool.correctSection")}
+                    </Typography>
+                    <Box sx={{ display: "grid", gap: 1.5 }}>
+                        <TextField
+                            label={t("dynamicTool.actualHit")}
+                            value={state.actualHit}
+                            onChange={(event) =>
+                                setField("actualHit", event.target.value)
+                            }
+                            fullWidth
+                        />
+                        <Button variant="contained" onClick={handleCorrectRate}>
+                            {t("dynamicTool.correctAction")}
+                        </Button>
+                    </Box>
+                </Paper>
 
                 <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
                     <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
@@ -697,50 +654,48 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         </Typography>
                     ) : (
                         <Box sx={{ display: "grid", gap: 1 }}>
-                            {state.history.map((
-                                entry: DynamicToolHistoryEntry,
-                                index: number
-                            ) => (
-                                <Box
-                                    key={entry.id}
-                                    sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        gap: 1,
-                                        flexWrap: "wrap",
-                                        p: 1.25,
-                                        borderRadius: 2,
-                                        backgroundColor:
-                                            "rgba(255,255,255,0.035)",
-                                    }}
-                                >
-                                    <Chip
-                                        size="small"
-                                        label={`#${state.history.length - index}`}
-                                        variant="outlined"
-                                    />
-                                    {entry.mode === "tv" && (
-                                        <Typography variant="body2">
-                                            _TV: {entry.tv} ms
-                                        </Typography>
-                                    )}
-                                    <Typography variant="body2">
-                                        _剩余: {entry.wait} ms
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        _奇偶: {entry.parity} ms
-                                    </Typography>
-                                    <Typography
-                                        variant="caption"
-                                        color="text.secondary"
+                            {state.history.map(
+                                (entry: DynamicToolHistoryEntry, index: number) => (
+                                    <Box
+                                        key={entry.id}
+                                        sx={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            gap: 1,
+                                            flexWrap: "wrap",
+                                            p: 1.25,
+                                            borderRadius: 2,
+                                            backgroundColor: "rgba(255,255,255,0.035)",
+                                        }}
                                     >
-                                        {entry.mode === "tv"
-                                            ? t("dynamicTool.modeTv")
-                                            : t("dynamicTool.modeNoTv")}
-                                    </Typography>
-                                </Box>
-                            ))}
+                                        <Chip
+                                            size="small"
+                                            label={`#${state.history.length - index}`}
+                                            variant="outlined"
+                                        />
+                                        {entry.mode === "tv" ? (
+                                            <Typography variant="body2">
+                                                {t("dynamicTool.historyTvShort")}: {entry.tv} ms
+                                            </Typography>
+                                        ) : null}
+                                        <Typography variant="body2">
+                                            {t("dynamicTool.historyWaitShort")}: {entry.wait} ms
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            {t("dynamicTool.historyParityShort")}: {entry.parity} ms
+                                        </Typography>
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                        >
+                                            {entry.mode === "tv"
+                                                ? t("dynamicTool.modeTv")
+                                                : t("dynamicTool.modeNoTv")}
+                                        </Typography>
+                                    </Box>
+                                )
+                            )}
                         </Box>
                     )}
                 </Paper>
