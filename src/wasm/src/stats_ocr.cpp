@@ -151,64 +151,54 @@ Rect find_content_bounds(const std::vector<uint8_t>& binary, int width, int heig
     return rect;
 }
 
-std::vector<Rect> find_row_bands(const std::vector<uint8_t>& binary, int width, int height, const Rect& bounds)
+Rect tighten_band_rows(const std::vector<uint8_t>& binary, int width, int height, const Rect& band)
 {
-    (void)height;
+    const int min_active = std::max(1, (band.right - band.left) / 30);
+    int top = band.bottom;
+    int bottom = band.top;
+    for (int y = band.top; y < band.bottom; y++) {
+        if (row_sum(binary, width, y, band.left, band.right) >= min_active) {
+            top = std::min(top, y);
+            bottom = std::max(bottom, y + 1);
+        }
+    }
+
+    if (bottom <= top) {
+        return band;
+    }
+
+    const int pad = std::max(1, (band.bottom - band.top) / 8);
+    return {
+        band.left,
+        std::clamp(top - pad, 0, height - 1),
+        band.right,
+        std::clamp(bottom + pad, top + 1, height),
+    };
+}
+
+std::vector<Rect> find_fixed_row_bands(const std::vector<uint8_t>& binary, int width, int height, const Rect& bounds)
+{
     std::vector<Rect> bands;
-    const int min_active = std::max(1, (bounds.right - bounds.left) / 24);
-    const int max_gap = std::max(1, (bounds.bottom - bounds.top) / 60);
+    const std::array<std::pair<double, double>, 6> ratios = {{
+        { 0.00, 0.18 },
+        { 0.18, 0.34 },
+        { 0.34, 0.50 },
+        { 0.50, 0.66 },
+        { 0.66, 0.82 },
+        { 0.82, 1.00 },
+    }};
 
-    int start = -1;
-    int last_active = -1;
-    for (int y = bounds.top; y < bounds.bottom; y++) {
-        int sum = row_sum(binary, width, y, bounds.left, bounds.right);
-        if (sum >= min_active) {
-            if (start < 0) {
-                start = y;
-            }
-            last_active = y;
-            continue;
-        }
-
-        if (start >= 0 && last_active >= 0 && y - last_active > max_gap) {
-            bands.push_back({ bounds.left, start, bounds.right, last_active + 1 });
-            start = -1;
-            last_active = -1;
-        }
-    }
-
-    if (start >= 0 && last_active >= 0) {
-        bands.push_back({ bounds.left, start, bounds.right, last_active + 1 });
-    }
-
-    bands.erase(
-        std::remove_if(
-            bands.begin(),
-            bands.end(),
-            [&](const Rect& band) {
-                return band.bottom - band.top < std::max(2, (bounds.bottom - bounds.top) / 28);
-            }),
-        bands.end());
-
-    if (bands.size() > 6) {
-        std::stable_sort(
-            bands.begin(),
-            bands.end(),
-            [&](const Rect& lhs, const Rect& rhs) {
-                const int lhs_score = (lhs.bottom - lhs.top) * (lhs.right - lhs.left);
-                const int rhs_score = (rhs.bottom - rhs.top) * (rhs.right - rhs.left);
-                if (lhs_score == rhs_score) {
-                    return lhs.top < rhs.top;
-                }
-                return lhs_score > rhs_score;
-            });
-        bands.resize(6);
-        std::sort(
-            bands.begin(),
-            bands.end(),
-            [](const Rect& lhs, const Rect& rhs) {
-                return lhs.top < rhs.top;
-            });
+    const int content_height = std::max(1, bounds.bottom - bounds.top);
+    for (const auto& ratio : ratios) {
+        Rect band {
+            bounds.left,
+            bounds.top + static_cast<int>(std::floor(content_height * ratio.first)),
+            bounds.right,
+            bounds.top + static_cast<int>(std::ceil(content_height * ratio.second)),
+        };
+        band.top = std::clamp(band.top, 0, height - 1);
+        band.bottom = std::clamp(band.bottom, band.top + 1, height);
+        bands.push_back(tighten_band_rows(binary, width, height, band));
     }
 
     return bands;
@@ -343,7 +333,7 @@ StatsOcrResult recognize_stats_roi(emscripten::typed_array<uint8_t> rgbaPixels, 
 
     std::vector<uint8_t> binary = binarize(rgbaPixels, width, height);
     Rect bounds = find_content_bounds(binary, width, height);
-    std::vector<Rect> bands = find_row_bands(binary, width, height, bounds);
+    std::vector<Rect> bands = find_fixed_row_bands(binary, width, height, bounds);
     if (bands.size() < 6) {
         return result;
     }
