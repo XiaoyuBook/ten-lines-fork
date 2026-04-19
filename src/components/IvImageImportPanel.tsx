@@ -10,8 +10,6 @@ import {
 } from "@mui/material";
 
 import { useI18n } from "../i18n";
-import fetchTenLines from "../tenLines";
-import type { MainModule, StatsOcrResult } from "../tenLines/generated";
 
 type TesseractModule = NonNullable<Window["Tesseract"]>;
 type TesseractWorker = Awaited<ReturnType<TesseractModule["createWorker"]>>;
@@ -69,6 +67,8 @@ type SelectionStart = {
     startX: number;
     startY: number;
 };
+
+type RoiSelectionTarget = "hp" | "stats";
 
 const STAT_KEYS: StatKey[] = [
     "hp",
@@ -1412,26 +1412,50 @@ const isValidStatValue = (value: string) => {
 };
 
 const extractRoiColumnStats = async (
-    tenLines: MainModule,
-    image: CanvasImage
+    image: CanvasImage,
+    recognizeValue: (rect: PixelRect) => Promise<string>
 ): Promise<StatValueMap | null> => {
-    const result = await tenLines.recognize_stats_roi(
-        Uint8Array.from(image.data),
-        image.width,
-        image.height
-    );
-    const parsedResult = result as StatsOcrResult;
-    if ((parsedResult.recognizedCount ?? 0) <= 0) {
-        return null;
+    const statKeys: StatKey[] = [
+        "attack",
+        "defense",
+        "specialAttack",
+        "specialDefense",
+        "speed",
+    ];
+    const nextStats = getEmptyStats();
+    const fullRect = {
+        left: 0,
+        top: 0,
+        right: image.width,
+        bottom: image.height,
+    };
+    const bandHeight = rectHeight(fullRect) / statKeys.length;
+
+    for (let index = 0; index < statKeys.length; index++) {
+        const bandTop = Math.round(index * bandHeight);
+        const bandBottom = Math.round((index + 1) * bandHeight);
+        const rawRect = clampRect(
+            {
+                left: 0,
+                top: Math.max(0, bandTop - Math.round(bandHeight * 0.12)),
+                right: image.width,
+                bottom: Math.min(
+                    image.height,
+                    bandBottom + Math.round(bandHeight * 0.12)
+                ),
+            },
+            image.width,
+            image.height
+        );
+        nextStats[statKeys[index]] = await recognizeValue(rawRect);
     }
 
-    const nextStats = getEmptyStats();
-    nextStats.hp = parsedResult.hp ?? "";
-    nextStats.attack = parsedResult.attack ?? "";
-    nextStats.defense = parsedResult.defense ?? "";
-    nextStats.specialAttack = parsedResult.specialAttack ?? "";
-    nextStats.specialDefense = parsedResult.specialDefense ?? "";
-    nextStats.speed = parsedResult.speed ?? "";
+    const recognizedCount = statKeys.filter((key) =>
+        isValidStatValue(nextStats[key])
+    ).length;
+    if (recognizedCount === 0) {
+        return null;
+    }
 
     return nextStats;
 };
@@ -1509,11 +1533,14 @@ export default function IvImageImportPanel({
     const [previewUrl, setPreviewUrl] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [roiSelectionMode, setRoiSelectionMode] = useState(false);
+    const [roiSelectionTarget, setRoiSelectionTarget] =
+        useState<RoiSelectionTarget | null>(null);
     const [roiSelectionStart, setRoiSelectionStart] = useState<SelectionStart | null>(
         null
     );
     const [draftRoiRegion, setDraftRoiRegion] = useState<RegionBox | null>(null);
-    const [manualRoiRegion, setManualRoiRegion] = useState<RegionBox | null>(null);
+    const [hpRoiRegion, setHpRoiRegion] = useState<RegionBox | null>(null);
+    const [statsRoiRegion, setStatsRoiRegion] = useState<RegionBox | null>(null);
     const [stats, setStats] = useState<StatValueMap>(getEmptyStats);
     const [feedback, setFeedback] = useState("");
     const [feedbackSeverity, setFeedbackSeverity] = useState<
@@ -1614,9 +1641,11 @@ export default function IvImageImportPanel({
         setImageFile(file);
         setPreviewUrl(URL.createObjectURL(file));
         setRoiSelectionMode(false);
+        setRoiSelectionTarget(null);
         setRoiSelectionStart(null);
         setDraftRoiRegion(null);
-        setManualRoiRegion(null);
+        setHpRoiRegion(null);
+        setStatsRoiRegion(null);
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setStatus(t("imageImport.imageLoaded"), "info");
@@ -1630,9 +1659,11 @@ export default function IvImageImportPanel({
         setPreviewUrl("");
         setImageFile(null);
         setRoiSelectionMode(false);
+        setRoiSelectionTarget(null);
         setRoiSelectionStart(null);
         setDraftRoiRegion(null);
-        setManualRoiRegion(null);
+        setHpRoiRegion(null);
+        setStatsRoiRegion(null);
         setStats(getEmptyStats());
         setRecognitionProgress(0);
         setFeedback("");
@@ -1650,12 +1681,19 @@ export default function IvImageImportPanel({
         event.target.value = "";
     };
 
-    const startRoiSelection = () => {
+    const startRoiSelection = (target: RoiSelectionTarget) => {
         setRoiSelectionMode(true);
+        setRoiSelectionTarget(target);
         setRoiSelectionStart(null);
         setDraftRoiRegion(null);
-        setManualRoiRegion(null);
-        setStatus(t("imageImport.roiSelectionModeActive"), "info");
+        setStatus(
+            t(
+                target === "hp"
+                    ? "imageImport.hpRoiSelectionModeActive"
+                    : "imageImport.statsRoiSelectionModeActive"
+            ),
+            "info"
+        );
     };
 
     const handlePreviewPointerDown = (
@@ -1691,11 +1729,17 @@ export default function IvImageImportPanel({
             height: Math.abs(currentY - roiSelectionStart.startY) / rect.height,
         };
 
-        setManualRoiRegion(nextRegion);
+        if (roiSelectionTarget === "hp") {
+            setHpRoiRegion(nextRegion);
+            setStatus(t("imageImport.hpRoiApplied"), "success");
+        } else {
+            setStatsRoiRegion(nextRegion);
+            setStatus(t("imageImport.statsRoiApplied"), "success");
+        }
         setDraftRoiRegion(null);
         setRoiSelectionStart(null);
         setRoiSelectionMode(false);
-        setStatus(t("imageImport.roiApplied"), "success");
+        setRoiSelectionTarget(null);
     };
 
     const recognizeRegion = async (
@@ -1768,8 +1812,8 @@ export default function IvImageImportPanel({
             setStatus(t("imageImport.noImage"), "warning");
             return;
         }
-        if (!manualRoiRegion) {
-            setStatus(t("imageImport.requiresRoi"), "warning");
+        if (!hpRoiRegion || !statsRoiRegion) {
+            setStatus(t("imageImport.requiresDualRoi"), "warning");
             return;
         }
 
@@ -1779,11 +1823,18 @@ export default function IvImageImportPanel({
 
         try {
             const image = await loadImage(imageFile);
-            const tenLines = await fetchTenLines();
-            const prepared = prepareManualRoiVariant(image, manualRoiRegion);
+            const worker = await getWorker();
+            const hpPrepared = prepareManualRoiVariant(image, hpRoiRegion);
+            const statsPrepared = prepareManualRoiVariant(image, statsRoiRegion);
             const nextStats = await extractRoiColumnStats(
-                tenLines as unknown as MainModule,
-                prepared.normalized
+                statsPrepared.normalized,
+                async (rect) =>
+                    await recognizeRegion(
+                        worker,
+                        statsPrepared.normalized,
+                        rect,
+                        false
+                    )
             );
 
             if (!nextStats) {
@@ -1791,6 +1842,17 @@ export default function IvImageImportPanel({
                 setStatus(t("imageImport.noStatsFound"), "error");
                 return;
             }
+            nextStats.hp = await recognizeRegion(
+                worker,
+                hpPrepared.normalized,
+                {
+                    left: 0,
+                    top: 0,
+                    right: hpPrepared.normalized.width,
+                    bottom: hpPrepared.normalized.height,
+                },
+                true
+            );
             const recognizedCount = statKeys.filter((key) =>
                 isValidStatValue(nextStats[key])
             ).length;
@@ -1927,10 +1989,24 @@ export default function IvImageImportPanel({
                 <Box sx={{ mt: 2 }}>
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
                         <Button
-                            variant={roiSelectionMode ? "contained" : "outlined"}
-                            onClick={startRoiSelection}
+                            variant={
+                                roiSelectionMode && roiSelectionTarget === "hp"
+                                    ? "contained"
+                                    : "outlined"
+                            }
+                            onClick={() => startRoiSelection("hp")}
                         >
-                            {t("imageImport.startRoiSelection")}
+                            {t("imageImport.startHpRoiSelection")}
+                        </Button>
+                        <Button
+                            variant={
+                                roiSelectionMode && roiSelectionTarget === "stats"
+                                    ? "contained"
+                                    : "outlined"
+                            }
+                            onClick={() => startRoiSelection("stats")}
+                        >
+                            {t("imageImport.startStatsRoiSelection")}
                         </Button>
                     </Box>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -1955,18 +2031,86 @@ export default function IvImageImportPanel({
                             alt={t("imageImport.previewTitle")}
                             sx={{ display: "block", width: "100%", height: "auto" }}
                         />
-                        {(manualRoiRegion ?? draftRoiRegion) && (
+                        {hpRoiRegion && (
                             <Box
                                 sx={{
                                     position: "absolute",
-                                    left: `${(manualRoiRegion ?? draftRoiRegion)!.x * 100}%`,
-                                    top: `${(manualRoiRegion ?? draftRoiRegion)!.y * 100}%`,
-                                    width: `${(manualRoiRegion ?? draftRoiRegion)!.width * 100}%`,
-                                    height: `${(manualRoiRegion ?? draftRoiRegion)!.height * 100}%`,
+                                    left: `${hpRoiRegion.x * 100}%`,
+                                    top: `${hpRoiRegion.y * 100}%`,
+                                    width: `${hpRoiRegion.width * 100}%`,
+                                    height: `${hpRoiRegion.height * 100}%`,
                                     border: "2px solid rgba(244, 67, 54, 0.95)",
                                     borderRadius: 1.5,
                                     boxSizing: "border-box",
                                     backgroundColor: "rgba(244, 67, 54, 0.06)",
+                                    pointerEvents: "none",
+                                }}
+                            >
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        position: "absolute",
+                                        top: 4,
+                                        left: 6,
+                                        px: 0.75,
+                                        borderRadius: 0.75,
+                                        color: "common.white",
+                                        backgroundColor: "rgba(244, 67, 54, 0.95)",
+                                    }}
+                                >
+                                    HP
+                                </Typography>
+                            </Box>
+                        )}
+                        {statsRoiRegion && (
+                            <Box
+                                sx={{
+                                    position: "absolute",
+                                    left: `${statsRoiRegion.x * 100}%`,
+                                    top: `${statsRoiRegion.y * 100}%`,
+                                    width: `${statsRoiRegion.width * 100}%`,
+                                    height: `${statsRoiRegion.height * 100}%`,
+                                    border: "2px solid rgba(33, 150, 243, 0.95)",
+                                    borderRadius: 1.5,
+                                    boxSizing: "border-box",
+                                    backgroundColor: "rgba(33, 150, 243, 0.08)",
+                                    pointerEvents: "none",
+                                }}
+                            >
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        position: "absolute",
+                                        top: 4,
+                                        left: 6,
+                                        px: 0.75,
+                                        borderRadius: 0.75,
+                                        color: "common.white",
+                                        backgroundColor: "rgba(33, 150, 243, 0.95)",
+                                    }}
+                                >
+                                    5 Stats
+                                </Typography>
+                            </Box>
+                        )}
+                        {draftRoiRegion && (
+                            <Box
+                                sx={{
+                                    position: "absolute",
+                                    left: `${draftRoiRegion.x * 100}%`,
+                                    top: `${draftRoiRegion.y * 100}%`,
+                                    width: `${draftRoiRegion.width * 100}%`,
+                                    height: `${draftRoiRegion.height * 100}%`,
+                                    border:
+                                        roiSelectionTarget === "hp"
+                                            ? "2px dashed rgba(244, 67, 54, 0.95)"
+                                            : "2px dashed rgba(33, 150, 243, 0.95)",
+                                    borderRadius: 1.5,
+                                    boxSizing: "border-box",
+                                    backgroundColor:
+                                        roiSelectionTarget === "hp"
+                                            ? "rgba(244, 67, 54, 0.04)"
+                                            : "rgba(33, 150, 243, 0.05)",
                                     pointerEvents: "none",
                                 }}
                             />

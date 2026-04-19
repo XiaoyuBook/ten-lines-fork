@@ -434,9 +434,11 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             queueHint:
                 "Current lines: {count}. Import will append line {nextCount}.",
             imageLoaded:
-                "Screenshot loaded. Select a manual ROI before starting recognition.",
+                "Screenshot loaded. Select one ROI for HP and one ROI for the other five stats before starting recognition.",
             noImage: "Paste or upload a screenshot first.",
             requiresRoi: "Select a manual ROI before starting recognition.",
+            requiresDualRoi:
+                "Select both ROI regions before starting recognition: one for HP and one for the other five stats.",
             recognizing: "Recognizing...",
             recognize: "Recognize Stats",
             recognitionComplete:
@@ -444,7 +446,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             recognitionFailed:
                 "Recognition failed. Try a clearer screenshot or enter the values manually.",
             noStatsFound:
-                "No stat values were detected inside the selected ROI.",
+                "No stat values were detected inside the selected ROI regions.",
             partialRecognition:
                 "Detected {count}/{total} values. Please review and fill in any missing fields.",
             requiresNature:
@@ -462,14 +464,24 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "Suggested flow: set Nature, enter Level, paste a screenshot, recognize, then append.",
             previewTitle: "Recognition Preview",
             adjustHint:
-                "Manual ROI only: click Select ROI, choose the top-left corner, then choose the bottom-right corner. Recognition reads only the selected ROI and does not use automatic fallback detection.",
+                "Manual ROI only: select one ROI for HP and another ROI for the other five stats. Click a selection button, choose the top-left corner, then choose the bottom-right corner.",
             startRoiSelection: "Select ROI",
+            startHpRoiSelection: "Select HP ROI",
+            startStatsRoiSelection: "Select 5-Stat ROI",
             roiSelectionModeActive:
                 "ROI selection mode is active. Click once for the top-left corner, then click again for the bottom-right corner.",
+            hpRoiSelectionModeActive:
+                "HP ROI selection mode is active. Click once for the top-left corner, then click again for the bottom-right corner.",
+            statsRoiSelectionModeActive:
+                "5-stat ROI selection mode is active. Click once for the top-left corner, then click again for the bottom-right corner.",
             roiFirstPointSet:
                 "Top-left corner recorded. Click again to set the bottom-right corner.",
             roiApplied:
                 "ROI applied. Recognition will use only this selected region.",
+            hpRoiApplied:
+                "HP ROI applied. Recognition will use this region for HP only.",
+            statsRoiApplied:
+                "5-stat ROI applied. Recognition will use this region for Attack, Defense, Sp. Atk, Sp. Def, and Speed.",
         },
         errors: {
             invalidInput: "Invalid input",
@@ -773,10 +785,12 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             queueHint:
                 "\u5f53\u524d\u5df2\u6709 {count} \u884c\uff0c\u5bfc\u5165\u540e\u4f1a\u8ffd\u52a0\u4e3a\u7b2c {nextCount} \u884c\u3002",
             imageLoaded:
-                "\u622a\u56fe\u5df2\u8f7d\u5165\uff0c\u8bf7\u5148\u624b\u52a8\u6846\u9009 ROI\uff0c\u518d\u5f00\u59cb\u8bc6\u522b\u3002",
+                "\u622a\u56fe\u5df2\u8f7d\u5165\uff0c\u8bf7\u5148\u5206\u522b\u6846\u9009 HP \u533a\u57df\u548c\u5176\u4ed6 5 \u9879\u80fd\u529b\u503c\u533a\u57df\uff0c\u518d\u5f00\u59cb\u8bc6\u522b\u3002",
             noImage: "\u8bf7\u5148\u7c98\u8d34\u6216\u4e0a\u4f20\u622a\u56fe\u3002",
             requiresRoi:
                 "\u5f00\u59cb\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u624b\u52a8\u6846\u9009 ROI\u3002",
+            requiresDualRoi:
+                "\u5f00\u59cb\u8bc6\u522b\u524d\uff0c\u8bf7\u5148\u6846\u9009\u4e24\u4e2a ROI\uff1a\u4e00\u4e2a\u7ed9 HP\uff0c\u4e00\u4e2a\u7ed9\u5176\u4ed6 5 \u9879\u80fd\u529b\u503c\u3002",
             recognizing: "\u6b63\u5728\u8bc6\u522b...",
             recognize: "\u8bc6\u522b\u80fd\u529b\u503c",
             recognitionComplete:
@@ -784,7 +798,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             recognitionFailed:
                 "\u8bc6\u522b\u5931\u8d25\uff0c\u8bf7\u6362\u66f4\u6e05\u6670\u7684\u622a\u56fe\uff0c\u6216\u8005\u624b\u52a8\u586b\u5199\u6570\u503c\u3002",
             noStatsFound:
-                "\u5728\u6240\u9009 ROI \u5185\u6ca1\u6709\u8bc6\u522b\u5230\u80fd\u529b\u503c\u3002",
+                "\u5728\u6240\u9009 ROI \u533a\u57df\u5185\u6ca1\u6709\u8bc6\u522b\u5230\u80fd\u529b\u503c\u3002",
             partialRecognition:
                 "\u5df2\u8bc6\u522b {count}/{total} \u4e2a\u6570\u503c\uff0c\u8bf7\u68c0\u67e5\u5e76\u8865\u5168\u7f3a\u5931\u9879\u3002",
             requiresNature:
@@ -805,14 +819,24 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5efa\u8bae\u6d41\u7a0b\uff1a\u5148\u9009\u6027\u683c\uff0c\u518d\u8f93\u5165\u7b49\u7ea7\uff0c\u7136\u540e\u7c98\u8d34\u622a\u56fe\u3001\u8bc6\u522b\uff0c\u6700\u540e\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c\u3002",
             previewTitle: "\u8bc6\u522b\u9884\u89c8",
             adjustHint:
-                "\u73b0\u5728\u53ea\u652f\u6301\u624b\u52a8 ROI\uff1a\u70b9\u51fb\u201c\u6846\u9009 ROI\u201d\u540e\uff0c\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002\u8bc6\u522b\u65f6\u53ea\u8bfb\u53d6\u4f60\u6846\u9009\u7684\u533a\u57df\uff0c\u4e0d\u518d\u4f7f\u7528\u81ea\u52a8\u515c\u5e95\u5b9a\u4f4d\u3002",
+                "\u73b0\u5728\u53ea\u652f\u6301\u624b\u52a8 ROI\uff1a\u9700\u8981\u5206\u522b\u6846\u9009 HP \u533a\u57df\u548c\u5176\u4ed6 5 \u9879\u80fd\u529b\u503c\u533a\u57df\u3002\u70b9\u51fb\u6309\u94ae\u540e\uff0c\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002",
             startRoiSelection: "\u6846\u9009 ROI",
+            startHpRoiSelection: "\u6846\u9009 HP ROI",
+            startStatsRoiSelection: "\u6846\u9009 5 \u9879 ROI",
             roiSelectionModeActive:
                 "\u5df2\u8fdb\u5165 ROI \u6846\u9009\u6a21\u5f0f\uff0c\u8bf7\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002",
+            hpRoiSelectionModeActive:
+                "\u5df2\u8fdb\u5165 HP ROI \u6846\u9009\u6a21\u5f0f\uff0c\u8bf7\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002",
+            statsRoiSelectionModeActive:
+                "\u5df2\u8fdb\u5165 5 \u9879 ROI \u6846\u9009\u6a21\u5f0f\uff0c\u8bf7\u5148\u70b9\u5de6\u4e0a\u89d2\uff0c\u518d\u70b9\u53f3\u4e0b\u89d2\u3002",
             roiFirstPointSet:
                 "\u5de6\u4e0a\u89d2\u5df2\u8bb0\u5f55\uff0c\u8bf7\u518d\u70b9\u4e00\u4e0b\u53f3\u4e0b\u89d2\u3002",
             roiApplied:
                 "ROI \u5df2\u5e94\u7528\uff0c\u540e\u7eed\u8bc6\u522b\u53ea\u4f1a\u4f7f\u7528\u8fd9\u4e2a\u9009\u5b9a\u533a\u57df\u3002",
+            hpRoiApplied:
+                "HP ROI \u5df2\u5e94\u7528\uff0c\u540e\u7eed\u8bc6\u522b\u53ea\u4f1a\u7528\u5b83\u6765\u8bc6\u522b HP\u3002",
+            statsRoiApplied:
+                "5 \u9879 ROI \u5df2\u5e94\u7528\uff0c\u540e\u7eed\u8bc6\u522b\u4f1a\u7528\u5b83\u6765\u8bc6\u522b\u653b\u51fb/\u9632\u5fa1/\u7279\u653b/\u7279\u9632/\u901f\u5ea6\u3002",
         },
         errors: {
             invalidInput: "\u8f93\u5165\u65e0\u6548",
