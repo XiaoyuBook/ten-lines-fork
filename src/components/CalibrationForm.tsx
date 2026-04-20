@@ -13,10 +13,12 @@ import {
     DialogTitle,
     FormControlLabel,
     FormGroup,
+    IconButton,
     MenuItem,
     Paper,
     Snackbar,
     TextField,
+    Tooltip,
     Typography,
 } from "@mui/material";
 import { useSearchParams } from "react-router-dom";
@@ -51,7 +53,10 @@ import CalibrationComparePanel, {
     type CalibrationResultRow,
     DEFAULT_COMPARE_COLUMNS,
 } from "./CalibrationComparePanel";
-import CalibrationTable from "./CalibrationTable";
+import CalibrationTable, {
+    CALIBRATION_TABLE_COLUMN_OPTIONS,
+    type CalibrationTableColumn,
+} from "./CalibrationTable";
 import CalibrationDynamicToolPanel from "./CalibrationDynamicToolPanel";
 import {
     setDynamicToolActualHit,
@@ -71,6 +76,7 @@ const CALIBRATION_COMPARE_COLUMN_OPTIONS: CalibrationCompareColumn[] = [
     "pid",
     "shiny",
     "nature",
+    "abilityValue",
     "ability",
     "ivs",
     "hidden",
@@ -83,8 +89,10 @@ const DEFAULT_COMPARE_SETTINGS: CalibrationCompareSettings = {
     position: "right",
     compareMode: "target",
     visibleColumns: DEFAULT_COMPARE_COLUMNS,
+    tableVisibleColumns: CALIBRATION_TABLE_COLUMN_OPTIONS,
     calculatorEnabled: false,
     autoAddTarget: true,
+    wildLevelFilterEnabled: false,
 };
 
 const FLOATING_COMPARE_DEFAULT_SIZE = {
@@ -148,6 +156,25 @@ export function createStoredCompareEntry(
     row: CalibrationCompareRow
 ): CalibrationCompareEntry {
     return createCompareEntry(row);
+}
+
+function parseFirstIvCalculatorLevel(value: string) {
+    const firstLine = value
+        .split("\n")
+        .map((line) => line.trim())
+        .find((line) => line !== "");
+
+    if (!firstLine) {
+        return null;
+    }
+
+    const firstToken = firstLine.split(/\s+/)[0];
+    const parsedLevel = Number.parseInt(firstToken, 10);
+    if (!Number.isInteger(parsedLevel) || parsedLevel < 1 || parsedLevel > 100) {
+        return null;
+    }
+
+    return parsedLevel;
 }
 
 function useCalibrationURLState() {
@@ -415,6 +442,36 @@ export default function CalibrationForm({
     const orderedVisibleColumns = CALIBRATION_COMPARE_COLUMN_OPTIONS.filter(
         (column) => compareSettings.visibleColumns.includes(column)
     );
+    const tableVisibleColumns =
+        compareSettings.tableVisibleColumns as CalibrationTableColumn[];
+    const orderedTableVisibleColumns = CALIBRATION_TABLE_COLUMN_OPTIONS.filter(
+        (column) => tableVisibleColumns.includes(column)
+    );
+    const firstIvCalculatorLevel = useMemo(
+        () =>
+            parseFirstIvCalculatorLevel(
+                calibrationFormState.ivCalculatorText
+            ),
+        [calibrationFormState.ivCalculatorText]
+    );
+    const visibleRows = useMemo(() => {
+        if (
+            isStatic ||
+            !compareSettings.wildLevelFilterEnabled ||
+            firstIvCalculatorLevel === null
+        ) {
+            return rows;
+        }
+
+        return (rows as ExtendedWildGeneratorState[]).filter(
+            (row) => row.level === firstIvCalculatorLevel
+        );
+    }, [
+        compareSettings.wildLevelFilterEnabled,
+        firstIvCalculatorLevel,
+        isStatic,
+        rows,
+    ]);
     const compareFloatingMinHeight = compareSettings.calculatorEnabled
         ? 520
         : 400;
@@ -459,6 +516,17 @@ export default function CalibrationForm({
         ]);
         setCompareFeedback(t("compare.addedHistory"));
     };
+
+    const addCompareHistoryEntry = useCallback((row: CalibrationCompareRow) => {
+        setCompareHistory((history: CalibrationCompareEntry[]) => [
+            ...history,
+            createCompareEntry(row),
+        ]);
+        if ("ivs" in row && "pid" in row) {
+            setDynamicToolActualHit(row.advances);
+        }
+        setCompareFeedback(t("compare.addedHistory"));
+    }, [setCompareHistory, t]);
 
     const handleQuickAdd = (
         row: CalibrationResultRow,
@@ -669,20 +737,41 @@ export default function CalibrationForm({
         });
     };
 
+    const toggleResultColumn = (column: CalibrationTableColumn) => {
+        setCompareSettings((current: CalibrationCompareSettings) => {
+            const currentColumns =
+                current.tableVisibleColumns as CalibrationTableColumn[];
+            const exists = currentColumns.includes(column);
+            const nextVisibleColumns = exists
+                ? currentColumns.filter(
+                      (item: CalibrationTableColumn) => item !== column
+                  )
+                : [...currentColumns, column];
+
+            return {
+                ...current,
+                tableVisibleColumns:
+                    nextVisibleColumns.length > 0
+                        ? nextVisibleColumns
+                        : current.tableVisibleColumns,
+            };
+        });
+    };
+
     useEffect(() => {
         if (
             !compareSettings.autoAddTarget ||
             compareTarget ||
-            rows.length === 0
+            visibleRows.length === 0
         ) {
             return;
         }
-        addCompareTarget(rows[0]);
+        addCompareTarget(visibleRows[0]);
     }, [
         addCompareTarget,
         compareSettings.autoAddTarget,
         compareTarget,
-        rows,
+        visibleRows,
     ]);
 
     useEffect(() => {
@@ -820,6 +909,14 @@ export default function CalibrationForm({
                         (entry: CalibrationCompareEntry) => entry.id !== id
                     )
                 );
+            }}
+            onReAddHistoryEntry={(id) => {
+                const existingEntry = compareHistory.find(
+                    (entry: CalibrationCompareEntry) => entry.id === id
+                );
+                if (existingEntry) {
+                    addCompareHistoryEntry(existingEntry.row);
+                }
             }}
             onClearAll={clearCompareEntries}
             onOpenSettings={() => setCompareSettingsOpen(true)}
@@ -1565,20 +1662,32 @@ export default function CalibrationForm({
                                 {t("compare.resultsTitle")}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                {t("labels.resultCount")}: {rows.length}
+                                {t("labels.resultCount")}: {visibleRows.length}
                             </Typography>
                         </Box>
-                        <Button
-                            variant="outlined"
-                            onClick={() => setCompareSettingsOpen(true)}
-                        >
-                            {t("compare.settings")}
-                        </Button>
+                        <Tooltip title={t("table.settings")}>
+                            <IconButton
+                                onClick={() => setCompareSettingsOpen(true)}
+                                aria-label={t("table.settings")}
+                                sx={{
+                                    border: "1px solid rgba(255,255,255,0.12)",
+                                    borderRadius: 999,
+                                    backgroundColor: "rgba(255,255,255,0.04)",
+                                }}
+                            >
+                                <Box
+                                    component="span"
+                                    sx={{ fontSize: "1.05rem", lineHeight: 1 }}
+                                >
+                                    ⚙
+                                </Box>
+                            </IconButton>
+                        </Tooltip>
                     </Box>
 
                     <Box sx={{ mt: 1.5 }}>
                         <CalibrationTable
-                            rows={rows}
+                            rows={visibleRows}
                             target={targetSeed}
                             gameConsole={gameConsole}
                             isStatic={isStatic}
@@ -1587,6 +1696,7 @@ export default function CalibrationForm({
                                 calibrationFormState.method == COMBINED_WILD_METHOD
                             }
                             hasTarget={Boolean(compareTarget)}
+                            visibleColumns={orderedTableVisibleColumns}
                             onAdd={handleQuickAdd}
                         />
                     </Box>
@@ -1734,6 +1844,67 @@ export default function CalibrationForm({
                                     />
                                 ))}
                             </FormGroup>
+                        </Paper>
+
+                        <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                {t("compare.resultVisibleColumns")}
+                            </Typography>
+                            <FormGroup>
+                                {CALIBRATION_TABLE_COLUMN_OPTIONS.map((column) => (
+                                    <FormControlLabel
+                                        key={column}
+                                        control={
+                                            <Checkbox
+                                                checked={orderedTableVisibleColumns.includes(
+                                                    column
+                                                )}
+                                                onChange={() =>
+                                                    toggleResultColumn(column)
+                                                }
+                                            />
+                                        }
+                                        label={t(`table.${column}`)}
+                                    />
+                                ))}
+                            </FormGroup>
+                            {!isStatic && (
+                                <React.Fragment>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={
+                                                    compareSettings.wildLevelFilterEnabled
+                                                }
+                                                onChange={(event) =>
+                                                    setCompareSettings(
+                                                        (
+                                                            current: CalibrationCompareSettings
+                                                        ) => ({
+                                                            ...current,
+                                                            wildLevelFilterEnabled:
+                                                                event.target.checked,
+                                                        })
+                                                    )
+                                                }
+                                            />
+                                        }
+                                        label={t("compare.wildLevelFilter")}
+                                    />
+                                    <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        sx={{ display: "block", mt: 0.5 }}
+                                    >
+                                        {t("compare.wildLevelFilterHint", {
+                                            level:
+                                                firstIvCalculatorLevel === null
+                                                    ? "-"
+                                                    : String(firstIvCalculatorLevel),
+                                        })}
+                                    </Typography>
+                                </React.Fragment>
+                            )}
                         </Paper>
                     </Box>
                 </DialogContent>

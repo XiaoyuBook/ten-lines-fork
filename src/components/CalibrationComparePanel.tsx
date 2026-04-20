@@ -60,6 +60,7 @@ export type CalibrationCompareColumn =
     | "pid"
     | "shiny"
     | "nature"
+    | "abilityValue"
     | "ability"
     | "ivs"
     | "hidden"
@@ -74,8 +75,10 @@ export interface CalibrationCompareSettings {
     position: CalibrationComparePosition;
     compareMode: CalibrationCompareMode;
     visibleColumns: CalibrationCompareColumn[];
+    tableVisibleColumns: string[];
     calculatorEnabled: boolean;
     autoAddTarget: boolean;
+    wildLevelFilterEnabled: boolean;
 }
 
 export interface CalibrationCompareEntry {
@@ -133,6 +136,8 @@ function getColumnValue(
             return "shiny" in row ? resources.shininess[row.shiny] : "-";
         case "nature":
             return "nature" in row ? resources.natures[row.nature] : "-";
+        case "abilityValue":
+            return "ability" in row ? String(row.ability) : "-";
         case "ability":
             return "ability" in row ? getAbilityText(row, resources) : "-";
         case "ivs":
@@ -497,6 +502,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     gameConsole,
     onDeleteTarget,
     onDeleteHistoryEntry,
+    onReAddHistoryEntry,
     onClearAll,
     onOpenSettings,
     onToggleFloating,
@@ -509,6 +515,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     gameConsole: string;
     onDeleteTarget: () => void;
     onDeleteHistoryEntry: (id: string) => void;
+    onReAddHistoryEntry: (id: string) => void;
     onClearAll: () => void;
     onOpenSettings: () => void;
     onToggleFloating: () => void;
@@ -720,7 +727,52 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                                     return (
                                         <TableRow key={entry.id} hover>
                                             <TableCell>
-                                                <Tooltip title={t("compare.delete")}>
+                                                <Box
+                                                    sx={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: 0.5,
+                                                    }}
+                                                >
+                                                    <Tooltip title={t("compare.reAddHistory")}>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() =>
+                                                                onReAddHistoryEntry(entry.id)
+                                                            }
+                                                            aria-label={t(
+                                                                "compare.reAddHistory"
+                                                            )}
+                                                            sx={{
+                                                                width: 28,
+                                                                height: 28,
+                                                                borderRadius: 999,
+                                                                border:
+                                                                    "1px solid rgba(144,202,249,0.28)",
+                                                                backgroundColor:
+                                                                    "rgba(144,202,249,0.10)",
+                                                                color: "primary.main",
+                                                                "&:hover": {
+                                                                    backgroundColor:
+                                                                        "rgba(144,202,249,0.20)",
+                                                                    borderColor:
+                                                                        "rgba(144,202,249,0.55)",
+                                                                },
+                                                            }}
+                                                        >
+                                                            <Box
+                                                                component="span"
+                                                                sx={{
+                                                                    fontSize: "1rem",
+                                                                    fontWeight: 700,
+                                                                    lineHeight: 1,
+                                                                }}
+                                                            >
+                                                                +
+                                                            </Box>
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title={t("compare.delete")}>
                                                     <IconButton
                                                         size="small"
                                                         onClick={() =>
@@ -753,6 +805,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                                                         </Box>
                                                     </IconButton>
                                                 </Tooltip>
+                                                </Box>
                                             </TableCell>
                                             <TableCell>
                                                 <Chip

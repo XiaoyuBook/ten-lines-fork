@@ -23,6 +23,41 @@ import type {
 
 import type { CalibrationResultRow } from "./CalibrationComparePanel";
 
+export type CalibrationTableColumn =
+    | "seed"
+    | "advances"
+    | "method"
+    | "finalAPressFrame"
+    | "teachyTvAdvances"
+    | "slot"
+    | "level"
+    | "pid"
+    | "shiny"
+    | "nature"
+    | "ability"
+    | "ivs"
+    | "hidden"
+    | "power"
+    | "gender";
+
+export const CALIBRATION_TABLE_COLUMN_OPTIONS: CalibrationTableColumn[] = [
+    "seed",
+    "advances",
+    "method",
+    "finalAPressFrame",
+    "teachyTvAdvances",
+    "slot",
+    "level",
+    "pid",
+    "shiny",
+    "nature",
+    "ability",
+    "ivs",
+    "hidden",
+    "power",
+    "gender",
+];
+
 const CalibrationTable = memo(function CalibrationTable({
     rows,
     target,
@@ -31,6 +66,7 @@ const CalibrationTable = memo(function CalibrationTable({
     isMultiMethod,
     isTeachyTVMode,
     hasTarget,
+    visibleColumns,
     onAdd,
 }: {
     rows: ExtendedGeneratorState[] | ExtendedWildGeneratorState[];
@@ -40,6 +76,7 @@ const CalibrationTable = memo(function CalibrationTable({
     isMultiMethod: boolean;
     isTeachyTVMode: boolean;
     hasTarget: boolean;
+    visibleColumns: CalibrationTableColumn[];
     onAdd: (row: CalibrationResultRow, destination: "target" | "history") => void;
 }) {
     const { t, resources } = useI18n();
@@ -55,6 +92,25 @@ const CalibrationTable = memo(function CalibrationTable({
                 page * rowsPerPage + rowsPerPage
             ),
         [cappedRows, page, rowsPerPage]
+    );
+    const activeColumns = useMemo(
+        () =>
+            visibleColumns.filter((column) => {
+                if (column === "method") {
+                    return isMultiMethod;
+                }
+                if (
+                    column === "finalAPressFrame" ||
+                    column === "teachyTvAdvances"
+                ) {
+                    return isTeachyTVMode;
+                }
+                if (column === "slot" || column === "level") {
+                    return !isStatic;
+                }
+                return true;
+            }),
+        [isMultiMethod, isStatic, isTeachyTVMode, visibleColumns]
     );
 
     useEffect(() => {
@@ -75,25 +131,9 @@ const CalibrationTable = memo(function CalibrationTable({
                         <TableCell width={72} align="center">
                             {t("table.actions")}
                         </TableCell>
-                        <TableCell>{t("table.seed")}</TableCell>
-                        <TableCell>{t("table.advances")}</TableCell>
-                        {isMultiMethod && <TableCell>{t("table.method")}</TableCell>}
-                        {isTeachyTVMode && (
-                            <TableCell>{t("table.finalAPressFrame")}</TableCell>
-                        )}
-                        {isTeachyTVMode && (
-                            <TableCell>{t("table.teachyTvAdvances")}</TableCell>
-                        )}
-                        {!isStatic && <TableCell>{t("table.slot")}</TableCell>}
-                        {!isStatic && <TableCell>{t("table.level")}</TableCell>}
-                        <TableCell>{t("table.pid")}</TableCell>
-                        <TableCell>{t("table.shiny")}</TableCell>
-                        <TableCell>{t("table.nature")}</TableCell>
-                        <TableCell>{t("table.ability")}</TableCell>
-                        <TableCell>{t("table.ivs")}</TableCell>
-                        <TableCell>{t("table.hidden")}</TableCell>
-                        <TableCell>{t("table.power")}</TableCell>
-                        <TableCell>{t("table.gender")}</TableCell>
+                        {activeColumns.map((column) => (
+                            <TableCell key={column}>{t(`table.${column}`)}</TableCell>
+                        ))}
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -167,58 +207,129 @@ const CalibrationTable = memo(function CalibrationTable({
                                         </Tooltip>
                                     </Box>
                                 </TableCell>
-                                <TableCell>
-                                    <div style={{ float: "left" }}>
-                                        {hexSeed(row.initialSeed, 16)} | {seedMS}
-                                    </div>
-                                    <span>{t("messages.ms")}</span> (
-                                    {offsetMS >= 0 && "+"}
-                                    {offsetMS}
-                                    {t("messages.ms")})
-                                </TableCell>
-                                <TableCell>{row.advances}</TableCell>
-                                {isMultiMethod && (
-                                    <TableCell>
-                                        {
-                                            resources.methods[
-                                                (row as ExtendedWildGeneratorState).method
-                                            ]
-                                        }
-                                    </TableCell>
-                                )}
-                                {isTeachyTVMode && (
-                                    <TableCell>
-                                        {row.advances - row.ttvAdvances * 313 + row.ttvAdvances}
-                                    </TableCell>
-                                )}
-                                {isTeachyTVMode && (
-                                    <TableCell>{row.ttvAdvances}</TableCell>
-                                )}
-                                {!isStatic && (
-                                    <TableCell>
-                                        {(row as ExtendedWildGeneratorState).encounterSlot}:{" "}
-                                        {getName(
-                                            resources,
-                                            (row as ExtendedWildGeneratorState).species,
-                                            (row as ExtendedWildGeneratorState).form
-                                        )}
-                                    </TableCell>
-                                )}
-                                {!isStatic && (
-                                    <TableCell>
-                                        {(row as ExtendedWildGeneratorState).level}
-                                    </TableCell>
-                                )}
-                                <TableCell>{hexSeed(row.pid, 32)}</TableCell>
-                                <TableCell>{resources.shininess[row.shiny]}</TableCell>
-                                <TableCell>{resources.natures[row.nature]}</TableCell>
-                                <TableCell>
-                                    {row.ability}: {resources.abilities[row.abilityIndex - 1]}
-                                </TableCell>
-                                <TableCell>{row.ivs.join("/")}</TableCell>
-                                <TableCell>{resources.types[row.hiddenPower]}</TableCell>
-                                <TableCell>{row.hiddenPowerStrength}</TableCell>
-                                <TableCell>{resources.genders[row.gender]}</TableCell>
+                                {activeColumns.map((column) => {
+                                    switch (column) {
+                                        case "seed":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    <div style={{ float: "left" }}>
+                                                        {hexSeed(row.initialSeed, 16)} | {seedMS}
+                                                    </div>
+                                                    <span>{t("messages.ms")}</span> (
+                                                    {offsetMS >= 0 && "+"}
+                                                    {offsetMS}
+                                                    {t("messages.ms")})
+                                                </TableCell>
+                                            );
+                                        case "advances":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {row.advances}
+                                                </TableCell>
+                                            );
+                                        case "method":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {
+                                                        resources.methods[
+                                                            (row as ExtendedWildGeneratorState).method
+                                                        ]
+                                                    }
+                                                </TableCell>
+                                            );
+                                        case "finalAPressFrame":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {row.advances -
+                                                        row.ttvAdvances * 313 +
+                                                        row.ttvAdvances}
+                                                </TableCell>
+                                            );
+                                        case "teachyTvAdvances":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {row.ttvAdvances}
+                                                </TableCell>
+                                            );
+                                        case "slot":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {
+                                                        (row as ExtendedWildGeneratorState)
+                                                            .encounterSlot
+                                                    }
+                                                    :{" "}
+                                                    {getName(
+                                                        resources,
+                                                        (
+                                                            row as ExtendedWildGeneratorState
+                                                        ).species,
+                                                        (
+                                                            row as ExtendedWildGeneratorState
+                                                        ).form
+                                                    )}
+                                                </TableCell>
+                                            );
+                                        case "level":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {
+                                                        (row as ExtendedWildGeneratorState)
+                                                            .level
+                                                    }
+                                                </TableCell>
+                                            );
+                                        case "pid":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {hexSeed(row.pid, 32)}
+                                                </TableCell>
+                                            );
+                                        case "shiny":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {resources.shininess[row.shiny]}
+                                                </TableCell>
+                                            );
+                                        case "nature":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {resources.natures[row.nature]}
+                                                </TableCell>
+                                            );
+                                        case "ability":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {row.ability}:{" "}
+                                                    {resources.abilities[row.abilityIndex - 1]}
+                                                </TableCell>
+                                            );
+                                        case "ivs":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {row.ivs.join("/")}
+                                                </TableCell>
+                                            );
+                                        case "hidden":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {resources.types[row.hiddenPower]}
+                                                </TableCell>
+                                            );
+                                        case "power":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {row.hiddenPowerStrength}
+                                                </TableCell>
+                                            );
+                                        case "gender":
+                                            return (
+                                                <TableCell key={`${absoluteIndex}-${column}`}>
+                                                    {resources.genders[row.gender]}
+                                                </TableCell>
+                                            );
+                                    }
+                                })}
                             </TableRow>
                         );
                     })}
