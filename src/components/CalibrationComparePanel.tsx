@@ -79,6 +79,7 @@ export interface CalibrationCompareSettings {
     calculatorEnabled: boolean;
     autoAddTarget: boolean;
     wildLevelFilterEnabled: boolean;
+    dynamicToolEnabled: boolean;
 }
 
 export interface CalibrationCompareEntry {

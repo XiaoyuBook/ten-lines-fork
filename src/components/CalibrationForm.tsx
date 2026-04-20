@@ -93,6 +93,7 @@ const DEFAULT_COMPARE_SETTINGS: CalibrationCompareSettings = {
     calculatorEnabled: false,
     autoAddTarget: true,
     wildLevelFilterEnabled: false,
+    dynamicToolEnabled: false,
 };
 
 const FLOATING_COMPARE_DEFAULT_SIZE = {
@@ -298,7 +299,6 @@ export default function CalibrationForm({
     >([]);
     const [searching, setSearching] = useState(false);
     const [hasSubmittedSearch, setHasSubmittedSearch] = useState(false);
-    const [dynamicToolOpen, setDynamicToolOpen] = useState(false);
     const [storedCompareSettings, setCompareSettings] =
         useLocalStorage<CalibrationCompareSettings>(
             "calibration-compare-settings",
@@ -925,20 +925,9 @@ export default function CalibrationForm({
         />
     );
 
-    const dynamicToolPanel = (
-        <Box sx={{ display: "grid", gap: 1.5 }}>
-            <Button
-                variant={dynamicToolOpen ? "outlined" : "contained"}
-                onClick={() => setDynamicToolOpen((current) => !current)}
-                fullWidth
-            >
-                {dynamicToolOpen
-                    ? t("dynamicTool.hideTool")
-                    : t("dynamicTool.showTool")}
-            </Button>
-            {dynamicToolOpen ? <CalibrationDynamicToolPanel /> : null}
-        </Box>
-    );
+    const dynamicToolPanel = compareSettings.dynamicToolEnabled ? (
+        <CalibrationDynamicToolPanel />
+    ) : null;
 
     return (
         <Box
@@ -1773,6 +1762,21 @@ export default function CalibrationForm({
                                     />
                                 }
                                 label={t("compare.autoAddTarget")}
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={compareSettings.dynamicToolEnabled}
+                                        onChange={(event) =>
+                                            setCompareSettings((current: CalibrationCompareSettings) => ({
+                                                ...current,
+                                                dynamicToolEnabled:
+                                                    event.target.checked,
+                                            }))
+                                        }
+                                    />
+                                }
+                                label={t("dynamicTool.toggleInSettings")}
                             />
                             <TextField
                                 label={t("compare.position")}
