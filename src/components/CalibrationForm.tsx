@@ -1778,27 +1778,6 @@ export default function CalibrationForm({
                                 }
                                 label={t("dynamicTool.toggleInSettings")}
                             />
-                            <TextField
-                                label={t("compare.position")}
-                                margin="normal"
-                                value={compareSettings.position}
-                                onChange={(event) =>
-                                    setCompareSettings((current: CalibrationCompareSettings) => ({
-                                        ...current,
-                                        position: event.target.value as
-                                            CalibrationCompareSettings["position"],
-                                    }))
-                                }
-                                select
-                                fullWidth
-                            >
-                                <MenuItem value="left">
-                                    {t("compare.positionLeft")}
-                                </MenuItem>
-                                <MenuItem value="right">
-                                    {t("compare.positionRight")}
-                                </MenuItem>
-                            </TextField>
                         </Paper>
 
                         <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
@@ -1872,43 +1851,42 @@ export default function CalibrationForm({
                                     />
                                 ))}
                             </FormGroup>
-                            {!isStatic && (
-                                <React.Fragment>
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                checked={
-                                                    compareSettings.wildLevelFilterEnabled
-                                                }
-                                                onChange={(event) =>
-                                                    setCompareSettings(
-                                                        (
-                                                            current: CalibrationCompareSettings
-                                                        ) => ({
-                                                            ...current,
-                                                            wildLevelFilterEnabled:
-                                                                event.target.checked,
-                                                        })
-                                                    )
-                                                }
-                                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={
+                                            compareSettings.wildLevelFilterEnabled
                                         }
-                                        label={t("compare.wildLevelFilter")}
+                                        disabled={isStatic}
+                                        onChange={(event) =>
+                                            setCompareSettings(
+                                                (
+                                                    current: CalibrationCompareSettings
+                                                ) => ({
+                                                    ...current,
+                                                    wildLevelFilterEnabled:
+                                                        event.target.checked,
+                                                })
+                                            )
+                                        }
                                     />
-                                    <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        sx={{ display: "block", mt: 0.5 }}
-                                    >
-                                        {t("compare.wildLevelFilterHint", {
-                                            level:
-                                                firstIvCalculatorLevel === null
-                                                    ? "-"
-                                                    : String(firstIvCalculatorLevel),
-                                        })}
-                                    </Typography>
-                                </React.Fragment>
-                            )}
+                                }
+                                label={t("compare.wildLevelFilter")}
+                            />
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ display: "block", mt: 0.5 }}
+                            >
+                                {isStatic
+                                    ? t("compare.wildLevelFilterStaticHint")
+                                    : t("compare.wildLevelFilterHint", {
+                                          level:
+                                              firstIvCalculatorLevel === null
+                                                  ? "-"
+                                                  : String(firstIvCalculatorLevel),
+                                      })}
+                            </Typography>
                         </Paper>
                     </Box>
                 </DialogContent>

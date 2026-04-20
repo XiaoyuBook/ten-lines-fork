@@ -370,6 +370,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             resultsTitle: "Calibration Results",
             calculator: "Calculator",
             wildLevelFilter: "Filter wild results by the first IV line level",
+            wildLevelFilterStaticHint:
+                "This filter is only available when the calibration method is wild.",
             wildLevelFilterHint:
                 "When enabled, only wild results matching the first IV input line level are shown. Current first-line level: {level}",
         },
@@ -759,6 +761,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             calculator: "\u8ba1\u7b97\u5668",
             wildLevelFilter:
                 "\u6309 IV \u7b2c\u4e00\u884c\u7684\u7b49\u7ea7\u7b5b\u9009\u91ce\u751f\u7ed3\u679c",
+            wildLevelFilterStaticHint:
+                "\u8be5\u7b5b\u9009\u53ea\u6709\u5728\u6821\u51c6\u65b9\u6cd5\u4e3a\u91ce\u751f\u65f6\u624d\u53ef\u7528\u3002",
             wildLevelFilterHint:
                 "\u5f00\u542f\u540e\uff0c\u53ea\u663e\u793a\u7b49\u4e8e IV \u8f93\u5165\u7b2c\u4e00\u884c\u7b49\u7ea7\u7684\u91ce\u751f\u7ed3\u679c\u3002\u5f53\u524d\u7b2c\u4e00\u884c\u7b49\u7ea7\uff1a{level}",
         },
