@@ -368,9 +368,11 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             calculator: "Calculator",
         },
         dynamicTool: {
-            title: "Dynamic Calibration Tool",
+            title: "Dynamic Calibration Tool (Experimental)",
             subtitle:
                 "Keep the previous round's TV and remaining wait values here for the next TV-rate correction.",
+            showTool: "Show Dynamic Tool",
+            hideTool: "Hide Dynamic Tool",
             modeSection: "Mode",
             modeTv: "Use TV Pass",
             modeNoTv: "No TV Pass",
@@ -396,9 +398,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             lastTvHint: "Filled automatically after each calculation",
             lastWaitHint: "Filled automatically after each calculation",
             lastParityHint: "Enter or review the previous parity time here",
-            currentTvLabel: "Current _TV Time",
-            currentWaitLabel: "Current _Remaining Wait",
-            currentParityLabel: "Current _Parity Time",
+            currentTvLabel: "Current TV Time",
+            currentWaitLabel: "Current Remaining Wait",
+            currentParityLabel: "Current Parity Time",
             physicalTotal: "Physical Total Time",
             invalidCalculation: "Please enter valid values before calculating.",
             needAdvNegative:
@@ -747,9 +749,11 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             calculator: "\u8ba1\u7b97\u5668",
         },
         dynamicTool: {
-            title: "\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
+            title: "\u52a8\u6001\u4fee\u6b63\u5de5\u5177\uff08\u5b9e\u9a8c\u6027\u529f\u80fd\uff09",
             subtitle:
                 "\u8fd9\u91cc\u4f1a\u4fdd\u7559\u4e0a\u4e00\u8f6e\u7684 _TV\u8fc7\u5e27\u65f6\u95f4 \u548c _\u5269\u4f59\u5e27\u6570\u65f6\u95f4\uff0c\u4e0b\u4e00\u8f6e\u4fee\u6b63 TV \u500d\u7387\u65f6\u53ef\u4ee5\u76f4\u63a5\u4f7f\u7528\u3002",
+            showTool: "\u663e\u793a\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
+            hideTool: "\u9690\u85cf\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
             modeSection: "\u6a21\u5f0f",
             modeTv: "\u4f7f\u7528 TV\u8fc7\u5e27",
             modeNoTv: "\u4e0d\u4f7f\u7528 TV\u8fc7\u5e27",
@@ -778,9 +782,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             lastWaitHint: "\u6bcf\u6b21\u8ba1\u7b97\u540e\u4f1a\u81ea\u52a8\u56de\u586b",
             lastParityHint:
                 "\u5728\u8fd9\u91cc\u67e5\u770b\u6216\u8f93\u5165\u4e0a\u4e00\u8f6e\u7684\u5947\u5076\u65f6\u95f4",
-            currentTvLabel: "\u672c\u6b21 _TV\u8fc7\u5e27\u65f6\u95f4",
-            currentWaitLabel: "\u672c\u6b21 _\u5269\u4f59\u5e27\u6570\u65f6\u95f4",
-            currentParityLabel: "\u672c\u6b21 _\u5947\u5076\u65f6\u95f4",
+            currentTvLabel: "\u672c\u6b21TV\u8fc7\u5e27\u65f6\u95f4",
+            currentWaitLabel: "\u672c\u6b21\u5269\u4f59\u5e27\u6570\u65f6\u95f4",
+            currentParityLabel: "\u672c\u6b21\u5947\u5076\u65f6\u95f4",
             physicalTotal: "\u7269\u7406\u603b\u65f6\u95f4",
             invalidCalculation: "\u8bf7\u5148\u8f93\u5165\u6709\u6548\u7684\u8ba1\u7b97\u53c2\u6570\u3002",
             needAdvNegative:

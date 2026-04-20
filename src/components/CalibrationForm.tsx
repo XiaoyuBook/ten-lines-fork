@@ -271,6 +271,7 @@ export default function CalibrationForm({
     >([]);
     const [searching, setSearching] = useState(false);
     const [hasSubmittedSearch, setHasSubmittedSearch] = useState(false);
+    const [dynamicToolOpen, setDynamicToolOpen] = useState(false);
     const [storedCompareSettings, setCompareSettings] =
         useLocalStorage<CalibrationCompareSettings>(
             "calibration-compare-settings",
@@ -827,7 +828,20 @@ export default function CalibrationForm({
         />
     );
 
-    const dynamicToolPanel = <CalibrationDynamicToolPanel />;
+    const dynamicToolPanel = (
+        <Box sx={{ display: "grid", gap: 1.5 }}>
+            <Button
+                variant={dynamicToolOpen ? "outlined" : "contained"}
+                onClick={() => setDynamicToolOpen((current) => !current)}
+                fullWidth
+            >
+                {dynamicToolOpen
+                    ? t("dynamicTool.hideTool")
+                    : t("dynamicTool.showTool")}
+            </Button>
+            {dynamicToolOpen ? <CalibrationDynamicToolPanel /> : null}
+        </Box>
+    );
 
     return (
         <Box

@@ -1,12 +1,13 @@
 import {
-    Alert,
     Box,
     Button,
     ButtonGroup,
     Paper,
+    Snackbar,
     TextField,
     Typography,
 } from "@mui/material";
+import Alert from "@mui/material/Alert";
 import { memo, useMemo, useState } from "react";
 
 import useLocalStorage from "../hooks/useLocalStorage";
@@ -501,16 +502,17 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
     };
 
     return (
-        <Paper
-            variant="outlined"
-            sx={{
-                width: "100%",
-                borderRadius: 4,
-                p: 2,
-                background:
-                    "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
-            }}
-        >
+        <>
+            <Paper
+                variant="outlined"
+                sx={{
+                    width: "100%",
+                    borderRadius: 4,
+                    p: 2,
+                    background:
+                        "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+                }}
+            >
             <Box
                 sx={{
                     display: "flex",
@@ -520,28 +522,22 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     mb: 0.5,
                 }}
             >
-                <Typography variant="h6" sx={{ textAlign: "left" }}>
-                    {t("dynamicTool.title")}
+                    <Typography variant="h6" sx={{ textAlign: "left" }}>
+                        {t("dynamicTool.title")}
+                    </Typography>
+                    <Button size="small" variant="outlined" onClick={handleReset}>
+                        {t("dynamicTool.clearAll")}
+                    </Button>
+                </Box>
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ textAlign: "left", mb: 2 }}
+                >
+                    {t("dynamicTool.subtitle")}
                 </Typography>
-                <Button size="small" variant="outlined" onClick={handleReset}>
-                    {t("dynamicTool.clearAll")}
-                </Button>
-            </Box>
-            <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ textAlign: "left", mb: 2 }}
-            >
-                {t("dynamicTool.subtitle")}
-            </Typography>
 
-            {feedback ? (
-                <Alert severity={feedbackSeverity} sx={{ mb: 2 }}>
-                    {feedback}
-                </Alert>
-            ) : null}
-
-            <Paper variant="outlined" sx={{ p: 2, textAlign: "left", mb: 2 }}>
+                <Paper variant="outlined" sx={{ p: 2, textAlign: "left", mb: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
                     {t("dynamicTool.modeSection")}
                 </Typography>
@@ -576,9 +572,9 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 >
                     {t("dynamicTool.currentRate")}: {currentTvRate.toFixed(6)}
                 </Typography>
-            </Paper>
+                </Paper>
 
-            <Box sx={{ display: "grid", gap: 2 }}>
+                <Box sx={{ display: "grid", gap: 2 }}>
                 <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
                     <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
                         {t("dynamicTool.calculateSection")}
@@ -908,8 +904,24 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         </Box>
                     )}
                 </Paper>
-            </Box>
-        </Paper>
+                </Box>
+            </Paper>
+            <Snackbar
+                open={Boolean(feedback)}
+                autoHideDuration={2200}
+                onClose={() => setFeedback("")}
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+            >
+                <Alert
+                    severity={feedbackSeverity}
+                    variant="filled"
+                    onClose={() => setFeedback("")}
+                    sx={{ width: "100%" }}
+                >
+                    {feedback}
+                </Alert>
+            </Snackbar>
+        </>
     );
 });
 
