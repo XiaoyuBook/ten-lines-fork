@@ -24,6 +24,7 @@ Original upstream project:
 - ID Combo search now supports **multi-select nature filters** and shows **example IV spreads** in the result table
 - Calibration now includes a **target / history comparison panel** with quick-add workflow, column visibility controls, delta display, floating window mode, and an optional calculator
 - Calibration now also includes a **dynamic correction tool** intended to be used together with [Xuan Yelin](https://space.bilibili.com/29039016?spm_id_from=333.1387.fans.user_card.click)'s script workflow
+- Calibration page settings now also control the **dynamic correction tool toggle**, **result-table visible columns**, and an optional **wild-level filter based on the first IV input line**
 - Calibration search now runs **manually on submit**, avoiding repeated automatic reruns while users are still entering values
 - Searcher and Initial Seed can now **carry a chosen target forward into Calibration compare automatically**
 - Calibration compare settings now include an **auto-add target** toggle, enabled by default
@@ -70,7 +71,11 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 
 - Calibration results can be added directly into a compare panel as either a target or history entry
 - History rows can compare against either the target or the previous history row for Seed and advance deltas
-- Compare panel columns are configurable, and the panel can be docked or switched into a draggable floating window
+- Compare history columns are configurable, including a separate **Ability Value** column when you want to inspect raw ability values instead of only IV spreads
+- History rows include a quick **add again** button so repeated confirmations of the same result can be appended back into history immediately
+- Calibration page settings also control the **result table visible columns** and the **dynamic correction tool** toggle
+- When using a wild calibration method, calibration page settings can enable a **wild level filter** that only uses the **first line** of the IV calculator input as the filter level
+- Compare panel can be switched into a draggable floating window
 - The floating compare panel includes an optional built-in calculator for quick frame and timing math
 - Calibration searches now run only when you press submit, which helps avoid UI stalls while editing input values
 - Clicking **Calibration** from Initial Seed can automatically add the selected target into the compare panel before you search
