@@ -76,7 +76,7 @@ const CALIBRATION_COMPARE_COLUMN_OPTIONS: CalibrationCompareColumn[] = [
     "pid",
     "shiny",
     "nature",
-    "abilityValue",
+    "stats",
     "ability",
     "ivs",
     "hidden",

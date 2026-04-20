@@ -71,7 +71,7 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 
 - Calibration results can be added directly into a compare panel as either a target or history entry
 - History rows can compare against either the target or the previous history row for Seed and advance deltas
-- Compare history columns are configurable, including a separate **Ability Value** column when you want to inspect raw ability values instead of only IV spreads
+- Compare history columns are configurable, including a separate **Stats** column that shows the actual six battle stats (`HP/Atk/Def/SpA/SpD/Spe`)
 - History rows include a quick **add again** button so repeated confirmations of the same result can be appended back into history immediately
 - Calibration page settings also control the **result table visible columns** and the **dynamic correction tool** toggle
 - When using a wild calibration method, calibration page settings can enable a **wild level filter** that only uses the **first line** of the IV calculator input as the filter level

@@ -42,6 +42,7 @@ export interface CalibrationStoredTarget extends CalibrationInitialSeedTarget {
     ability: number;
     abilityIndex: number;
     ivs: number[];
+    stats: number[];
     hiddenPower: number;
     hiddenPowerStrength: number;
     gender: number;
@@ -60,7 +61,7 @@ export type CalibrationCompareColumn =
     | "pid"
     | "shiny"
     | "nature"
-    | "abilityValue"
+    | "stats"
     | "ability"
     | "ivs"
     | "hidden"
@@ -137,8 +138,8 @@ function getColumnValue(
             return "shiny" in row ? resources.shininess[row.shiny] : "-";
         case "nature":
             return "nature" in row ? resources.natures[row.nature] : "-";
-        case "abilityValue":
-            return "ability" in row ? String(row.ability) : "-";
+        case "stats":
+            return "stats" in row ? row.stats.join("/") : "-";
         case "ability":
             return "ability" in row ? getAbilityText(row, resources) : "-";
         case "ivs":
