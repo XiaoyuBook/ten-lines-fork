@@ -378,14 +378,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         dynamicTool: {
             title: "Dynamic Calibration Tool",
             subtitle:
-                "Reworked around the V45 logic: initialize parameters first, then update parity / TV phase / remaining wait from the actual hit.",
+                "Use one calculate button for both initialization and correction. Leave actual hit empty for a fresh calculation, or fill it in to correct from the last result.",
             showTool: "Show Dynamic Tool",
             hideTool: "Hide Dynamic Tool",
             toggleInSettings: "Show dynamic calibration tool",
-            modeSection: "Mode And Base Time",
+            modeSection: "Mode And Input",
             modeTv: "TV Mode",
             modeNoTv: "Normal Mode",
-            correctSection: "Apply Hit Result",
             currentResultSection: "Current Script Parameters",
             historySection: "Adjustment Log",
             targetAdv: "Target Advances",
@@ -395,9 +394,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             baseTimeNoTvHint: "Default from the reference code is 13500 ms.",
             parityAutoHint:
                 "Parity time is maintained internally. It only moves by +17 ms when seed parity needs correction.",
-            calculateAction: "Initialize",
+            calculateAction: "Calculate",
             actualHit: "Actual Hit Advances",
-            correctAction: "Apply Correction",
+            actualHitHint: "Leave empty to initialize. Fill it in to correct from the current parameters.",
             currentTvLabel: "_TV Time",
             currentWaitLabel: "_Remaining Wait",
             currentParityLabel: "_Parity Time",
@@ -415,27 +414,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             seedQuestion: "Did you hit the target seed?",
             seedHit: "Yes",
             seedMiss: "No",
-            initTvAction:
-                "Initialized in TV mode: solve the initial _TV time first and keep the remaining wait at 5000 ms.",
-            initNoTvAction:
-                "Initialized in normal mode: solve the remaining wait directly from the target advances.",
-            actionParityShift: "Parity mismatch on a hit seed, so _Parity Time moved by +17 ms.",
-            actionPerfect: "Perfect match, no parameter changes were needed.",
-            actionSeedProtect:
-                "Seed-protection rule triggered: seed was missed and the diff was only 1 frame, so parameters were kept unchanged.",
-            actionNoTvLinear:
-                "Normal mode uses linear correction: only the remaining wait was adjusted.",
-            actionPhaseShift:
-                "Detected a {jumps}x 314-frame jump. Shifted TV phase first and left a residual of {residual} frames for fine tuning.",
-            actionCoarseTv:
-                "Residual was still large, so TV time was re-focused with the coarse TV block correction.",
-            actionFineWait:
-                "TV phase stayed locked and only the remaining wait was micro-adjusted.",
             historyUnit: "Unit: ms",
+            historyRound: "Round",
+            historyTvShort: "_TV",
+            historyWaitShort: "_Remaining",
+            historyParityShort: "_Parity",
             emptyHistory:
-                "Each correction round will record the observed diff and the resulting script parameters here.",
-            logSummary: "Target {target} / Actual {actual} / Diff {diff}",
-            logParams: "Parity {parity} | TV {tv} | Wait {remain}",
+                "Each calculation will append the resulting parameters here.",
         },
         messages: {
             noKnownSeeds: "No known seeds for this game & settings",
@@ -764,14 +749,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         dynamicTool: {
             title: "\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
             subtitle:
-                "\u6309\u4f60\u7ed9\u7684 V45 \u903b\u8f91\u91cd\u505a\uff1a\u5148\u521d\u59cb\u5316\u53c2\u6570\uff0c\u518d\u6839\u636e\u5b9e\u9645\u547d\u4e2d\u53bb\u4fee\u6b63\u5947\u5076\u65f6\u95f4\u3001TV \u76f8\u4f4d\u548c\u5269\u4f59\u7b49\u5f85\u65f6\u95f4\u3002",
+                "\u53ea\u4fdd\u7559\u4e00\u4e2a\u8ba1\u7b97\u6309\u94ae\uff1a`\u5b9e\u9645\u547d\u4e2d` \u7559\u7a7a\u65f6\u7528\u6765\u521d\u59cb\u8ba1\u7b97\uff0c\u586b\u4e86\u4e4b\u540e\u5c31\u6309\u5f53\u524d\u7ed3\u679c\u8fdb\u884c\u4fee\u6b63\u3002",
             showTool: "\u663e\u793a\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
             hideTool: "\u9690\u85cf\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
             toggleInSettings: "\u663e\u793a\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
-            modeSection: "\u6a21\u5f0f\u4e0e\u57fa\u7840\u65f6\u95f4",
+            modeSection: "\u6a21\u5f0f\u4e0e\u8f93\u5165",
             modeTv: "TV \u6a21\u5f0f",
             modeNoTv: "\u666e\u901a\u6a21\u5f0f",
-            correctSection: "\u5e94\u7528\u5b9e\u9645\u547d\u4e2d",
             currentResultSection: "\u5f53\u524d\u811a\u672c\u53c2\u6570",
             historySection: "\u8c03\u6574\u65e5\u5fd7",
             targetAdv: "\u76ee\u6807 Advances",
@@ -781,9 +765,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             baseTimeNoTvHint: "\u53c2\u8003\u4ee3\u7801\u9ed8\u8ba4\u503c\u4e3a 13500 ms\u3002",
             parityAutoHint:
                 "\u5947\u5076\u65f6\u95f4\u7531\u5de5\u5177\u5185\u90e8\u7ef4\u62a4\uff0c\u53ea\u6709\u5728 seed \u5947\u5076\u9700\u8981\u4fee\u6b63\u65f6\u624d\u4f1a +17 ms\u3002",
-            calculateAction: "\u521d\u59cb\u5316",
+            calculateAction: "\u8ba1\u7b97",
             actualHit: "\u5b9e\u9645\u547d\u4e2d Advances",
-            correctAction: "\u5e94\u7528\u4fee\u6b63",
+            actualHitHint: "\u7559\u7a7a\u65f6\u505a\u521d\u59cb\u8ba1\u7b97\uff0c\u586b\u4e86\u4e4b\u540e\u5c31\u6309\u5f53\u524d\u53c2\u6570\u8fdb\u884c\u4fee\u6b63\u3002",
             currentTvLabel: "_TV\u8fc7\u5e27\u65f6\u95f4",
             currentWaitLabel: "_\u5269\u4f59\u5e27\u6570\u65f6\u95f4",
             currentParityLabel: "_\u5947\u5076\u65f6\u95f4",
@@ -801,28 +785,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             seedQuestion: "\u8fd9\u6b21 seed \u547d\u4e2d\u4e86\u5417\uff1f",
             seedHit: "\u547d\u4e2d",
             seedMiss: "\u672a\u547d\u4e2d",
-            initTvAction:
-                "TV \u6a21\u5f0f\u521d\u59cb\u5316\uff1a\u5148\u89e3\u51fa _TV \u65f6\u95f4\uff0c\u5e76\u5c06\u5269\u4f59\u7b49\u5f85\u56fa\u5b9a\u4e3a 5000 ms\u3002",
-            initNoTvAction:
-                "\u666e\u901a\u6a21\u5f0f\u521d\u59cb\u5316\uff1a\u76f4\u63a5\u7531\u76ee\u6807 Advances \u89e3\u51fa\u5269\u4f59\u7b49\u5f85\u65f6\u95f4\u3002",
-            actionParityShift:
-                "seed \u547d\u4e2d\u4e14\u5947\u5076\u4e0d\u5bf9\uff0c\u6240\u4ee5 _\u5947\u5076\u65f6\u95f4 +17 ms\u3002",
-            actionPerfect: "\u672c\u8f6e\u5b8c\u5168\u5bf9\u9f50\uff0c\u4e0d\u9700\u8981\u4fee\u6539\u4efb\u4f55\u53c2\u6570\u3002",
-            actionSeedProtect:
-                "\u89e6\u53d1 seed \u4fdd\u62a4\uff1aseed \u6ca1\u4e2d\u4e14\u504f\u5dee\u53ea\u6709 1 \u5e27\uff0c\u6240\u4ee5\u4fdd\u6301\u53c2\u6570\u4e0d\u53d8\u3002",
-            actionNoTvLinear:
-                "\u666e\u901a\u6a21\u5f0f\u4f7f\u7528\u7ebf\u6027\u4fee\u6b63\uff1a\u53ea\u8c03\u6574\u5269\u4f59\u7b49\u5f85\u65f6\u95f4\u3002",
-            actionPhaseShift:
-                "\u68c0\u6d4b\u5230 {jumps} \u6b21 314 \u5e27\u8df3\u53d8\uff0c\u5148\u5e73\u79fb TV \u76f8\u4f4d\uff0c\u5269\u4f59 {residual} \u5e27\u518d\u4ea4\u7ed9\u540e\u7eed\u7cbe\u8c03\u3002",
-            actionCoarseTv:
-                "\u6b8b\u5dee\u4ecd\u7136\u8fc7\u5927\uff0c\u6240\u4ee5\u7528 TV \u5757\u7ea7\u522b\u7684\u7c97\u8c03\u91cd\u65b0\u5bf9\u7126\u3002",
-            actionFineWait:
-                "TV \u76f8\u4f4d\u4fdd\u6301\u9501\u5b9a\uff0c\u53ea\u5bf9\u5269\u4f59\u7b49\u5f85\u65f6\u95f4\u505a\u5fae\u8c03\u3002",
             historyUnit: "\u5355\u4f4d\uff1ams",
+            historyRound: "\u8f6e\u6b21",
+            historyTvShort: "_TV",
+            historyWaitShort: "_\u5269\u4f59",
+            historyParityShort: "_\u5947\u5076",
             emptyHistory:
-                "\u6bcf\u6b21\u4fee\u6b63\u540e\uff0c\u8fd9\u91cc\u90fd\u4f1a\u8bb0\u5f55\u89c2\u5bdf\u5230\u7684\u504f\u5dee\u548c\u6700\u7ec8\u811a\u672c\u53c2\u6570\u3002",
-            logSummary: "\u76ee\u6807 {target} / \u5b9e\u9645 {actual} / \u504f\u5dee {diff}",
-            logParams: "\u5947\u5076 {parity} | TV {tv} | \u5269\u4f59 {remain}",
+                "\u6bcf\u6b21\u8ba1\u7b97\u540e\uff0c\u7ed3\u679c\u53c2\u6570\u90fd\u4f1a\u8ffd\u52a0\u5230\u8fd9\u91cc\u3002",
         },
         messages: {
             noKnownSeeds:

@@ -17,17 +17,17 @@ const MAX_LOG_ITEMS = 10;
 const STORAGE_KEY = "calibration-dynamic-tool";
 
 type DynamicToolMode = "tv" | "no-tv";
-interface DynamicToolLogEntry { id: string; mode: DynamicToolMode; targetAdv: string; actualAdv: string; diff: string; action: string; tvTime: string; remainTime: string; parityTime: string; }
+interface DynamicToolLogEntry { id: string; mode: DynamicToolMode; tvTime: string; remainTime: string; parityTime: string; }
 interface DynamicToolStoredState {
     targetAdv: string; actualHit: string; parityTime: string; tvTime: string; remainTime: string;
     baseTimeTv: string; baseTimeNoTv: string; useTv: DynamicToolMode; hitSeed: boolean;
-    lastDiff: string; lastAction: string; tvBlacklist: string[]; logs: DynamicToolLogEntry[];
+    lastDiff: string; tvBlacklist: string[]; logs: DynamicToolLogEntry[];
 }
 
 const DEFAULT_STATE: DynamicToolStoredState = {
     targetAdv: "", actualHit: "", parityTime: DEFAULT_PARITY_TIME.toFixed(0), tvTime: "0", remainTime: DEFAULT_REMAIN_TIME.toFixed(0),
     baseTimeTv: DEFAULT_BASE_TIME_TV.toFixed(0), baseTimeNoTv: DEFAULT_BASE_TIME_NO_TV.toFixed(0), useTv: "tv", hitSeed: true,
-    lastDiff: "", lastAction: "", tvBlacklist: [], logs: [],
+    lastDiff: "", tvBlacklist: [], logs: [],
 };
 
 const parseNumber = (value: string) => { const trimmed = value.trim(); return trimmed ? Number(trimmed) : NaN; };
@@ -58,10 +58,6 @@ function normalizeState(value: unknown): DynamicToolStoredState {
                   return {
                       id: typeof next.id === "string" && next.id ? next.id : globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
                       mode: next.mode === "no-tv" ? ("no-tv" as DynamicToolMode) : ("tv" as DynamicToolMode),
-                      targetAdv: typeof next.targetAdv === "string" ? next.targetAdv : "",
-                      actualAdv: typeof next.actualAdv === "string" ? next.actualAdv : "",
-                      diff: typeof next.diff === "string" ? next.diff : "",
-                      action: typeof next.action === "string" ? next.action : "",
                       tvTime: typeof next.tvTime === "string" ? next.tvTime : "0",
                       remainTime: typeof next.remainTime === "string" ? next.remainTime : "5000",
                       parityTime: typeof next.parityTime === "string" ? next.parityTime : "1500",
@@ -113,10 +109,10 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         if (state.useTv === "tv") {
             const rawTv = (targetAdv - 180.0 - (baseTimeTv + DEFAULT_REMAIN_TIME) * ADV_PER_MS_NORMAL) / TV_BLOCK_EXTRA * FRAME_MS;
             const alignedTv = alignToSafePhase(rawTv, state.tvBlacklist.map(parseNumber).filter((value) => !Number.isNaN(value)));
-            setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), tvTime: formatMs(alignedTv), remainTime: "5000", lastAction: t("dynamicTool.initTvAction"), lastDiff: "" }));
+            setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), tvTime: formatMs(alignedTv), remainTime: "5000", lastDiff: "", actualHit: "" }));
         } else {
             const remainTime = (targetAdv - 180.0) / ADV_PER_MS_NORMAL - baseTimeNoTv;
-            setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), tvTime: "0", remainTime: formatMs(remainTime), lastAction: t("dynamicTool.initNoTvAction"), lastDiff: "" }));
+            setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), tvTime: "0", remainTime: formatMs(remainTime), lastDiff: "", actualHit: "" }));
         }
         ok("dynamicTool.calculateCompleted");
     };
@@ -137,12 +133,14 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         let nextRemainTime = remainTime;
         const nextBlacklist = [...state.tvBlacklist];
         const diff = targetAdv - actualAdv;
-        const actions: string[] = [];
-
-        if (state.hitSeed && targetAdv % 2 !== actualAdv % 2) { nextParityTime += PARITY_SHIFT_MS; actions.push(t("dynamicTool.actionParityShift")); }
-        if (diff === 0) actions.push(t("dynamicTool.actionPerfect"));
-        else if (!state.hitSeed && Math.abs(diff) <= 1.0) actions.push(t("dynamicTool.actionSeedProtect"));
-        else if (state.useTv === "no-tv") { nextRemainTime += diff / ADV_PER_MS_NORMAL; actions.push(t("dynamicTool.actionNoTvLinear")); }
+        if (state.hitSeed && targetAdv % 2 !== actualAdv % 2) { nextParityTime += PARITY_SHIFT_MS; }
+        if (diff === 0) {
+            // keep current values
+        }
+        else if (!state.hitSeed && Math.abs(diff) <= 1.0) {
+            // seed-protection: keep current values
+        }
+        else if (state.useTv === "no-tv") { nextRemainTime += diff / ADV_PER_MS_NORMAL; }
         else {
             let residual = diff;
             const jumps = Math.round(diff / TV_SINGLE_BLOCK_TOTAL);
@@ -151,18 +149,14 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 nextTvTime += jumps * FRAME_MS;
                 residual = diff - jumps * TV_SINGLE_BLOCK_TOTAL;
                 nextTvTime = alignToSafePhase(nextTvTime, nextBlacklist.map(parseNumber).filter((value) => !Number.isNaN(value)));
-                actions.push(t("dynamicTool.actionPhaseShift", { jumps: String(jumps), residual: formatMs(residual) }));
             }
             if (Math.abs(residual) > 1000.0) {
                 nextTvTime = alignToSafePhase(nextTvTime + (residual / TV_BLOCK_EXTRA) * FRAME_MS, nextBlacklist.map(parseNumber).filter((value) => !Number.isNaN(value)));
-                actions.push(t("dynamicTool.actionCoarseTv"));
             } else {
                 nextRemainTime += residual / ADV_PER_MS_NORMAL;
-                actions.push(t("dynamicTool.actionFineWait"));
             }
         }
 
-        const actionSummary = actions.join(" ");
         setState((current: DynamicToolStoredState) => {
             const next = normalizeState(current);
             return {
@@ -171,15 +165,22 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 tvTime: formatMs(nextTvTime),
                 remainTime: formatMs(nextRemainTime),
                 lastDiff: diff.toFixed(0),
-                lastAction: actionSummary,
+                actualHit: "",
                 tvBlacklist: nextBlacklist.slice(-8),
                 logs: appendLog(next.logs, {
-                    mode: next.useTv, targetAdv: formatMs(targetAdv), actualAdv: formatMs(actualAdv), diff: diff.toFixed(0),
-                    action: actionSummary, tvTime: formatMs(nextTvTime), remainTime: formatMs(nextRemainTime), parityTime: formatMs(nextParityTime),
+                    mode: next.useTv, tvTime: formatMs(nextTvTime), remainTime: formatMs(nextRemainTime), parityTime: formatMs(nextParityTime),
                 }),
             };
         });
         ok(diff === 0 ? "dynamicTool.perfectAligned" : "dynamicTool.correctionCompleted");
+    };
+
+    const handleCalculate = () => {
+        if (state.actualHit.trim()) {
+            handleCorrect();
+            return;
+        }
+        handleInitialize();
     };
 
     const handleReset = () => { setState(DEFAULT_STATE); ok("dynamicTool.clearedState"); };
@@ -203,18 +204,27 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                 </ButtonGroup>
                                 <TextField label={t("dynamicTool.targetAdv")} value={state.targetAdv} onChange={(event) => setField("targetAdv", event.target.value)} fullWidth />
                             </Box>
-                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 1.5 }}>
-                                <TextField label={t("dynamicTool.baseTimeTv")} value={state.baseTimeTv} onChange={(event) => setField("baseTimeTv", event.target.value)} helperText={t("dynamicTool.baseTimeTvHint")} />
-                                <TextField label={t("dynamicTool.baseTimeNoTv")} value={state.baseTimeNoTv} onChange={(event) => setField("baseTimeNoTv", event.target.value)} helperText={t("dynamicTool.baseTimeNoTvHint")} />
+                            <Box sx={{ display: "grid", gap: 1.5 }}>
+                                {state.useTv === "tv" ? (
+                                    <TextField label={t("dynamicTool.baseTimeTv")} value={state.baseTimeTv} onChange={(event) => setField("baseTimeTv", event.target.value)} helperText={t("dynamicTool.baseTimeTvHint")} />
+                                ) : (
+                                    <TextField label={t("dynamicTool.baseTimeNoTv")} value={state.baseTimeNoTv} onChange={(event) => setField("baseTimeNoTv", event.target.value)} helperText={t("dynamicTool.baseTimeNoTvHint")} />
+                                )}
+                                <TextField label={t("dynamicTool.actualHit")} value={state.actualHit} onChange={(event) => setField("actualHit", event.target.value)} helperText={t("dynamicTool.actualHitHint")} fullWidth />
+                                <Box>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.seedQuestion")}</Typography>
+                                    <ButtonGroup fullWidth>
+                                        <Button variant={state.hitSeed ? "contained" : "outlined"} onClick={() => setField("hitSeed", true)}>{t("dynamicTool.seedHit")}</Button>
+                                        <Button variant={!state.hitSeed ? "contained" : "outlined"} onClick={() => setField("hitSeed", false)}>{t("dynamicTool.seedMiss")}</Button>
+                                    </ButtonGroup>
+                                </Box>
+                                <Button variant="contained" onClick={handleCalculate}>{t("dynamicTool.calculateAction")}</Button>
                             </Box>
                         </Box>
                     </Paper>
 
                     <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
-                            <Typography variant="subtitle2">{t("dynamicTool.currentResultSection")}</Typography>
-                            <Button variant="contained" onClick={handleInitialize}>{t("dynamicTool.calculateAction")}</Button>
-                        </Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{t("dynamicTool.currentResultSection")}</Typography>
                         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 1.5 }}>
                             <ReadonlyValue label={t("dynamicTool.currentParityLabel")} value={state.parityTime} helperText={t("dynamicTool.parityAutoHint")} />
                             <ReadonlyValue label={t("dynamicTool.currentTvLabel")} value={state.useTv === "tv" ? state.tvTime : t("dynamicTool.notUsedShort")} />
@@ -225,24 +235,6 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             <Chip label={`${t("dynamicTool.physicalTotal")}: ${totalWait || "-"} ms`} variant="outlined" />
                             {state.lastDiff ? <Chip label={`${t("dynamicTool.lastDiff")}: ${state.lastDiff}`} color={state.lastDiff === "0" ? "success" : "default"} variant="outlined" /> : null}
                         </Box>
-                        {state.lastAction ? <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>{state.lastAction}</Typography> : null}
-                    </Paper>
-
-                    <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{t("dynamicTool.correctSection")}</Typography>
-                        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr auto" }, gap: 1.5, alignItems: "start" }}>
-                            <Box sx={{ display: "grid", gap: 1.5 }}>
-                                <TextField label={t("dynamicTool.actualHit")} value={state.actualHit} onChange={(event) => setField("actualHit", event.target.value)} fullWidth />
-                                <Box>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.seedQuestion")}</Typography>
-                                    <ButtonGroup fullWidth>
-                                        <Button variant={state.hitSeed ? "contained" : "outlined"} onClick={() => setField("hitSeed", true)}>{t("dynamicTool.seedHit")}</Button>
-                                        <Button variant={!state.hitSeed ? "contained" : "outlined"} onClick={() => setField("hitSeed", false)}>{t("dynamicTool.seedMiss")}</Button>
-                                    </ButtonGroup>
-                                </Box>
-                            </Box>
-                            <Button variant="contained" onClick={handleCorrect}>{t("dynamicTool.correctAction")}</Button>
-                        </Box>
                     </Paper>
 
                     <Paper variant="outlined" sx={{ p: 2, textAlign: "left" }}>
@@ -251,17 +243,20 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             <Typography variant="caption" color="text.secondary">{t("dynamicTool.historyUnit")}</Typography>
                         </Box>
                         {state.logs.length === 0 ? <Typography variant="body2" color="text.secondary">{t("dynamicTool.emptyHistory")}</Typography> : (
-                            <Box sx={{ display: "grid", gap: 1.25 }}>
-                                {state.logs.map((entry, index) => (
-                                    <Paper key={entry.id} variant="outlined" sx={{ p: 1.5, backgroundColor: index % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.04)" }}>
-                                        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, flexWrap: "wrap", mb: 1 }}>
-                                            <Typography variant="body2">#{state.logs.length - index}</Typography>
-                                            <Chip size="small" label={entry.mode === "tv" ? t("dynamicTool.modeTv") : t("dynamicTool.modeNoTv")} variant="outlined" />
-                                        </Box>
-                                        <Typography variant="body2" sx={{ mb: 0.5 }}>{t("dynamicTool.logSummary", { target: entry.targetAdv, actual: entry.actualAdv, diff: entry.diff })}</Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>{entry.action}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{t("dynamicTool.logParams", { parity: entry.parityTime, tv: entry.tvTime, remain: entry.remainTime })}</Typography>
-                                    </Paper>
+                            <Box sx={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
+                                <Box sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)", backgroundColor: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                                    <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyRound")}</Typography></Box>
+                                    {state.useTv === "tv" ? <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyTvShort")}</Typography></Box> : null}
+                                    <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyWaitShort")}</Typography></Box>
+                                    <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyParityShort")}</Typography></Box>
+                                </Box>
+                                {state.logs.filter((entry) => entry.mode === state.useTv).map((entry, index, filtered) => (
+                                    <Box key={entry.id} sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)", borderBottom: index === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)", backgroundColor: index % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.035)" }}>
+                                        <Box sx={{ px: 1.5, py: 1.25 }}><Typography variant="body2">#{filtered.length - index}</Typography></Box>
+                                        {state.useTv === "tv" ? <Box sx={{ px: 1.5, py: 1.25 }}><Typography variant="body2">{entry.tvTime}</Typography></Box> : null}
+                                        <Box sx={{ px: 1.5, py: 1.25 }}><Typography variant="body2">{entry.remainTime}</Typography></Box>
+                                        <Box sx={{ px: 1.5, py: 1.25 }}><Typography variant="body2">{entry.parityTime}</Typography></Box>
+                                    </Box>
                                 ))}
                             </Box>
                         )}
