@@ -1,6 +1,6 @@
 import { Box, Button, ButtonGroup, Chip, Paper, Snackbar, TextField, Typography } from "@mui/material";
 import Alert from "@mui/material/Alert";
-import { memo, useMemo, useState } from "react";
+import { memo, useState } from "react";
 import useLocalStorage from "../hooks/useLocalStorage";
 import { useI18n } from "../i18n";
 
@@ -77,6 +77,12 @@ function ReadonlyValue({ label, value, helperText }: { label: string; value: str
             onFocus={(event) => { event.target.select(); }}
             onClick={(event) => event.currentTarget.querySelector("input")?.select()}
             fullWidth
+            sx={{
+                "& .MuiOutlinedInput-root": {
+                    borderRadius: 3,
+                    backgroundColor: "rgba(255,255,255,0.02)",
+                },
+            }}
         />
     );
 }
@@ -86,15 +92,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
     const [storedState, setState] = useLocalStorage<DynamicToolStoredState>(STORAGE_KEY, DEFAULT_STATE);
     const [feedback, setFeedback] = useState("");
     const [feedbackSeverity, setFeedbackSeverity] = useState<"success" | "warning">("success");
-    const state = useMemo(() => normalizeState(storedState), [storedState]);
-    const baseTime = useMemo(() => parseNumber(state.useTv === "tv" ? state.baseTimeTv : state.baseTimeNoTv), [state.baseTimeNoTv, state.baseTimeTv, state.useTv]);
-    const totalWait = useMemo(() => {
-        const tv = parseNumber(state.tvTime);
-        const remain = parseNumber(state.remainTime);
-        if ([tv, remain, baseTime].some((value) => Number.isNaN(value))) return "";
-        return formatMs((state.useTv === "tv" ? tv : 0) + remain + baseTime);
-    }, [baseTime, state.remainTime, state.tvTime, state.useTv]);
-
+    const state = normalizeState(storedState);
     const setField = (key: keyof DynamicToolStoredState, value: string | boolean) =>
         setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), [key]: value }));
 
@@ -109,10 +107,40 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         if (state.useTv === "tv") {
             const rawTv = (targetAdv - 180.0 - (baseTimeTv + DEFAULT_REMAIN_TIME) * ADV_PER_MS_NORMAL) / TV_BLOCK_EXTRA * FRAME_MS;
             const alignedTv = alignToSafePhase(rawTv, state.tvBlacklist.map(parseNumber).filter((value) => !Number.isNaN(value)));
-            setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), tvTime: formatMs(alignedTv), remainTime: "5000", lastDiff: "", actualHit: "" }));
+            setState((current: DynamicToolStoredState) => {
+                const next = normalizeState(current);
+                return {
+                    ...next,
+                    tvTime: formatMs(alignedTv),
+                    remainTime: "5000",
+                    lastDiff: "",
+                    actualHit: "",
+                    logs: appendLog(next.logs, {
+                        mode: "tv",
+                        tvTime: formatMs(alignedTv),
+                        remainTime: "5000",
+                        parityTime: next.parityTime,
+                    }),
+                };
+            });
         } else {
             const remainTime = (targetAdv - 180.0) / ADV_PER_MS_NORMAL - baseTimeNoTv;
-            setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), tvTime: "0", remainTime: formatMs(remainTime), lastDiff: "", actualHit: "" }));
+            setState((current: DynamicToolStoredState) => {
+                const next = normalizeState(current);
+                return {
+                    ...next,
+                    tvTime: "0",
+                    remainTime: formatMs(remainTime),
+                    lastDiff: "",
+                    actualHit: "",
+                    logs: appendLog(next.logs, {
+                        mode: "no-tv",
+                        tvTime: "0",
+                        remainTime: formatMs(remainTime),
+                        parityTime: next.parityTime,
+                    }),
+                };
+            });
         }
         ok("dynamicTool.calculateCompleted");
     };
@@ -194,7 +222,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     borderRadius: 4,
                     p: { xs: 1.5, md: 2.25 },
                     background:
-                        "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015))",
+                        "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.012))",
                     borderColor: "rgba(255,255,255,0.1)",
                     boxShadow: "0 18px 50px rgba(0,0,0,0.22)",
                 }}
@@ -203,184 +231,197 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     <Typography variant="h6" sx={{ textAlign: "left" }}>{t("dynamicTool.title")}</Typography>
                     <Button size="small" variant="outlined" onClick={handleReset}>{t("dynamicTool.clearAll")}</Button>
                 </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: "left", mb: 2 }}>{t("dynamicTool.subtitle")}</Typography>
                 <Box sx={{ display: "grid", gap: 2 }}>
-                    <Paper
-                        variant="outlined"
-                        sx={{
-                            p: { xs: 1.5, md: 2 },
-                            textAlign: "left",
-                            borderRadius: 3,
-                            borderColor: "rgba(255,255,255,0.08)",
-                            background:
-                                "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-                        }}
-                    >
-                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{t("dynamicTool.modeSection")}</Typography>
-                        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1.15fr 0.85fr" }, gap: 1.5 }}>
-                            <Box sx={{ display: "grid", gap: 1.5 }}>
-                                <ButtonGroup
-                                    fullWidth
-                                    sx={{
-                                        p: 0.5,
-                                        borderRadius: 3,
-                                        backgroundColor: "rgba(255,255,255,0.04)",
-                                        border: "1px solid rgba(255,255,255,0.08)",
-                                        "& .MuiButtonGroup-grouped": {
-                                            minHeight: 52,
-                                            border: "none",
-                                            borderRadius: "12px !important",
-                                            fontWeight: 700,
-                                            fontSize: "1rem",
-                                        },
-                                    }}
-                                >
-                                    <Button
-                                        variant={state.useTv === "tv" ? "contained" : "text"}
-                                        onClick={() => setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), useTv: "tv" }))}
-                                        sx={{
-                                            color: state.useTv === "tv" ? "#0f1720" : "rgba(255,255,255,0.9)",
-                                            background:
-                                                state.useTv === "tv"
-                                                    ? "linear-gradient(135deg, #8fc8f7, #74aee2)"
-                                                    : "transparent",
-                                        }}
-                                    >
-                                        {t("dynamicTool.modeTv")}
-                                    </Button>
-                                    <Button
-                                        variant={state.useTv === "no-tv" ? "contained" : "text"}
-                                        onClick={() => setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), useTv: "no-tv" }))}
-                                        sx={{
-                                            color:
-                                                state.useTv === "no-tv"
-                                                    ? "#0f1720"
-                                                    : "rgba(255,255,255,0.9)",
-                                            background:
-                                                state.useTv === "no-tv"
-                                                    ? "linear-gradient(135deg, #8fc8f7, #74aee2)"
-                                                    : "transparent",
-                                        }}
-                                    >
-                                        {t("dynamicTool.modeNoTv")}
-                                    </Button>
-                                </ButtonGroup>
-                                <TextField
-                                    label={t("dynamicTool.targetAdv")}
-                                    value={state.targetAdv}
-                                    onChange={(event) => setField("targetAdv", event.target.value)}
-                                    fullWidth
-                                    sx={{
-                                        "& .MuiOutlinedInput-root": {
-                                            borderRadius: 3,
-                                            backgroundColor: "rgba(255,255,255,0.02)",
-                                        },
-                                    }}
-                                />
-                            </Box>
-                            <Box sx={{ display: "grid", gap: 1.5, alignContent: "start" }}>
-                                {state.useTv === "tv" ? (
-                                    <TextField
-                                        label={t("dynamicTool.baseTimeTv")}
-                                        value={state.baseTimeTv}
-                                        onChange={(event) => setField("baseTimeTv", event.target.value)}
-                                        helperText={t("dynamicTool.baseTimeTvHint")}
-                                        sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                                borderRadius: 3,
-                                                backgroundColor: "rgba(255,255,255,0.02)",
-                                            },
-                                        }}
-                                    />
-                                ) : (
-                                    <TextField
-                                        label={t("dynamicTool.baseTimeNoTv")}
-                                        value={state.baseTimeNoTv}
-                                        onChange={(event) => setField("baseTimeNoTv", event.target.value)}
-                                        helperText={t("dynamicTool.baseTimeNoTvHint")}
-                                        sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                                borderRadius: 3,
-                                                backgroundColor: "rgba(255,255,255,0.02)",
-                                            },
-                                        }}
-                                    />
-                                )}
-                                <TextField
-                                    label={t("dynamicTool.actualHit")}
-                                    value={state.actualHit}
-                                    onChange={(event) => setField("actualHit", event.target.value)}
-                                    helperText={t("dynamicTool.actualHitHint")}
-                                    fullWidth
-                                    sx={{
-                                        "& .MuiOutlinedInput-root": {
-                                            borderRadius: 3,
-                                            backgroundColor: "rgba(255,255,255,0.02)",
-                                        },
-                                    }}
-                                />
-                                <Box
-                                    sx={{
-                                        p: 1.25,
-                                        borderRadius: 3,
-                                        border: "1px solid rgba(255,255,255,0.06)",
-                                        backgroundColor: "rgba(255,255,255,0.02)",
-                                    }}
-                                >
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.seedQuestion")}</Typography>
-                                    <ButtonGroup
-                                        fullWidth
-                                        sx={{
-                                            "& .MuiButtonGroup-grouped": {
-                                                minHeight: 44,
-                                                fontWeight: 700,
-                                            },
-                                        }}
-                                    >
-                                        <Button
-                                            variant={state.hitSeed ? "contained" : "outlined"}
-                                            onClick={() => setField("hitSeed", true)}
-                                            sx={{
-                                                color: state.hitSeed ? "#0f1720" : undefined,
-                                                background: state.hitSeed
-                                                    ? "linear-gradient(135deg, #8fc8f7, #74aee2)"
-                                                    : undefined,
-                                            }}
-                                        >
-                                            {t("dynamicTool.seedHit")}
-                                        </Button>
-                                        <Button
-                                            variant={!state.hitSeed ? "contained" : "outlined"}
-                                            onClick={() => setField("hitSeed", false)}
-                                            sx={{
-                                                color: !state.hitSeed ? "#0f1720" : undefined,
-                                                background: !state.hitSeed
-                                                    ? "linear-gradient(135deg, #8fc8f7, #74aee2)"
-                                                    : undefined,
-                                            }}
-                                        >
-                                            {t("dynamicTool.seedMiss")}
-                                        </Button>
-                                    </ButtonGroup>
-                                </Box>
+                    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) minmax(360px, 420px)" }, gap: 2, alignItems: "start" }}>
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                p: { xs: 1.5, md: 2 },
+                                textAlign: "left",
+                                borderRadius: 3,
+                                borderColor: "rgba(255,255,255,0.08)",
+                                background:
+                                    "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ mb: 1.75 }}>{t("dynamicTool.modeSection")}</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.modeLabel")}</Typography>
+                            <ButtonGroup
+                                fullWidth
+                                sx={{
+                                    mb: 2,
+                                    gap: 1,
+                                    display: "grid",
+                                    gridTemplateColumns: "1fr 1fr",
+                                    "& .MuiButtonGroup-grouped": {
+                                        borderRadius: "12px !important",
+                                        border: "1px solid rgba(143,200,247,0.45) !important",
+                                        minHeight: 48,
+                                        fontWeight: 700,
+                                    },
+                                }}
+                            >
                                 <Button
-                                    variant="contained"
-                                    onClick={handleCalculate}
+                                    variant={state.useTv === "tv" ? "contained" : "outlined"}
+                                    onClick={() => setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), useTv: "tv" }))}
                                     sx={{
-                                        minHeight: 50,
-                                        borderRadius: 3,
-                                        fontWeight: 800,
-                                        letterSpacing: 0.4,
-                                        color: "#0f1720",
-                                        background: "linear-gradient(135deg, #8fc8f7, #74aee2)",
-                                        boxShadow: "0 10px 24px rgba(116, 174, 226, 0.28)",
+                                        color: state.useTv === "tv" ? "#0f1720" : "rgba(255,255,255,0.92)",
+                                        background: state.useTv === "tv" ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
                                     }}
                                 >
-                                    {t("dynamicTool.calculateAction")}
+                                    {t("dynamicTool.modeTv")}
                                 </Button>
-                            </Box>
-                        </Box>
-                    </Paper>
+                                <Button
+                                    variant={state.useTv === "no-tv" ? "contained" : "outlined"}
+                                    onClick={() => setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), useTv: "no-tv" }))}
+                                    sx={{
+                                        color: state.useTv === "no-tv" ? "#0f1720" : "rgba(255,255,255,0.92)",
+                                        background: state.useTv === "no-tv" ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
+                                    }}
+                                >
+                                    {t("dynamicTool.modeNoTv")}
+                                </Button>
+                            </ButtonGroup>
+
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.targetAdv")}</Typography>
+                            <TextField
+                                value={state.targetAdv}
+                                onChange={(event) => setField("targetAdv", event.target.value)}
+                                fullWidth
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: 3,
+                                        backgroundColor: "rgba(255,255,255,0.02)",
+                                    },
+                                }}
+                            />
+                        </Paper>
+
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                p: { xs: 1.5, md: 2 },
+                                textAlign: "left",
+                                borderRadius: 3,
+                                borderColor: "rgba(255,255,255,0.08)",
+                                background:
+                                    "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ mb: 1.75 }}>
+                                {state.useTv === "tv" ? t("dynamicTool.tvParams") : t("dynamicTool.noTvParams")}
+                            </Typography>
+
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                {t("dynamicTool.baseTimeInput")}
+                            </Typography>
+                            {state.useTv === "tv" ? (
+                                <TextField
+                                    value={state.baseTimeTv}
+                                    onChange={(event) => setField("baseTimeTv", event.target.value)}
+                                    fullWidth
+                                    sx={{
+                                        mb: 0.75,
+                                        "& .MuiOutlinedInput-root": {
+                                            borderRadius: 3,
+                                            backgroundColor: "rgba(255,255,255,0.02)",
+                                        },
+                                    }}
+                                />
+                            ) : (
+                                <TextField
+                                    value={state.baseTimeNoTv}
+                                    onChange={(event) => setField("baseTimeNoTv", event.target.value)}
+                                    fullWidth
+                                    sx={{
+                                        mb: 0.75,
+                                        "& .MuiOutlinedInput-root": {
+                                            borderRadius: 3,
+                                            backgroundColor: "rgba(255,255,255,0.02)",
+                                        },
+                                    }}
+                                />
+                            )}
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {state.useTv === "tv"
+                                    ? t("dynamicTool.baseTimeTvHint")
+                                    : t("dynamicTool.baseTimeNoTvHint")}
+                            </Typography>
+
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.actualHit")}</Typography>
+                            <TextField
+                                value={state.actualHit}
+                                onChange={(event) => setField("actualHit", event.target.value)}
+                                placeholder={t("dynamicTool.actualHitPlaceholder")}
+                                fullWidth
+                                sx={{
+                                    mb: 0.75,
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: 3,
+                                        backgroundColor: "rgba(255,255,255,0.02)",
+                                    },
+                                }}
+                            />
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {t("dynamicTool.actualHitHint")}
+                            </Typography>
+
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.seedStatusLabel")}</Typography>
+                            <ButtonGroup
+                                fullWidth
+                                sx={{
+                                    mb: 2,
+                                    gap: 1,
+                                    display: "grid",
+                                    gridTemplateColumns: "1fr 1fr",
+                                    "& .MuiButtonGroup-grouped": {
+                                        borderRadius: "12px !important",
+                                        border: "1px solid rgba(143,200,247,0.45) !important",
+                                        minHeight: 46,
+                                        fontWeight: 700,
+                                    },
+                                }}
+                            >
+                                <Button
+                                    variant={state.hitSeed ? "contained" : "outlined"}
+                                    onClick={() => setField("hitSeed", true)}
+                                    sx={{
+                                        color: state.hitSeed ? "#0f1720" : "rgba(255,255,255,0.92)",
+                                        background: state.hitSeed ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
+                                    }}
+                                >
+                                    {t("dynamicTool.seedHit")}
+                                </Button>
+                                <Button
+                                    variant={!state.hitSeed ? "contained" : "outlined"}
+                                    onClick={() => setField("hitSeed", false)}
+                                    sx={{
+                                        color: !state.hitSeed ? "#0f1720" : "rgba(255,255,255,0.92)",
+                                        background: !state.hitSeed ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
+                                    }}
+                                >
+                                    {t("dynamicTool.seedMiss")}
+                                </Button>
+                            </ButtonGroup>
+
+                            <Button
+                                variant="contained"
+                                onClick={handleCalculate}
+                                fullWidth
+                                sx={{
+                                    minHeight: 50,
+                                    borderRadius: 3,
+                                    fontWeight: 800,
+                                    letterSpacing: 0.4,
+                                    color: "#0f1720",
+                                    background: "linear-gradient(135deg, #8fc8f7, #74aee2)",
+                                    boxShadow: "0 10px 24px rgba(116, 174, 226, 0.28)",
+                                }}
+                            >
+                                {t("dynamicTool.calculateAction")}
+                            </Button>
+                        </Paper>
+                    </Box>
 
                     <Paper
                         variant="outlined"
@@ -395,15 +436,14 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     >
                         <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{t("dynamicTool.currentResultSection")}</Typography>
                         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 1.5 }}>
-                            <ReadonlyValue label={t("dynamicTool.currentParityLabel")} value={state.parityTime} helperText={t("dynamicTool.parityAutoHint")} />
+                            <ReadonlyValue label={t("dynamicTool.currentParityLabel")} value={state.parityTime} />
                             <ReadonlyValue label={t("dynamicTool.currentTvLabel")} value={state.useTv === "tv" ? state.tvTime : t("dynamicTool.notUsedShort")} />
                             <ReadonlyValue label={t("dynamicTool.currentWaitLabel")} value={state.remainTime} />
                             <ReadonlyValue label={t("dynamicTool.currentBaseLabel")} value={state.useTv === "tv" ? state.baseTimeTv : state.baseTimeNoTv} />
                         </Box>
-                        <Box sx={{ display: "flex", gap: 1, mt: 1.5, flexWrap: "wrap" }}>
-                            <Chip label={`${t("dynamicTool.physicalTotal")}: ${totalWait || "-"} ms`} variant="outlined" />
-                            {state.lastDiff ? <Chip label={`${t("dynamicTool.lastDiff")}: ${state.lastDiff}`} color={state.lastDiff === "0" ? "success" : "default"} variant="outlined" /> : null}
-                        </Box>
+                        {state.lastDiff ? <Box sx={{ display: "flex", gap: 1, mt: 1.5, flexWrap: "wrap" }}>
+                            <Chip label={`${t("dynamicTool.lastDiff")}: ${state.lastDiff}`} color={state.lastDiff === "0" ? "success" : "default"} variant="outlined" />
+                        </Box> : null}
                     </Paper>
 
                     <Paper
