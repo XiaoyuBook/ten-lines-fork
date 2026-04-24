@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import { useState } from "react";
 import { useI18n } from "../i18n";
 import RangeInput from "./RangeInput";
@@ -44,7 +45,7 @@ function IvEntry({
         onChange(event, { value: currentValue, isValid: allIvRangesAreValid });
     };
     return (
-        <React.Fragment>
+        <Box className="iv-entry-grid">
             <RangeInput
                 label={t("stats.hp")}
                 name="hpRange"
@@ -99,7 +100,7 @@ function IvEntry({
                 maximumValue={31}
                 resetButton
             />
-        </React.Fragment>
+        </Box>
     );
 }
 

@@ -66,6 +66,7 @@ const CalibrationTable = memo(function CalibrationTable({
     isMultiMethod,
     isTeachyTVMode,
     hasTarget,
+    uiMode = "legacy",
     visibleColumns,
     onAdd,
 }: {
@@ -76,10 +77,12 @@ const CalibrationTable = memo(function CalibrationTable({
     isMultiMethod: boolean;
     isTeachyTVMode: boolean;
     hasTarget: boolean;
+    uiMode?: "legacy" | "modern";
     visibleColumns: CalibrationTableColumn[];
     onAdd: (row: CalibrationResultRow, destination: "target" | "history") => void;
 }) {
     const { t, resources } = useI18n();
+    const isModernUI = uiMode === "modern";
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(50);
 
@@ -124,8 +127,11 @@ const CalibrationTable = memo(function CalibrationTable({
     }, [cappedRows.length, page, rowsPerPage]);
 
     return (
-        <TableContainer component={Paper}>
-            <Table>
+        <TableContainer
+            component={Paper}
+            className={isModernUI ? "calibration-table calibration-table--modern" : undefined}
+        >
+            <Table stickyHeader={isModernUI}>
                 <TableHead>
                     <TableRow>
                         <TableCell width={72} align="center">

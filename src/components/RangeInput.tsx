@@ -65,7 +65,7 @@ function RangeInput({
     };
 
     return (
-        <Box sx={{ display: "flex" }}>
+        <Box className="range-input-row" sx={{ display: "flex" }}>
             <NumericalInput
                 label={`${t("labels.minimum")} ${label}`}
                 name={name}

@@ -220,11 +220,13 @@ function TargetSummary({
     entry,
     visibleColumns,
     gameConsole,
+    compact = false,
     onDelete,
 }: {
     entry: CalibrationCompareEntry;
     visibleColumns: CalibrationCompareColumn[];
     gameConsole: string;
+    compact?: boolean;
     onDelete: () => void;
 }) {
     const { t, resources } = useI18n();
@@ -233,6 +235,7 @@ function TargetSummary({
     return (
         <Paper
             variant="outlined"
+            className={compact ? "compare-target-summary compare-target-summary--compact" : undefined}
             sx={{
                 p: 2,
                 borderRadius: 3,
@@ -501,6 +504,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     historyEntries,
     settings,
     floating,
+    uiMode = "legacy",
     gameConsole,
     onDeleteTarget,
     onDeleteHistoryEntry,
@@ -514,6 +518,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     historyEntries: CalibrationCompareEntry[];
     settings: CalibrationCompareSettings;
     floating: boolean;
+    uiMode?: "legacy" | "modern";
     gameConsole: string;
     onDeleteTarget: () => void;
     onDeleteHistoryEntry: (id: string) => void;
@@ -524,6 +529,17 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     onHeaderMouseDown?: (event: ReactMouseEvent<HTMLDivElement>) => void;
 }) {
     const { t } = useI18n();
+    const isModernUI = uiMode === "modern";
+    const summaryColumns = isModernUI
+        ? settings.visibleColumns.filter((column) =>
+              ["seed", "advances", "pid", "nature", "gender"].includes(column)
+          )
+        : settings.visibleColumns;
+    const historyColumns = isModernUI
+        ? settings.visibleColumns.filter((column) =>
+              ["seed", "advances", "pid"].includes(column)
+          )
+        : settings.visibleColumns;
 
     if (!settings.enabled) {
         return null;
@@ -532,6 +548,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     return (
         <Paper
             variant="outlined"
+            className={isModernUI ? "compare-panel compare-panel--modern" : undefined}
             sx={{
                 width: "100%",
                 height: floating ? "100%" : "auto",
@@ -555,6 +572,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
         >
             <Box sx={{ p: 2 }}>
                 <Box
+                    className={isModernUI ? "compare-panel__header" : undefined}
                     sx={{
                         display: "flex",
                         alignItems: "center",
@@ -567,18 +585,20 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                 >
                     <Box>
                         <Typography variant="h6" sx={{ textAlign: "left" }}>
-                            {t("compare.title")}
+                            {isModernUI ? "校准对照" : t("compare.title")}
                         </Typography>
                         <Typography
                             variant="caption"
                             color="text.secondary"
                             sx={{ display: "block", textAlign: "left" }}
                         >
-                            {t(
-                                settings.compareMode === "target"
-                                    ? "compare.modeTarget"
-                                    : "compare.modePrevious"
-                            )}
+                            {isModernUI
+                                ? "目标信息与历史数据表"
+                                : t(
+                                      settings.compareMode === "target"
+                                          ? "compare.modeTarget"
+                                          : "compare.modePrevious"
+                                  )}
                         </Typography>
                     </Box>
                     <Box sx={{ display: "flex", gap: 1 }}>
@@ -642,8 +662,13 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                     {targetEntry ? (
                         <TargetSummary
                             entry={targetEntry}
-                            visibleColumns={settings.visibleColumns}
+                            visibleColumns={
+                                summaryColumns.length > 0
+                                    ? summaryColumns
+                                    : settings.visibleColumns
+                            }
                             gameConsole={gameConsole}
+                            compact={isModernUI}
                             onDelete={onDeleteTarget}
                         />
                     ) : (
@@ -668,6 +693,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
             <Divider />
 
             <Box
+                className={isModernUI ? "compare-panel__history" : undefined}
                 sx={{
                     p: 2,
                     flex: floating ? 1 : "0 1 auto",
@@ -681,7 +707,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                     variant="subtitle2"
                     sx={{ textAlign: "left", mb: 1.25 }}
                 >
-                    {t("compare.history")}
+                    {isModernUI ? "历史数据表" : t("compare.history")}
                 </Typography>
                 {historyEntries.length === 0 ? (
                     <Typography
@@ -710,7 +736,10 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                                     <TableCell width={76}>
                                         {t("compare.record")}
                                     </TableCell>
-                                    {settings.visibleColumns.map((column) => (
+                                    {(historyColumns.length > 0
+                                        ? historyColumns
+                                        : settings.visibleColumns
+                                    ).map((column) => (
                                         <TableCell key={column}>
                                             {t(`table.${column}`)}
                                         </TableCell>
@@ -816,7 +845,10 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                                                     variant="outlined"
                                                 />
                                             </TableCell>
-                                            {settings.visibleColumns.map((column) => (
+                                            {(historyColumns.length > 0
+                                                ? historyColumns
+                                                : settings.visibleColumns
+                                            ).map((column) => (
                                                 <TableCell
                                                     key={`${entry.id}-${column}`}
                                                 >

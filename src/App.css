@@ -5,14 +5,490 @@
     text-align: center;
 }
 
+.app-shell {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 1rem;
+    min-height: calc(100vh - 9rem);
+}
+
+.app-sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1rem 0.75rem;
+    border: 1px solid rgba(124, 145, 255, 0.18);
+    border-radius: 28px;
+    background:
+        linear-gradient(180deg, rgba(11, 16, 31, 0.96), rgba(10, 13, 26, 0.88)),
+        radial-gradient(circle at top, rgba(76, 125, 255, 0.18), transparent 45%);
+    box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+}
+
+.app-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.app-brand-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    padding: 2px;
+    background: linear-gradient(180deg, #ff5959 0 49%, #f6f7fb 49% 100%);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.app-brand-ball {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgba(15, 23, 42, 0.85);
+    position: relative;
+    background: linear-gradient(180deg, transparent 0 49%, #eef2ff 49% 100%);
+}
+
+.app-brand-ball::before,
+.app-brand-ball::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.app-brand-ball::before {
+    top: calc(50% - 1px);
+    width: calc(100% + 4px);
+    height: 2px;
+    background: rgba(15, 23, 42, 0.9);
+}
+
+.app-brand-ball::after {
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #f8fafc;
+    border: 2px solid rgba(15, 23, 42, 0.85);
+    margin-top: -7px;
+}
+
+.app-brand-text {
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em;
+}
+
+.app-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    align-items: center;
+}
+
+.app-nav-button.MuiButton-root {
+    min-width: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    color: rgba(226, 232, 240, 0.78);
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.app-nav-button.MuiButton-root[data-active="true"] {
+    color: #f8fbff;
+    background: linear-gradient(135deg, rgba(64, 105, 255, 0.95), rgba(86, 143, 255, 0.88));
+    border-color: rgba(121, 162, 255, 0.65);
+    box-shadow: 0 10px 24px rgba(59, 91, 219, 0.42);
+}
+
+.app-nav-button.MuiButton-root:hover {
+    background: rgba(76, 125, 255, 0.18);
+    border-color: rgba(124, 145, 255, 0.3);
+}
+
+.app-main {
+    min-width: 0;
+}
+
+.app-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    border-radius: 24px;
+    border: 1px solid rgba(124, 145, 255, 0.14);
+    background:
+        linear-gradient(180deg, rgba(12, 18, 34, 0.96), rgba(10, 14, 28, 0.92)),
+        radial-gradient(circle at left top, rgba(76, 125, 255, 0.16), transparent 40%);
+    text-align: left;
+}
+
+.app-kicker {
+    color: rgba(148, 163, 184, 0.9);
+    letter-spacing: 0.18em !important;
+}
+
+.app-page-title {
+    font-weight: 700 !important;
+}
+
+.app-content {
+    min-width: 0;
+}
+
+.modern-page-surface {
+    min-width: 0;
+}
+
+.app-shell .app-content .MuiPaper-root {
+    border-color: rgba(124, 145, 255, 0.14);
+    box-shadow: 0 16px 40px rgba(2, 6, 23, 0.24);
+}
+
+.app-shell .app-content .MuiTextField-root .MuiOutlinedInput-root,
+.app-shell .app-content .MuiAutocomplete-root .MuiOutlinedInput-root {
+    background: rgba(8, 12, 24, 0.68);
+    border-radius: 14px;
+}
+
+.app-shell .app-content .MuiButton-contained {
+    background: linear-gradient(135deg, rgba(64, 105, 255, 0.98), rgba(86, 143, 255, 0.92));
+}
+
+.app-shell .app-content .MuiTableContainer-root {
+    background: rgba(10, 14, 28, 0.74);
+}
+
+.app-shell .app-content .MuiFormHelperText-root {
+    margin-left: 0.25rem;
+    margin-right: 0.25rem;
+}
+
+.modern-section-card--pokemon .MuiFormHelperText-root {
+    color: rgba(148, 163, 184, 0.78);
+}
+
+.calibration-page--modern {
+    text-align: left;
+}
+
+.calibration-layout--modern {
+    align-items: stretch;
+}
+
+.calibration-layout__left,
+.calibration-layout__center,
+.calibration-layout__right {
+    min-width: 0;
+}
+
+.calibration-layout__right {
+    align-self: stretch;
+}
+
+.calibration-form--modern .MuiFormControl-root {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.calibration-form--modern .MuiTextField-root .MuiOutlinedInput-root,
+.calibration-form--modern .MuiAutocomplete-root .MuiOutlinedInput-root {
+    border-radius: 14px;
+    background: rgba(8, 12, 24, 0.68);
+}
+
+.calibration-form--modern .MuiInputLabel-root {
+    font-size: 0.92rem;
+}
+
+.calibration-form--modern .MuiButton-containedPrimary,
+.calibration-form--modern .MuiButton-contained {
+    box-shadow: 0 12px 28px rgba(59, 91, 219, 0.28);
+}
+
+.modern-form-divider {
+    margin-top: 0.5rem;
+    margin-bottom: 0.25rem;
+    padding: 1rem 1rem 0.25rem;
+    border-top: 1px solid rgba(124, 145, 255, 0.16);
+}
+
+.modern-form-divider:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.modern-form-divider__title {
+    font-size: 1.02rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.01em;
+    text-align: left;
+}
+
+.modern-trainer-id-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.modern-section-card {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 1rem;
+    padding: 0.5rem 1rem 1rem;
+    border: 1px solid rgba(124, 145, 255, 0.12);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(11, 16, 30, 0.72), rgba(8, 12, 24, 0.58));
+}
+
+.modern-section-card--pokemon {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: min(44vh, 620px);
+    overflow: auto;
+    padding-bottom: 0.85rem;
+}
+
+.modern-section-card > .MuiFormControl-root,
+.modern-section-card > .MuiAutocomplete-root,
+.modern-section-card > .MuiBox-root,
+.modern-section-card > span {
+    grid-column: span 1;
+}
+
+.modern-trainer-id-row,
+.modern-seed-leeway-row,
+.modern-target-seed-field,
+.modern-section-card--pokemon > .MuiBox-root,
+.modern-section-card--pokemon > span {
+    grid-column: 1 / -1;
+}
+
+.modern-seed-leeway-row {
+    align-items: center;
+}
+
+.modern-seed-leeway-row > .MuiTextField-root:first-child {
+    max-width: 280px;
+}
+
+.modern-encounter-selector {
+    display: contents;
+}
+
+.modern-action-row > .MuiButton-root {
+    flex: 1;
+    min-height: 46px;
+    border-radius: 14px;
+}
+
+.calibration-right-rail {
+    height: min(78vh, 920px);
+    grid-template-rows: minmax(250px, 0.3fr) minmax(420px, 0.7fr);
+}
+
+.compare-panel--modern {
+    min-height: 0;
+    height: 100% !important;
+}
+
+.compare-panel--modern .MuiTableContainer-root {
+    max-height: none !important;
+}
+
+.compare-panel__history {
+    min-height: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.compare-panel__history .MuiTableContainer-root {
+    height: 100%;
+}
+
+.compare-panel--modern .MuiChip-root {
+    height: 24px;
+}
+
+.compare-panel--modern .MuiPaper-root {
+    border-radius: 16px;
+}
+
+.compare-target-summary--compact {
+    padding: 1rem !important;
+}
+
+.compare-target-summary--compact > .MuiBox-root:last-child {
+    margin-top: 0.9rem !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.75rem !important;
+}
+
+.compare-target-summary--compact > .MuiBox-root:last-child > .MuiBox-root {
+    padding: 0.75rem 0.85rem !important;
+}
+
+.calibration-results-panel {
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.calibration-results-panel .MuiTableContainer-root {
+    height: 100%;
+}
+
+.modern-iv-block {
+    margin-top: 1rem;
+    padding: 1rem 1rem 0.25rem;
+    border: 1px solid rgba(124, 145, 255, 0.14);
+    border-radius: 16px 16px 0 0;
+    background: linear-gradient(180deg, rgba(76, 125, 255, 0.08), rgba(76, 125, 255, 0.02));
+}
+
+.modern-iv-block__title {
+    font-weight: 700 !important;
+    text-align: left;
+}
+
+.modern-iv-block__hint,
+.modern-iv-results__title {
+    text-align: left;
+}
+
+.modern-iv-block__hint {
+    color: rgba(148, 163, 184, 0.92);
+}
+
+.modern-iv-results__title {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+    padding-left: 0.125rem;
+    font-weight: 600 !important;
+}
+
+.iv-entry-grid {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.iv-entry-grid > .MuiBox-root {
+    align-items: center;
+}
+
+.range-input-row {
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.range-input-row > .MuiTextField-root {
+    flex: 1;
+}
+
+.range-input-row > .MuiButton-root {
+    min-width: 54px !important;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.calibration-table--modern {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: none !important;
+}
+
+.calibration-table--modern .MuiTableCell-root {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
+}
+
+.calibration-table--modern .MuiTableHead-root .MuiTableCell-root {
+    background: rgba(12, 18, 34, 0.96);
+    font-weight: 700;
+}
+
+.calibration-table--modern .MuiTablePagination-root {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.calibration-table--modern .MuiTableRow-root:hover {
+    background: rgba(76, 125, 255, 0.06);
+}
+
+.calibration-table--modern .MuiTablePagination-toolbar,
+.compare-panel--modern .MuiTableCell-root {
+    color: rgba(226, 232, 240, 0.96);
+}
+
+.dynamic-tool-panel {
+    height: min(78vh, 920px);
+    overflow: hidden;
+    box-shadow: 0 18px 44px rgba(2, 6, 23, 0.28);
+}
+
+.dynamic-tool-panel__content {
+    height: 100%;
+    grid-template-rows: auto auto auto minmax(320px, 1fr);
+}
+
+.dynamic-tool-panel__history-card {
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.dynamic-tool-panel__history-table {
+    flex: 1;
+    min-height: 0;
+    overflow: auto !important;
+}
+
 footer {
     margin-top: 2rem;
     line-height: 1.6;
     overflow-wrap: anywhere;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     #root {
         padding: 1rem;
+    }
+
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .app-sidebar {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.85rem 1rem;
+    }
+
+    .app-brand {
+        flex-direction: row;
+    }
+
+    .app-sidebar-nav {
+        flex-direction: row;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .app-topbar {
+        flex-direction: column;
+        align-items: stretch;
     }
 }

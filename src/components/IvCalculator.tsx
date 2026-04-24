@@ -177,14 +177,26 @@ function IvCalculator({
 
     return (
         <TextField
-            label={t("labels.ivCalculator")}
-            margin="normal"
             value={value}
             error={error !== ""}
-            helperText={error}
+            helperText={error || " "}
             onChange={handleChange}
             multiline
+            minRows={1}
+            maxRows={4}
+            placeholder="50 162 121 106 143 93 96"
             fullWidth
+            sx={{
+                mt: 1.5,
+                "& .MuiOutlinedInput-root": {
+                    borderRadius: 3,
+                },
+                "& .MuiInputBase-input": {
+                    fontFamily: "Consolas, 'Courier New', monospace",
+                    fontSize: "1.05rem",
+                    lineHeight: 1.8,
+                },
+            }}
         />
     );
 }

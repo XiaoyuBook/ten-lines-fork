@@ -217,6 +217,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
         <>
             <Paper
                 variant="outlined"
+                className="dynamic-tool-panel"
                 sx={{
                     width: "100%",
                     borderRadius: 4,
@@ -231,9 +232,10 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                     <Typography variant="h6" sx={{ textAlign: "left" }}>{t("dynamicTool.title")}</Typography>
                     <Button size="small" variant="outlined" onClick={handleReset}>{t("dynamicTool.clearAll")}</Button>
                 </Box>
-                <Box sx={{ display: "grid", gap: 2 }}>
+                <Box className="dynamic-tool-panel__content" sx={{ display: "grid", gap: 2 }}>
                     <Paper
                         variant="outlined"
+                        className="dynamic-tool-panel__history-card"
                         sx={{
                             p: { xs: 1.5, md: 2 },
                             textAlign: "left",
@@ -464,7 +466,14 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             <Typography variant="caption" color="text.secondary">{t("dynamicTool.historyUnit")}</Typography>
                         </Box>
                         {state.logs.length === 0 ? <Typography variant="body2" color="text.secondary">{t("dynamicTool.emptyHistory")}</Typography> : (
-                            <Box sx={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2.5, overflow: "hidden" }}>
+                            <Box
+                                className="dynamic-tool-panel__history-table"
+                                sx={{
+                                    border: "1px solid rgba(255,255,255,0.08)",
+                                    borderRadius: 2.5,
+                                    overflow: "hidden",
+                                }}
+                            >
                                 <Box sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)", backgroundColor: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyRound")}</Typography></Box>
                                     {state.useTv === "tv" ? <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyTvShort")}</Typography></Box> : null}

@@ -236,9 +236,11 @@ function useCalibrationURLState() {
 export default function CalibrationForm({
     sx,
     hidden,
+    uiMode = "legacy",
 }: {
     sx?: Record<string, unknown>;
     hidden?: boolean;
+    uiMode?: "legacy" | "modern";
 }) {
     const { t, resources } = useI18n();
     const [calibrationFormState, setCalibrationFormState] =
@@ -892,12 +894,17 @@ export default function CalibrationForm({
         return null;
     }
 
+    const isModernUI = uiMode === "modern";
+    const showComparePanel = isModernUI || compareSettings.enabled;
+
     const comparePanel = (
         <CalibrationComparePanel
             targetEntry={compareTarget}
             historyEntries={compareHistory}
+            uiMode={uiMode}
             settings={{
                 ...compareSettings,
+                enabled: showComparePanel,
                 visibleColumns: orderedVisibleColumns,
             }}
             floating={compareFloating}
@@ -925,12 +932,102 @@ export default function CalibrationForm({
         />
     );
 
-    const dynamicToolPanel = compareSettings.dynamicToolEnabled ? (
+    const showDynamicToolPanel = isModernUI || compareSettings.dynamicToolEnabled;
+
+    const dynamicToolPanel = showDynamicToolPanel ? (
         <CalibrationDynamicToolPanel />
     ) : null;
 
+    const calibrationResultsPanel = (
+        <Paper
+            variant="outlined"
+            className={isModernUI ? "calibration-results-panel" : undefined}
+            sx={{
+                borderRadius: isModernUI ? 4 : 3,
+                p: isModernUI ? 2 : 1.5,
+                display: isModernUI ? "flex" : "block",
+                flexDirection: isModernUI ? "column" : undefined,
+                borderColor: isModernUI
+                    ? "rgba(124, 145, 255, 0.16)"
+                    : "rgba(255,255,255,0.12)",
+                background: isModernUI
+                    ? "linear-gradient(180deg, rgba(12,18,34,0.96), rgba(10,14,28,0.92))"
+                    : "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+            }}
+        >
+            <Box
+                sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 2,
+                    flexWrap: "wrap",
+                    mb: 1.5,
+                }}
+            >
+                <Box sx={{ textAlign: "left" }}>
+                        <Typography variant="h6">
+                        {isModernUI ? "校准结果表" : t("compare.resultsTitle")}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {t("labels.resultCount")}: {visibleRows.length}
+                    </Typography>
+                </Box>
+                <Tooltip title={t("table.settings")}>
+                    <IconButton
+                        onClick={() => setCompareSettingsOpen(true)}
+                        aria-label={t("table.settings")}
+                        sx={{
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: 999,
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                        }}
+                    >
+                        <Box
+                            component="span"
+                            sx={{ fontSize: "1.05rem", lineHeight: 1 }}
+                        >
+                            ...
+                        </Box>
+                    </IconButton>
+                </Tooltip>
+            </Box>
+
+            <Box
+                sx={
+                    isModernUI
+                        ? {
+                              flex: 1,
+                              minHeight: 0,
+                              maxHeight: "min(58vh, 720px)",
+                              overflow: "auto",
+                              borderRadius: 3,
+                              border: "1px solid rgba(255,255,255,0.08)",
+                          }
+                        : undefined
+                }
+            >
+                                <CalibrationTable
+                                    rows={visibleRows}
+                                    target={targetSeed}
+                                    gameConsole={gameConsole}
+                                    isStatic={isStatic}
+                                    isTeachyTVMode={isTeachyTVMode}
+                                    uiMode={uiMode}
+                                    isMultiMethod={
+                                        calibrationFormState.method == COMBINED_WILD_METHOD
+                                    }
+                    hasTarget={Boolean(compareTarget)}
+                    visibleColumns={orderedTableVisibleColumns}
+                    onAdd={handleQuickAdd}
+                />
+            </Box>
+        </Paper>
+    );
+
     return (
         <Box
+            className={isModernUI ? "calibration-page calibration-page--modern" : undefined}
             sx={{
                 ...sx,
                 width: "100%",
@@ -939,24 +1036,28 @@ export default function CalibrationForm({
             }}
         >
             <Box
+                className={isModernUI ? "calibration-layout calibration-layout--modern" : undefined}
                 sx={{
                     width: "100%",
                     display: "grid",
-                    gap: 2,
+                    gap: isModernUI ? 2.5 : 2,
                     alignItems: "start",
                     gridTemplateColumns: {
                         xs: "1fr",
-                        lg: compareSettings.enabled
-                            ? "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
+                        lg: showComparePanel
+                            ? isModernUI
+                                ? "minmax(280px, 320px) minmax(760px, 1.65fr) minmax(340px, 1fr)"
+                                : "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
                             : "minmax(280px, 340px) minmax(0, 1fr)",
                     },
                 }}
             >
                 <Box
+                    className={isModernUI ? "calibration-layout__left" : undefined}
                     sx={{
                         order: { xs: 1, lg: 1 },
                         position: { lg: "sticky" },
-                        top: { lg: 16 },
+                        top: { lg: isModernUI ? 8 : 16 },
                         alignSelf: "start",
                         minWidth: 0,
                     }}
@@ -1033,18 +1134,41 @@ export default function CalibrationForm({
 
                 <Paper
                     variant="outlined"
+                    className={isModernUI ? "calibration-layout__center" : undefined}
                     sx={{
                         order: { xs: 2, lg: 2 },
                         width: "100%",
                         minWidth: 0,
                         minInlineSize: { lg: 720 },
-                        borderRadius: 4,
-                        p: { xs: 1.5, sm: 2.5 },
-                        background:
-                            "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+                        borderRadius: isModernUI ? 5 : 4,
+                        p: { xs: 1.5, sm: isModernUI ? 3 : 2.5 },
+                        borderColor: isModernUI
+                            ? "rgba(124, 145, 255, 0.16)"
+                            : undefined,
+                        background: isModernUI
+                            ? "linear-gradient(180deg, rgba(14,20,38,0.96), rgba(11,16,30,0.92))"
+                            : "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+                        boxShadow: isModernUI
+                            ? "0 18px 48px rgba(2, 6, 23, 0.34)"
+                            : "none",
                     }}
                 >
-                    <Box component="form" onSubmit={handleSubmit}>
+                    <Box
+                        component="form"
+                        onSubmit={handleSubmit}
+                        className={isModernUI ? "calibration-form calibration-form--modern" : undefined}
+                    >
+                        {isModernUI && (
+                            <Box className="modern-form-divider">
+                                <Typography
+                                    variant="h6"
+                                    className="modern-form-divider__title"
+                                >
+                                    基础游戏参数
+                                </Typography>
+                            </Box>
+                        )}
+                        <Box className={isModernUI ? "modern-section-card" : undefined}>
                         <TextField
                             label={t("labels.game")}
                             margin="normal"
@@ -1169,7 +1293,50 @@ export default function CalibrationForm({
                                 </MenuItem>
                             ))}
                         </TextField>
+                        {isModernUI && (
+                            <Box className="modern-trainer-id-row">
+                                <NumericalInput
+                                    label={t("labels.trainerId")}
+                                    margin="normal"
+                                    onChange={(_event, value) => {
+                                        setCalibrationURLState({ trainerID: value.value });
+                                        setTrainerIDIsValid(value.isValid);
+                                    }}
+                                    value={trainerID}
+                                    minimumValue={0}
+                                    maximumValue={65535}
+                                    isHex={false}
+                                    name="trainerID-modern"
+                                />
+                                <NumericalInput
+                                    label={t("labels.secretId")}
+                                    margin="normal"
+                                    onChange={(_event, value) => {
+                                        setCalibrationURLState({ secretID: value.value });
+                                        setSecretIDIsValid(value.isValid);
+                                    }}
+                                    value={secretID}
+                                    minimumValue={0}
+                                    maximumValue={65535}
+                                    isHex={false}
+                                    name="secretID-modern"
+                                />
+                            </Box>
+                        )}
+                        </Box>
+                        {isModernUI && (
+                            <Box className="modern-form-divider modern-form-divider--seed">
+                                <Typography
+                                    variant="h6"
+                                    className="modern-form-divider__title"
+                                >
+                                    目标 Seed 参数
+                                </Typography>
+                            </Box>
+                        )}
+                        <Box className={isModernUI ? "modern-section-card" : undefined}>
                         <Autocomplete
+                            className={isModernUI ? "modern-target-seed-field" : undefined}
                             options={seedList}
                             value={targetSeed}
                             onChange={(_event, newValue) => {
@@ -1207,6 +1374,7 @@ export default function CalibrationForm({
                             fullWidth
                         />
                         <Box
+                            className={isModernUI ? "modern-seed-leeway-row" : undefined}
                             sx={{
                                 display: "flex",
                                 gap: 1,
@@ -1214,7 +1382,11 @@ export default function CalibrationForm({
                             }}
                         >
                             <NumericalInput
-                                label={t("labels.seedLeeway")}
+                                label={
+                                    isModernUI
+                                        ? `${t("labels.seedLeeway")} ±`
+                                        : t("labels.seedLeeway")
+                                }
                                 margin="normal"
                                 onChange={(_event, value) => {
                                     setCalibrationFormState((data) => ({
@@ -1229,17 +1401,19 @@ export default function CalibrationForm({
                                 isHex={false}
                                 name="seedLeeway"
                             />
-                            <Button
-                                sx={{ my: 2, minWidth: 110 }}
-                                size="small"
-                                variant="contained"
-                                color="primary"
-                                onClick={() => {
-                                    setSeedDialogOpen(true);
-                                }}
-                            >
-                                {t("common.showSeeds")}
-                            </Button>
+                            {!isModernUI && (
+                                <Button
+                                    sx={{ my: 2, minWidth: 110 }}
+                                    size="small"
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={() => {
+                                        setSeedDialogOpen(true);
+                                    }}
+                                >
+                                    {t("common.showSeeds")}
+                                </Button>
+                            )}
                             <Dialog
                                 open={seedDialogOpen}
                                 onClose={() => {
@@ -1342,7 +1516,8 @@ export default function CalibrationForm({
                                 label={t("labels.teachyTvMode")}
                             />
                         )}
-                        <Box sx={{ flexDirection: "row", display: "flex" }}>
+                        </Box>
+                        {!isModernUI && <Box sx={{ flexDirection: "row", display: "flex" }}>
                             <NumericalInput
                                 label={t("labels.trainerId")}
                                 margin="normal"
@@ -1377,7 +1552,24 @@ export default function CalibrationForm({
                                 isHex={false}
                                 name="secretID"
                             />
-                        </Box>
+                        </Box>}
+                        {isModernUI && (
+                            <Box className="modern-form-divider modern-form-divider--pokemon">
+                                <Typography
+                                    variant="h6"
+                                    className="modern-form-divider__title"
+                                >
+                                    宝可梦信息
+                                </Typography>
+                            </Box>
+                        )}
+                        <Box
+                            className={
+                                isModernUI
+                                    ? "modern-section-card modern-section-card--pokemon"
+                                    : undefined
+                            }
+                        >
                         <TextField
                             label={t("labels.method")}
                             margin="normal"
@@ -1400,47 +1592,49 @@ export default function CalibrationForm({
                                     </MenuItem>
                                 ))}
                         </TextField>
-                        {isStatic ? (
-                            <StaticEncounterSelector
-                                staticCategory={calibrationFormState.staticCategory}
-                                staticPokemon={calibrationFormState.staticPokemon}
-                                game={SEED_IDENTIFIER_TO_GAME[game]}
-                                onChange={(staticCategory, staticPokemon) => {
-                                    setCalibrationFormState((data) => ({
-                                        ...data,
-                                        staticCategory,
-                                        staticPokemon,
-                                    }));
-                                }}
-                            />
-                        ) : (
-                            <WildEncounterSelector
-                                wildCategory={calibrationFormState.wildCategory}
-                                wildLocation={calibrationFormState.wildLocation}
-                                wildPokemon={calibrationFormState.wildPokemon}
-                                wildLead={calibrationFormState.wildLead}
-                                shouldFilterPokemon={
-                                    calibrationFormState.shouldFilterPokemon
-                                }
-                                game={SEED_IDENTIFIER_TO_GAME[game]}
-                                onChange={(
-                                    wildCategory,
-                                    wildLocation,
-                                    wildPokemon,
-                                    wildLead,
-                                    shouldFilterPokemon
-                                ) => {
-                                    setCalibrationFormState((data) => ({
-                                        ...data,
+                        <Box className={isModernUI ? "modern-encounter-selector" : undefined}>
+                            {isStatic ? (
+                                <StaticEncounterSelector
+                                    staticCategory={calibrationFormState.staticCategory}
+                                    staticPokemon={calibrationFormState.staticPokemon}
+                                    game={SEED_IDENTIFIER_TO_GAME[game]}
+                                    onChange={(staticCategory, staticPokemon) => {
+                                        setCalibrationFormState((data) => ({
+                                            ...data,
+                                            staticCategory,
+                                            staticPokemon,
+                                        }));
+                                    }}
+                                />
+                            ) : (
+                                <WildEncounterSelector
+                                    wildCategory={calibrationFormState.wildCategory}
+                                    wildLocation={calibrationFormState.wildLocation}
+                                    wildPokemon={calibrationFormState.wildPokemon}
+                                    wildLead={calibrationFormState.wildLead}
+                                    shouldFilterPokemon={
+                                        calibrationFormState.shouldFilterPokemon
+                                    }
+                                    game={SEED_IDENTIFIER_TO_GAME[game]}
+                                    onChange={(
                                         wildCategory,
                                         wildLocation,
                                         wildPokemon,
                                         wildLead,
-                                        shouldFilterPokemon,
-                                    }));
-                                }}
-                            />
-                        )}
+                                        shouldFilterPokemon
+                                    ) => {
+                                        setCalibrationFormState((data) => ({
+                                            ...data,
+                                            wildCategory,
+                                            wildLocation,
+                                            wildPokemon,
+                                            wildLead,
+                                            shouldFilterPokemon,
+                                        }));
+                                    }}
+                                />
+                            )}
+                        </Box>
                         <TextField
                             label={t("labels.shininess")}
                             margin="normal"
@@ -1459,6 +1653,27 @@ export default function CalibrationForm({
                             <MenuItem value="1">{t("options.star")}</MenuItem>
                             <MenuItem value="2">{t("options.square")}</MenuItem>
                             <MenuItem value="3">{t("options.starSquare")}</MenuItem>
+                        </TextField>
+                        <TextField
+                            label={t("labels.gender")}
+                            margin="normal"
+                            style={{ textAlign: "left" }}
+                            onChange={(event) => {
+                                setCalibrationFormState((data) => ({
+                                    ...data,
+                                    gender: parseInt(event.target.value),
+                                }));
+                            }}
+                            value={calibrationFormState.gender}
+                            select
+                            fullWidth
+                        >
+                            <MenuItem value="255">{t("common.any")}</MenuItem>
+                            {resources.genders.slice(0, 2).map((gender, index) => (
+                                <MenuItem key={index} value={index}>
+                                    {gender}
+                                </MenuItem>
+                            ))}
                         </TextField>
                         <Autocomplete
                             options={[-1, ...resources.natures.map((_nature, index) => index)]}
@@ -1496,29 +1711,24 @@ export default function CalibrationForm({
                             )}
                             fullWidth
                         />
-                        <TextField
-                            label={t("labels.gender")}
-                            margin="normal"
-                            style={{ textAlign: "left" }}
-                            onChange={(event) => {
-                                setCalibrationFormState((data) => ({
-                                    ...data,
-                                    gender: parseInt(event.target.value),
-                                }));
-                            }}
-                            value={calibrationFormState.gender}
-                            select
-                            fullWidth
-                        >
-                            <MenuItem value="255">{t("common.any")}</MenuItem>
-                            {resources.genders.slice(0, 2).map((gender, index) => (
-                                <MenuItem key={index} value={index}>
-                                    {gender}
-                                </MenuItem>
-                            ))}
-                        </TextField>
                         {calibrationFormState.nature !== -1 ? (
                             <React.Fragment>
+                                {isModernUI && (
+                                    <Box className="modern-iv-block">
+                                        <Typography
+                                            variant="subtitle1"
+                                            className="modern-iv-block__title"
+                                        >
+                                            IV 计算器
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            className="modern-iv-block__hint"
+                                        >
+                                            输入一整串能力值后自动计算范围
+                                        </Typography>
+                                    </Box>
+                                )}
                                 <IvCalculator
                                     onChange={(_event, value) => {
                                         setCalibrationFormState((data) => ({
@@ -1556,6 +1766,14 @@ export default function CalibrationForm({
                                     }}
                                     value={calibrationFormState.ivCalculatorText}
                                 />
+                                {isModernUI && (
+                                    <Typography
+                                        variant="subtitle2"
+                                        className="modern-iv-results__title"
+                                    >
+                                        对应能力值范围
+                                    </Typography>
+                                )}
                                 <IvEntry
                                     onChange={(_event, value) => {
                                         setIvRangesAreValid(value.isValid);
@@ -1570,49 +1788,60 @@ export default function CalibrationForm({
                         ) : (
                             <span>{t("messages.ivCalculationDisabled")}</span>
                         )}
-                        {bingoActive && (
+                        <Box
+                            className={isModernUI ? "modern-action-row" : undefined}
+                            sx={{
+                                display: "flex",
+                                flexDirection: isModernUI ? "row" : "column",
+                                gap: isModernUI ? 1.5 : 0,
+                                mt: 0.5,
+                            }}
+                        >
+                            {bingoActive && (
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    type="button"
+                                    onClick={() => {
+                                        if (isNotSubmittable) return;
+                                        const searchSeeds = seedList.slice(
+                                            Math.max(0, targetSeedIndex - seedLeeway),
+                                            Math.min(
+                                                seedList.length,
+                                                targetSeedIndex + seedLeeway + 1
+                                            )
+                                        );
+                                        fetchBingo(
+                                            searchSeeds,
+                                            advancesRange,
+                                            offset,
+                                            isStatic,
+                                            trainerID,
+                                            secretID,
+                                            game,
+                                            calibrationFormState,
+                                            setBingoBoard,
+                                            setBingoCounters
+                                        );
+                                    }}
+                                    fullWidth={!isModernUI}
+                                    sx={{ my: isModernUI ? 0 : 0.5 }}
+                                >
+                                    Bingo
+                                </Button>
+                            )}
                             <Button
                                 variant="contained"
                                 color="primary"
-                                type="button"
-                                onClick={() => {
-                                    if (isNotSubmittable) return;
-                                    const searchSeeds = seedList.slice(
-                                        Math.max(0, targetSeedIndex - seedLeeway),
-                                        Math.min(
-                                            seedList.length,
-                                            targetSeedIndex + seedLeeway + 1
-                                        )
-                                    );
-                                    fetchBingo(
-                                        searchSeeds,
-                                        advancesRange,
-                                        offset,
-                                        isStatic,
-                                        trainerID,
-                                        secretID,
-                                        game,
-                                        calibrationFormState,
-                                        setBingoBoard,
-                                        setBingoCounters
-                                    );
-                                }}
-                                fullWidth
-                                sx={{ my: 0.5 }}
+                                type="submit"
+                                disabled={isNotSubmittable}
+                                sx={{ my: isModernUI ? 0 : 0.5 }}
+                                fullWidth={!isModernUI}
                             >
-                                Bingo
+                                {searching ? t("common.searching") : t("common.submit")}
                             </Button>
-                        )}
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            type="submit"
-                            disabled={isNotSubmittable}
-                            sx={{ my: 0.5 }}
-                            fullWidth
-                        >
-                            {searching ? t("common.searching") : t("common.submit")}
-                        </Button>
+                        </Box>
+                        </Box>
                     </Box>
 
                     {!searching && hasSubmittedSearch && rows.length === 0 && (
@@ -1636,7 +1865,7 @@ export default function CalibrationForm({
                         </Alert>
                     )}
 
-                    <Box
+                    {!isModernUI && <Box
                         sx={{
                             mt: 2,
                             display: "flex",
@@ -1672,36 +1901,44 @@ export default function CalibrationForm({
                                 </Box>
                             </IconButton>
                         </Tooltip>
-                    </Box>
+                    </Box>}
 
-                    <Box sx={{ mt: 1.5 }}>
-                        <CalibrationTable
-                            rows={visibleRows}
-                            target={targetSeed}
-                            gameConsole={gameConsole}
-                            isStatic={isStatic}
-                            isTeachyTVMode={isTeachyTVMode}
-                            isMultiMethod={
-                                calibrationFormState.method == COMBINED_WILD_METHOD
-                            }
+                    {!isModernUI && <Box sx={{ mt: 1.5 }}>
+                <CalibrationTable
+                    rows={visibleRows}
+                    target={targetSeed}
+                    gameConsole={gameConsole}
+                    isStatic={isStatic}
+                    isTeachyTVMode={isTeachyTVMode}
+                    uiMode={uiMode}
+                    isMultiMethod={
+                        calibrationFormState.method == COMBINED_WILD_METHOD
+                    }
                             hasTarget={Boolean(compareTarget)}
                             visibleColumns={orderedTableVisibleColumns}
                             onAdd={handleQuickAdd}
                         />
-                    </Box>
+                    </Box>}
                 </Paper>
 
-                {compareSettings.enabled && !compareFloating && (
+                {showComparePanel && !compareFloating && (
                     <Box
+                        className={isModernUI ? "calibration-layout__right" : undefined}
                         sx={{
                             order: { xs: 3, lg: 3 },
                             position: { lg: "sticky" },
-                            top: { lg: 16 },
+                            top: { lg: isModernUI ? 8 : 16 },
                             alignSelf: "start",
                             minWidth: 0,
                         }}
                     >
-                        {comparePanel}
+                        <Box
+                            className={isModernUI ? "calibration-right-rail" : undefined}
+                            sx={{ display: "grid", gap: 2 }}
+                        >
+                            {comparePanel}
+                            {isModernUI && calibrationResultsPanel}
+                        </Box>
                     </Box>
                 )}
             </Box>
