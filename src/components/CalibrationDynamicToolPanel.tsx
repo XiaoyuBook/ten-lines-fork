@@ -1,4 +1,4 @@
-import { Box, Button, ButtonGroup, Chip, Paper, Snackbar, TextField, Typography } from "@mui/material";
+import { Box, Button, Chip, Paper, Snackbar, TextField, Typography } from "@mui/material";
 import Alert from "@mui/material/Alert";
 import { memo, useState } from "react";
 import useLocalStorage from "../hooks/useLocalStorage";
@@ -246,26 +246,23 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         >
                             <Typography variant="subtitle2" sx={{ mb: 1.75 }}>{t("dynamicTool.modeSection")}</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.modeLabel")}</Typography>
-                            <ButtonGroup
-                                fullWidth
+                            <Box
                                 sx={{
                                     mb: 2,
-                                    gap: 1,
                                     display: "grid",
                                     gridTemplateColumns: "1fr 1fr",
-                                    "& .MuiButtonGroup-grouped": {
-                                        borderRadius: "12px !important",
-                                        border: "1px solid rgba(143,200,247,0.45) !important",
-                                        minHeight: 48,
-                                        fontWeight: 700,
-                                    },
+                                    gap: 1,
                                 }}
                             >
                                 <Button
                                     variant={state.useTv === "tv" ? "contained" : "outlined"}
                                     onClick={() => setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), useTv: "tv" }))}
                                     sx={{
+                                        minHeight: 48,
+                                        borderRadius: 3,
+                                        fontWeight: 700,
                                         color: state.useTv === "tv" ? "#0f1720" : "rgba(255,255,255,0.92)",
+                                        borderColor: "rgba(143,200,247,0.45)",
                                         background: state.useTv === "tv" ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
                                     }}
                                 >
@@ -275,13 +272,17 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                     variant={state.useTv === "no-tv" ? "contained" : "outlined"}
                                     onClick={() => setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), useTv: "no-tv" }))}
                                     sx={{
+                                        minHeight: 48,
+                                        borderRadius: 3,
+                                        fontWeight: 700,
                                         color: state.useTv === "no-tv" ? "#0f1720" : "rgba(255,255,255,0.92)",
+                                        borderColor: "rgba(143,200,247,0.45)",
                                         background: state.useTv === "no-tv" ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
                                     }}
                                 >
                                     {t("dynamicTool.modeNoTv")}
                                 </Button>
-                            </ButtonGroup>
+                            </Box>
 
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.targetAdv")}</Typography>
                             <TextField
@@ -367,26 +368,23 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             </Typography>
 
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.seedStatusLabel")}</Typography>
-                            <ButtonGroup
-                                fullWidth
+                            <Box
                                 sx={{
                                     mb: 2,
-                                    gap: 1,
                                     display: "grid",
                                     gridTemplateColumns: "1fr 1fr",
-                                    "& .MuiButtonGroup-grouped": {
-                                        borderRadius: "12px !important",
-                                        border: "1px solid rgba(143,200,247,0.45) !important",
-                                        minHeight: 46,
-                                        fontWeight: 700,
-                                    },
+                                    gap: 1,
                                 }}
                             >
                                 <Button
                                     variant={state.hitSeed ? "contained" : "outlined"}
                                     onClick={() => setField("hitSeed", true)}
                                     sx={{
+                                        minHeight: 46,
+                                        borderRadius: 3,
+                                        fontWeight: 700,
                                         color: state.hitSeed ? "#0f1720" : "rgba(255,255,255,0.92)",
+                                        borderColor: "rgba(143,200,247,0.45)",
                                         background: state.hitSeed ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
                                     }}
                                 >
@@ -396,13 +394,17 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                     variant={!state.hitSeed ? "contained" : "outlined"}
                                     onClick={() => setField("hitSeed", false)}
                                     sx={{
+                                        minHeight: 46,
+                                        borderRadius: 3,
+                                        fontWeight: 700,
                                         color: !state.hitSeed ? "#0f1720" : "rgba(255,255,255,0.92)",
+                                        borderColor: "rgba(143,200,247,0.45)",
                                         background: !state.hitSeed ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
                                     }}
                                 >
                                     {t("dynamicTool.seedMiss")}
                                 </Button>
-                            </ButtonGroup>
+                            </Box>
 
                             <Button
                                 variant="contained"
