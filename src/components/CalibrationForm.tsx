@@ -1046,9 +1046,14 @@ export default function CalibrationForm({
                         xs: "1fr",
                         lg: showComparePanel
                             ? isModernUI
-                                ? "minmax(280px, 320px) minmax(760px, 1.65fr) minmax(340px, 1fr)"
+                                ? "minmax(248px, 288px) minmax(0, 1fr)"
                                 : "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
                             : "minmax(280px, 340px) minmax(0, 1fr)",
+                        xl: showComparePanel
+                            ? isModernUI
+                                ? "minmax(248px, 296px) minmax(0, 1.7fr) minmax(320px, 1fr)"
+                                : undefined
+                            : undefined,
                     },
                 }}
             >
@@ -1139,7 +1144,7 @@ export default function CalibrationForm({
                         order: { xs: 2, lg: 2 },
                         width: "100%",
                         minWidth: 0,
-                        minInlineSize: { lg: 720 },
+                        minInlineSize: { lg: isModernUI ? 0 : 720 },
                         borderRadius: isModernUI ? 5 : 4,
                         p: { xs: 1.5, sm: isModernUI ? 3 : 2.5 },
                         borderColor: isModernUI
@@ -1926,10 +1931,18 @@ export default function CalibrationForm({
                         className={isModernUI ? "calibration-layout__right" : undefined}
                         sx={{
                             order: { xs: 3, lg: 3 },
-                            position: { lg: "sticky" },
-                            top: { lg: isModernUI ? 8 : 16 },
+                            gridColumn: isModernUI
+                                ? { xs: "auto", lg: "1 / -1", xl: "auto" }
+                                : undefined,
+                            position: isModernUI
+                                ? { xs: "static", lg: "static", xl: "sticky" }
+                                : { lg: "sticky" },
+                            top: isModernUI
+                                ? { xs: 0, lg: 0, xl: 8 }
+                                : { lg: 16 },
                             alignSelf: "start",
                             minWidth: 0,
+                            width: "100%",
                         }}
                     >
                         <Box

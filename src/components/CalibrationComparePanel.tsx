@@ -622,7 +622,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                                     component="span"
                                     sx={{ fontSize: "1rem", lineHeight: 1 }}
                                 >
-                                    {floating ? "—" : "⧉"}
+                                    {floating ? "−" : "↗"}
                                 </Box>
                             </IconButton>
                         </Tooltip>
