@@ -2,6 +2,7 @@ import {
     Box,
     Button,
     Chip,
+    IconButton,
     Dialog,
     DialogActions,
     DialogContent,
@@ -12,7 +13,7 @@ import {
     Typography,
 } from "@mui/material";
 import Alert from "@mui/material/Alert";
-import { memo, useState } from "react";
+import { memo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import useLocalStorage from "../hooks/useLocalStorage";
 import { useI18n } from "../i18n";
 
@@ -138,7 +139,15 @@ function ReadonlyValue({ label, value, helperText }: { label: string; value: str
     );
 }
 
-const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() {
+const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
+    floating = false,
+    onToggleFloating,
+    onHeaderMouseDown,
+}: {
+    floating?: boolean;
+    onToggleFloating?: () => void;
+    onHeaderMouseDown?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+}) {
     const { t } = useI18n();
     const [storedState, setState] = useLocalStorage<DynamicToolStoredState>(STORAGE_KEY, DEFAULT_STATE);
     const [feedback, setFeedback] = useState("");
@@ -322,8 +331,41 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 }}
             >
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1, mb: 0.5 }}>
-                    <Typography variant="h6" sx={{ textAlign: "left" }}>{t("dynamicTool.title")}</Typography>
-                    <Button size="small" variant="outlined" onClick={handleReset}>{t("dynamicTool.clearAll")}</Button>
+                    <Box
+                        sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 1,
+                            flex: 1,
+                            cursor: floating ? "move" : "default",
+                            userSelect: "none",
+                        }}
+                        onMouseDown={onHeaderMouseDown}
+                    >
+                        <Typography variant="h6" sx={{ textAlign: "left" }}>{t("dynamicTool.title")}</Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            {onToggleFloating ? (
+                                <IconButton
+                                    size="small"
+                                    onClick={onToggleFloating}
+                                    aria-label={t(
+                                        floating
+                                            ? "compare.minimize"
+                                            : "compare.floatWindow"
+                                    )}
+                                >
+                                    <Box
+                                        component="span"
+                                        sx={{ fontSize: "1rem", lineHeight: 1 }}
+                                    >
+                                        {floating ? "−" : "□"}
+                                    </Box>
+                                </IconButton>
+                            ) : null}
+                            <Button size="small" variant="outlined" onClick={handleReset}>{t("dynamicTool.clearAll")}</Button>
+                        </Box>
+                    </Box>
                 </Box>
                 <Box sx={{ display: "grid", gap: 2 }}>
                     <Paper

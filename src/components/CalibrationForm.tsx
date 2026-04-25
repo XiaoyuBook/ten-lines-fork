@@ -107,6 +107,16 @@ const FLOATING_COMPARE_DEFAULT_POSITION = {
     x: 24,
     y: 88,
 };
+const FLOATING_DYNAMIC_DEFAULT_SIZE = {
+    width: 420,
+    height: 760,
+};
+const FLOATING_DYNAMIC_MIN_WIDTH = 340;
+const FLOATING_DYNAMIC_MIN_HEIGHT = 520;
+const FLOATING_DYNAMIC_DEFAULT_POSITION = {
+    x: 40,
+    y: 104,
+};
 
 export const COMPARE_TARGET_STORAGE_KEY = "calibration-compare-target";
 export const SEARCHER_COMPARE_TARGET_KEY = "searcher-compare-target";
@@ -330,13 +340,31 @@ export default function CalibrationForm({
     const [compareFeedback, setCompareFeedback] = useState("");
     const [blockedAutoAddKey, setBlockedAutoAddKey] = useState("");
     const [compareFloating, setCompareFloating] = useState(false);
+    const [dynamicToolFloating, setDynamicToolFloating] = useState(false);
+    const [activeFloatingPanel, setActiveFloatingPanel] = useState<
+        "compare" | "dynamic"
+    >("compare");
     const [compareFloatingPosition, setCompareFloatingPosition] = useState(
         FLOATING_COMPARE_DEFAULT_POSITION
     );
     const [compareFloatingSize, setCompareFloatingSize] = useState(
         FLOATING_COMPARE_DEFAULT_SIZE
     );
+    const [dynamicToolFloatingPosition, setDynamicToolFloatingPosition] =
+        useState(FLOATING_DYNAMIC_DEFAULT_POSITION);
+    const [dynamicToolFloatingSize, setDynamicToolFloatingSize] = useState(
+        FLOATING_DYNAMIC_DEFAULT_SIZE
+    );
     const compareFloatingFrameRef = useRef<{
+        mode: "drag" | "resize-right" | "resize-bottom" | "resize-corner";
+        pointerX: number;
+        pointerY: number;
+        startX: number;
+        startY: number;
+        startWidth: number;
+        startHeight: number;
+    } | null>(null);
+    const dynamicToolFloatingFrameRef = useRef<{
         mode: "drag" | "resize-right" | "resize-bottom" | "resize-corner";
         pointerX: number;
         pointerY: number;
@@ -490,6 +518,10 @@ export default function CalibrationForm({
         () => getCompareRowAutoAddKey(visibleRows[0]),
         [visibleRows]
     );
+    const dynamicToolFloatingZIndex =
+        activeFloatingPanel === "dynamic" ? 1401 : 1400;
+    const compareFloatingZIndex =
+        activeFloatingPanel === "compare" ? 1401 : 1400;
 
     const clampFloatingPosition = useCallback((
         x: number,
@@ -517,6 +549,19 @@ export default function CalibrationForm({
             Math.max(compareFloatingMinHeight, window.innerHeight - 24)
         ),
     }), [compareFloatingMinHeight]);
+    const clampDynamicToolFloatingSize = useCallback(
+        (width: number, height: number) => ({
+            width: Math.min(
+                Math.max(FLOATING_DYNAMIC_MIN_WIDTH, width),
+                Math.max(FLOATING_DYNAMIC_MIN_WIDTH, window.innerWidth - 24)
+            ),
+            height: Math.min(
+                Math.max(FLOATING_DYNAMIC_MIN_HEIGHT, height),
+                Math.max(FLOATING_DYNAMIC_MIN_HEIGHT, window.innerHeight - 24)
+            ),
+        }),
+        []
+    );
 
     const addCompareTarget = useCallback((row: CalibrationCompareRow) => {
         setCompareTarget(createCompareEntry(row));
@@ -631,6 +676,71 @@ export default function CalibrationForm({
     ]);
 
     useEffect(() => {
+        if (!dynamicToolFloating) {
+            return undefined;
+        }
+
+        const handlePointerMove = (event: MouseEvent) => {
+            const frame = dynamicToolFloatingFrameRef.current;
+            if (!frame) {
+                return;
+            }
+
+            if (frame.mode === "drag") {
+                const nextPosition = clampFloatingPosition(
+                    frame.startX + (event.clientX - frame.pointerX),
+                    frame.startY + (event.clientY - frame.pointerY),
+                    dynamicToolFloatingSize.width,
+                    dynamicToolFloatingSize.height
+                );
+                setDynamicToolFloatingPosition(nextPosition);
+                return;
+            }
+
+            const nextWidth =
+                frame.mode === "resize-bottom"
+                    ? frame.startWidth
+                    : frame.startWidth + (event.clientX - frame.pointerX);
+            const nextHeight =
+                frame.mode === "resize-right"
+                    ? frame.startHeight
+                    : frame.startHeight + (event.clientY - frame.pointerY);
+            const clampedSize = clampDynamicToolFloatingSize(
+                nextWidth,
+                nextHeight
+            );
+
+            setDynamicToolFloatingSize(clampedSize);
+            setDynamicToolFloatingPosition((current) =>
+                clampFloatingPosition(
+                    current.x,
+                    current.y,
+                    clampedSize.width,
+                    clampedSize.height
+                )
+            );
+        };
+
+        const handlePointerUp = () => {
+            dynamicToolFloatingFrameRef.current = null;
+        };
+
+        window.addEventListener("mousemove", handlePointerMove);
+        window.addEventListener("mouseup", handlePointerUp);
+
+        return () => {
+            window.removeEventListener("mousemove", handlePointerMove);
+            window.removeEventListener("mouseup", handlePointerUp);
+        };
+    }, [
+        clampDynamicToolFloatingSize,
+        clampFloatingPosition,
+        dynamicToolFloating,
+        dynamicToolFloatingSize.height,
+        dynamicToolFloatingSize.width,
+    ]);
+
+    useEffect(() => {
         if (!compareFloating) {
             return undefined;
         }
@@ -663,6 +773,37 @@ export default function CalibrationForm({
     ]);
 
     useEffect(() => {
+        if (!dynamicToolFloating) {
+            return undefined;
+        }
+
+        const handleResize = () => {
+            setDynamicToolFloatingSize((current) =>
+                clampDynamicToolFloatingSize(current.width, current.height)
+            );
+            setDynamicToolFloatingPosition((current) =>
+                clampFloatingPosition(
+                    current.x,
+                    current.y,
+                    dynamicToolFloatingSize.width,
+                    dynamicToolFloatingSize.height
+                )
+            );
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
+    }, [
+        clampDynamicToolFloatingSize,
+        clampFloatingPosition,
+        dynamicToolFloating,
+        dynamicToolFloatingSize.height,
+        dynamicToolFloatingSize.width,
+    ]);
+
+    useEffect(() => {
         if (!compareFloating) {
             return;
         }
@@ -670,6 +811,15 @@ export default function CalibrationForm({
             clampFloatingSize(current.width, current.height)
         );
     }, [clampFloatingSize, compareFloating, compareFloatingMinHeight]);
+
+    useEffect(() => {
+        if (!dynamicToolFloating) {
+            return;
+        }
+        setDynamicToolFloatingSize((current) =>
+            clampDynamicToolFloatingSize(current.width, current.height)
+        );
+    }, [clampDynamicToolFloatingSize, dynamicToolFloating]);
 
     const startCompareFloatingDrag = (
         event: React.MouseEvent<HTMLDivElement>
@@ -692,6 +842,28 @@ export default function CalibrationForm({
             startHeight: compareFloatingSize.height,
         };
     };
+    const startDynamicToolFloatingDrag = (
+        event: React.MouseEvent<HTMLDivElement>
+    ) => {
+        if (!dynamicToolFloating || event.button !== 0) {
+            return;
+        }
+        const target = event.target as HTMLElement;
+        if (target.closest("button")) {
+            return;
+        }
+        event.preventDefault();
+        setActiveFloatingPanel("dynamic");
+        dynamicToolFloatingFrameRef.current = {
+            mode: "drag",
+            pointerX: event.clientX,
+            pointerY: event.clientY,
+            startX: dynamicToolFloatingPosition.x,
+            startY: dynamicToolFloatingPosition.y,
+            startWidth: dynamicToolFloatingSize.width,
+            startHeight: dynamicToolFloatingSize.height,
+        };
+    };
 
     const startCompareFloatingResize = (
         mode: "resize-right" | "resize-bottom" | "resize-corner"
@@ -711,11 +883,31 @@ export default function CalibrationForm({
             startHeight: compareFloatingSize.height,
         };
     };
+    const startDynamicToolFloatingResize = (
+        mode: "resize-right" | "resize-bottom" | "resize-corner"
+    ) => (event: React.MouseEvent<HTMLDivElement>) => {
+        if (!dynamicToolFloating || event.button !== 0) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        setActiveFloatingPanel("dynamic");
+        dynamicToolFloatingFrameRef.current = {
+            mode,
+            pointerX: event.clientX,
+            pointerY: event.clientY,
+            startX: dynamicToolFloatingPosition.x,
+            startY: dynamicToolFloatingPosition.y,
+            startWidth: dynamicToolFloatingSize.width,
+            startHeight: dynamicToolFloatingSize.height,
+        };
+    };
 
     const toggleCompareFloating = () => {
         setCompareFloating((current) => {
             const next = !current;
             if (next) {
+                setActiveFloatingPanel("compare");
                 const clampedSize = clampFloatingSize(
                     compareFloatingSize.width,
                     compareFloatingSize.height
@@ -731,6 +923,30 @@ export default function CalibrationForm({
                 );
             } else {
                 compareFloatingFrameRef.current = null;
+            }
+            return next;
+        });
+    };
+    const toggleDynamicToolFloating = () => {
+        setDynamicToolFloating((current) => {
+            const next = !current;
+            if (next) {
+                setActiveFloatingPanel("dynamic");
+                const clampedSize = clampDynamicToolFloatingSize(
+                    dynamicToolFloatingSize.width,
+                    dynamicToolFloatingSize.height
+                );
+                setDynamicToolFloatingSize(clampedSize);
+                setDynamicToolFloatingPosition((position) =>
+                    clampFloatingPosition(
+                        position.x,
+                        position.y,
+                        clampedSize.width,
+                        clampedSize.height
+                    )
+                );
+            } else {
+                dynamicToolFloatingFrameRef.current = null;
             }
             return next;
         });
@@ -948,7 +1164,11 @@ export default function CalibrationForm({
     );
 
     const dynamicToolPanel = compareSettings.dynamicToolEnabled ? (
-        <CalibrationDynamicToolPanel />
+        <CalibrationDynamicToolPanel
+            floating={dynamicToolFloating}
+            onToggleFloating={toggleDynamicToolFloating}
+            onHeaderMouseDown={startDynamicToolFloatingDrag}
+        />
     ) : null;
 
     return (
@@ -968,26 +1188,31 @@ export default function CalibrationForm({
                     alignItems: "start",
                     gridTemplateColumns: {
                         xs: "1fr",
-                        lg: compareSettings.enabled
+                        lg: "minmax(280px, 340px) minmax(0, 1fr)",
+                        xl: compareSettings.enabled
                             ? "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
                             : "minmax(280px, 340px) minmax(0, 1fr)",
                     },
                 }}
             >
-                <Box
-                    sx={{
-                        order: { xs: 1, lg: 1 },
-                        position: { lg: "sticky" },
-                        top: { lg: 16 },
-                        alignSelf: "start",
-                        minWidth: 0,
-                    }}
-                >
-                    {dynamicToolPanel}
-                </Box>
+                {compareSettings.dynamicToolEnabled && !dynamicToolFloating ? (
+                    <Box
+                        sx={{
+                            order: { xs: 1, lg: 1 },
+                            position: { lg: "sticky" },
+                            top: { lg: 16 },
+                            alignSelf: "start",
+                            minWidth: 0,
+                            gridColumn: { xs: "1", lg: "1", xl: "1" },
+                        }}
+                    >
+                        {dynamicToolPanel}
+                    </Box>
+                ) : null}
 
                 {compareSettings.enabled && compareFloating && (
                     <Box
+                        onMouseDown={() => setActiveFloatingPanel("compare")}
                         sx={{
                             position: "fixed",
                             top: compareFloatingPosition.y,
@@ -999,7 +1224,7 @@ export default function CalibrationForm({
                             maxWidth: "calc(100vw - 24px)",
                             maxHeight: "calc(100vh - 24px)",
                             overflow: "hidden",
-                            zIndex: 1400,
+                            zIndex: compareFloatingZIndex,
                             boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
                         }}
                     >
@@ -1052,14 +1277,81 @@ export default function CalibrationForm({
                         />
                     </Box>
                 )}
+                {compareSettings.dynamicToolEnabled && dynamicToolFloating ? (
+                    <Box
+                        onMouseDown={() => setActiveFloatingPanel("dynamic")}
+                        sx={{
+                            position: "fixed",
+                            top: dynamicToolFloatingPosition.y,
+                            left: dynamicToolFloatingPosition.x,
+                            width: dynamicToolFloatingSize.width,
+                            height: dynamicToolFloatingSize.height,
+                            minWidth: FLOATING_DYNAMIC_MIN_WIDTH,
+                            minHeight: FLOATING_DYNAMIC_MIN_HEIGHT,
+                            maxWidth: "calc(100vw - 24px)",
+                            maxHeight: "calc(100vh - 24px)",
+                            overflow: "hidden",
+                            zIndex: dynamicToolFloatingZIndex,
+                            boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+                        }}
+                    >
+                        {dynamicToolPanel}
+                        <Box
+                            onMouseDown={startDynamicToolFloatingResize("resize-right")}
+                            sx={{
+                                position: "absolute",
+                                top: 0,
+                                right: 0,
+                                width: 10,
+                                height: "100%",
+                                cursor: "ew-resize",
+                                zIndex: 2,
+                            }}
+                        />
+                        <Box
+                            onMouseDown={startDynamicToolFloatingResize("resize-bottom")}
+                            sx={{
+                                position: "absolute",
+                                left: 0,
+                                bottom: 0,
+                                width: "100%",
+                                height: 10,
+                                cursor: "ns-resize",
+                                zIndex: 2,
+                            }}
+                        />
+                        <Box
+                            onMouseDown={startDynamicToolFloatingResize("resize-corner")}
+                            sx={{
+                                position: "absolute",
+                                right: 0,
+                                bottom: 0,
+                                width: 18,
+                                height: 18,
+                                cursor: "nwse-resize",
+                                zIndex: 3,
+                                "&::after": {
+                                    content: '""',
+                                    position: "absolute",
+                                    right: 4,
+                                    bottom: 4,
+                                    width: 8,
+                                    height: 8,
+                                    borderRight: "2px solid rgba(255,255,255,0.45)",
+                                    borderBottom: "2px solid rgba(255,255,255,0.45)",
+                                },
+                            }}
+                        />
+                    </Box>
+                ) : null}
 
                 <Paper
                     variant="outlined"
                     sx={{
-                        order: { xs: 2, lg: 2 },
+                        order: { xs: 3, lg: 2 },
                         width: "100%",
                         minWidth: 0,
-                        minInlineSize: { lg: 720 },
+                        minInlineSize: { xs: 0, lg: 0, xl: 720 },
                         borderRadius: 4,
                         p: { xs: 1.5, sm: 2.5 },
                         background:
@@ -1716,11 +2008,16 @@ export default function CalibrationForm({
                 {compareSettings.enabled && !compareFloating && (
                     <Box
                         sx={{
-                            order: { xs: 3, lg: 3 },
+                            order: { xs: 4, lg: 3 },
                             position: { lg: "sticky" },
                             top: { lg: 16 },
                             alignSelf: "start",
                             minWidth: 0,
+                            gridColumn: {
+                                xs: "1",
+                                lg: "1 / -1",
+                                xl: "3",
+                            },
                         }}
                     >
                         {comparePanel}
