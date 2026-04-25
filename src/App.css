@@ -218,6 +218,7 @@
 
 .calibration-layout__left {
     min-inline-size: 0;
+    flex-shrink: 0;
 }
 
 .calibration-layout__center {
