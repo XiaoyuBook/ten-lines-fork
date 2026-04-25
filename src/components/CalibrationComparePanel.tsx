@@ -696,8 +696,8 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                 className={isModernUI ? "compare-panel__history" : undefined}
                 sx={{
                     p: 2,
-                    flex: floating ? 1 : "0 1 auto",
-                    minHeight: floating ? 170 : "auto",
+                    flex: isModernUI ? "1 1 160px" : floating ? 1 : "0 1 auto",
+                    minHeight: isModernUI ? 160 : floating ? 170 : "auto",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",

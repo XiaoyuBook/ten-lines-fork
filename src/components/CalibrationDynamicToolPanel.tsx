@@ -235,7 +235,6 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                 <Box className="dynamic-tool-panel__content" sx={{ display: "grid", gap: 2 }}>
                     <Paper
                         variant="outlined"
-                        className="dynamic-tool-panel__history-card"
                         sx={{
                             p: { xs: 1.5, md: 2 },
                             textAlign: "left",
@@ -302,6 +301,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
 
                     <Paper
                         variant="outlined"
+                        className="dynamic-tool-panel__history-card"
                         sx={{
                             p: { xs: 1.5, md: 2 },
                             textAlign: "left",
