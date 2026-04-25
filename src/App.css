@@ -281,16 +281,8 @@
     background: linear-gradient(180deg, rgba(11, 16, 30, 0.72), rgba(8, 12, 24, 0.58));
 }
 
-.modern-section-card--base {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.modern-section-card--seed-params {
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.25fr) minmax(0, 0.9fr);
-}
-
 .modern-section-card--pokemon {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: min(44vh, 620px);
     overflow: auto;
     padding-bottom: 0.75rem;
@@ -310,23 +302,6 @@
 .modern-section-card--pokemon > .MuiBox-root,
 .modern-section-card--pokemon > span {
     grid-column: 1 / -1;
-}
-
-.modern-section-card--base .modern-trainer-id-row {
-    grid-column: span 2;
-    max-width: 520px;
-}
-
-.modern-section-card--seed-params .modern-target-seed-field {
-    grid-column: span 2;
-}
-
-.modern-section-card--seed-params .modern-seed-leeway-row {
-    grid-column: span 1;
-}
-
-.modern-section-card--seed-params > .MuiBox-root:not(.modern-target-seed-field):not(.modern-seed-leeway-row) {
-    grid-column: span 1;
 }
 
 .modern-seed-leeway-row {
@@ -349,7 +324,7 @@
 
 .calibration-right-rail {
     height: min(78vh, 920px);
-    grid-template-rows: minmax(340px, 0.4fr) minmax(400px, 0.6fr);
+    grid-template-rows: minmax(220px, 0.26fr) minmax(520px, 0.74fr);
     min-width: 0;
 }
 
@@ -385,25 +360,37 @@
 }
 
 .compare-target-summary--compact {
-    padding: 0.85rem !important;
+    padding: 0.75rem 0.85rem !important;
 }
 
 .compare-target-summary--compact > .MuiBox-root:last-child {
-    margin-top: 0.7rem !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 0.55rem !important;
+    margin-top: 0.65rem;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 0.15rem;
 }
 
 .compare-target-summary--compact > .MuiBox-root:last-child > .MuiBox-root {
-    padding: 0.6rem 0.7rem !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    min-width: fit-content;
 }
 
-.compare-target-summary--compact .MuiTypography-caption {
-    line-height: 1.2;
+.compare-target-summary--compact > .MuiBox-root:last-child .MuiTypography-caption {
+    color: rgba(226, 232, 240, 0.62);
+    font-size: 0.72rem;
+    margin-bottom: 0 !important;
 }
 
-.compare-target-summary--compact .MuiTypography-body2 {
+.compare-target-summary--compact > .MuiBox-root:last-child > .MuiBox-root > .MuiBox-root:last-child {
     font-size: 0.84rem;
+    font-weight: 600;
 }
 
 .calibration-results-panel {

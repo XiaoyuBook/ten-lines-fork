@@ -1173,13 +1173,7 @@ export default function CalibrationForm({
                                 </Typography>
                             </Box>
                         )}
-                        <Box
-                            className={
-                                isModernUI
-                                    ? "modern-section-card modern-section-card--base"
-                                    : undefined
-                            }
-                        >
+                        <Box className={isModernUI ? "modern-section-card" : undefined}>
                         <TextField
                             label={t("labels.game")}
                             margin="normal"
@@ -1345,13 +1339,7 @@ export default function CalibrationForm({
                                 </Typography>
                             </Box>
                         )}
-                        <Box
-                            className={
-                                isModernUI
-                                    ? "modern-section-card modern-section-card--seed-params"
-                                    : undefined
-                            }
-                        >
+                        <Box className={isModernUI ? "modern-section-card" : undefined}>
                         <Autocomplete
                             className={isModernUI ? "modern-target-seed-field" : undefined}
                             options={seedList}
