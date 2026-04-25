@@ -94,6 +94,7 @@ const DEFAULT_COMPARE_SETTINGS: CalibrationCompareSettings = {
     autoAddTarget: true,
     wildLevelFilterEnabled: false,
     dynamicToolEnabled: false,
+    historyWildDetailsEnabled: true,
 };
 
 const FLOATING_COMPARE_DEFAULT_SIZE = {
@@ -1777,6 +1778,23 @@ export default function CalibrationForm({
                                     />
                                 }
                                 label={t("dynamicTool.toggleInSettings")}
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={
+                                            compareSettings.historyWildDetailsEnabled
+                                        }
+                                        onChange={(event) =>
+                                            setCompareSettings((current: CalibrationCompareSettings) => ({
+                                                ...current,
+                                                historyWildDetailsEnabled:
+                                                    event.target.checked,
+                                            }))
+                                        }
+                                    />
+                                }
+                                label={t("compare.historyWildDetailsToggle")}
                             />
                         </Paper>
 

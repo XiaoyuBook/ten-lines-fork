@@ -370,13 +370,16 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             resultsTitle: "Calibration Results",
             calculator: "Calculator",
             wildLevelFilter: "Filter wild results by the first IV line level",
+            historyWildDetails: "Pokemon / Level",
+            historyWildDetailsToggle:
+                "Show Pokemon species and level in history",
             wildLevelFilterStaticHint:
                 "This filter is only available when the calibration method is wild.",
             wildLevelFilterHint:
                 "When enabled, only wild results matching the first IV input line level are shown. Current first-line level: {level}",
         },
         dynamicTool: {
-            title: "Dynamic Calibration Tool",
+            title: "FRLG Dynamic Calibration Tool",
             showTool: "Show Dynamic Tool",
             hideTool: "Hide Dynamic Tool",
             toggleInSettings: "Show dynamic calibration tool",
@@ -421,6 +424,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             historyTvShort: "TV",
             historyWaitShort: "Remaining",
             historyParityShort: "Parity",
+            rollbackHint: "Click to roll back",
+            rollbackAction: "Rollback",
+            rollbackDialogTitle: "Rollback Parameters",
+            rollbackDialogBody:
+                "Roll back to the full parameter state of round {round}?",
+            rollbackConfirm: "Confirm rollback",
+            rollbackCompleted: "Rolled back to the selected round.",
             emptyHistory:
                 "Each calculation will append the resulting parameters here.",
         },
@@ -743,13 +753,16 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             calculator: "\u8ba1\u7b97\u5668",
             wildLevelFilter:
                 "\u6309 IV \u7b2c\u4e00\u884c\u7684\u7b49\u7ea7\u7b5b\u9009\u91ce\u751f\u7ed3\u679c",
+            historyWildDetails: "\u5b9d\u53ef\u68a6 / \u7b49\u7ea7",
+            historyWildDetailsToggle:
+                "\u5728\u5386\u53f2\u8868\u4e2d\u663e\u793a\u5b9d\u53ef\u68a6\u79cd\u7c7b\u548c\u7b49\u7ea7",
             wildLevelFilterStaticHint:
                 "\u8be5\u7b5b\u9009\u53ea\u6709\u5728\u6821\u51c6\u65b9\u6cd5\u4e3a\u91ce\u751f\u65f6\u624d\u53ef\u7528\u3002",
             wildLevelFilterHint:
                 "\u5f00\u542f\u540e\uff0c\u53ea\u663e\u793a\u7b49\u4e8e IV \u8f93\u5165\u7b2c\u4e00\u884c\u7b49\u7ea7\u7684\u91ce\u751f\u7ed3\u679c\u3002\u5f53\u524d\u7b2c\u4e00\u884c\u7b49\u7ea7\uff1a{level}",
         },
         dynamicTool: {
-            title: "\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
+            title: "\u706b\u7ea2\u53f6\u7eff\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
             showTool: "\u663e\u793a\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
             hideTool: "\u9690\u85cf\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
             toggleInSettings: "\u663e\u793a\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
@@ -794,6 +807,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             historyTvShort: "TV",
             historyWaitShort: "\u5269\u4f59",
             historyParityShort: "\u5947\u5076",
+            rollbackHint: "\u70b9\u51fb\u5373\u53ef\u56de\u6eaf",
+            rollbackAction: "\u56de\u6eaf",
+            rollbackDialogTitle: "\u786e\u8ba4\u56de\u6eaf",
+            rollbackDialogBody:
+                "\u662f\u5426\u786e\u5b9a\u56de\u6eaf\u5230 {round} \u7684\u5b8c\u6574\u72b6\u6001\uff1f",
+            rollbackConfirm: "\u786e\u5b9a",
+            rollbackCompleted: "\u5df2\u56de\u6eaf\u5230\u9009\u4e2d\u8f6e\u6b21\u3002",
             emptyHistory:
                 "\u6bcf\u6b21\u8ba1\u7b97\u540e\uff0c\u7ed3\u679c\u53c2\u6570\u90fd\u4f1a\u8ffd\u52a0\u5230\u8fd9\u91cc\u3002",
         },

@@ -81,6 +81,7 @@ export interface CalibrationCompareSettings {
     autoAddTarget: boolean;
     wildLevelFilterEnabled: boolean;
     dynamicToolEnabled: boolean;
+    historyWildDetailsEnabled: boolean;
 }
 
 export interface CalibrationCompareEntry {
@@ -496,6 +497,12 @@ function CompareCalculator() {
     );
 }
 
+function isWildCompareRow(
+    row: CalibrationCompareRow | null | undefined
+): row is CalibrationStoredTarget | ExtendedWildGeneratorState {
+    return Boolean(row && "species" in row && row.species !== undefined);
+}
+
 const CalibrationComparePanel = memo(function CalibrationComparePanel({
     targetEntry,
     historyEntries,
@@ -523,7 +530,11 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     onToggleFloating: () => void;
     onHeaderMouseDown?: (event: ReactMouseEvent<HTMLDivElement>) => void;
 }) {
-    const { t } = useI18n();
+    const { t, resources } = useI18n();
+    const showHistoryWildDetails =
+        settings.historyWildDetailsEnabled &&
+        (isWildCompareRow(targetEntry?.row) ||
+            historyEntries.some((entry) => isWildCompareRow(entry.row)));
 
     if (!settings.enabled) {
         return null;
@@ -701,6 +712,23 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                             overflow: "auto",
                             borderRadius: 3,
                             border: "1px solid rgba(255,255,255,0.08)",
+                            scrollbarWidth: "thin",
+                            scrollbarColor:
+                                "rgba(143,200,247,0.55) rgba(255,255,255,0.08)",
+                            "&::-webkit-scrollbar": {
+                                width: 10,
+                                height: 10,
+                            },
+                            "&::-webkit-scrollbar-track": {
+                                backgroundColor: "rgba(255,255,255,0.08)",
+                                borderRadius: 999,
+                            },
+                            "&::-webkit-scrollbar-thumb": {
+                                background:
+                                    "linear-gradient(180deg, rgba(143,200,247,0.85), rgba(116,174,226,0.7))",
+                                borderRadius: 999,
+                                border: "2px solid rgba(15,23,32,0.18)",
+                            },
                         }}
                     >
                         <Table stickyHeader size="small">
@@ -710,6 +738,11 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                                     <TableCell width={76}>
                                         {t("compare.record")}
                                     </TableCell>
+                                    {showHistoryWildDetails ? (
+                                        <TableCell width={170}>
+                                            {t("compare.historyWildDetails")}
+                                        </TableCell>
+                                    ) : null}
                                     {settings.visibleColumns.map((column) => (
                                         <TableCell key={column}>
                                             {t(`table.${column}`)}
@@ -816,6 +849,28 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                                                     variant="outlined"
                                                 />
                                             </TableCell>
+                                            {showHistoryWildDetails ? (
+                                                <TableCell>
+                                                    {isWildCompareRow(entry.row) ? (
+                                                        <Box>
+                                                            <Typography variant="body2" fontWeight={600}>
+                                                                {getName(
+                                                                    resources,
+                                                                    entry.row.species ?? 0,
+                                                                    entry.row.form ?? 0
+                                                                )}
+                                                            </Typography>
+                                                            {"level" in entry.row ? (
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {t("table.level")}: {entry.row.level}
+                                                                </Typography>
+                                                            ) : null}
+                                                        </Box>
+                                                    ) : (
+                                                        "-"
+                                                    )}
+                                                </TableCell>
+                                            ) : null}
                                             {settings.visibleColumns.map((column) => (
                                                 <TableCell
                                                     key={`${entry.id}-${column}`}
