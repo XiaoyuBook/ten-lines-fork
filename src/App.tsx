@@ -444,6 +444,10 @@ function TenLinesPages() {
                         <Box
                             key={page.value}
                             className="modern-page-surface"
+                            sx={{
+                                display:
+                                    currentPage === page.value ? "block" : "none",
+                            }}
                         >
                             {page.content}
                         </Box>
