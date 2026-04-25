@@ -179,6 +179,15 @@ function parseFirstIvCalculatorLevel(value: string) {
     return parsedLevel;
 }
 
+function getCompareRowAutoAddKey(row: CalibrationCompareRow | null | undefined) {
+    if (!row) {
+        return "";
+    }
+
+    const pidPart = "pid" in row ? row.pid : "nopid";
+    return `${row.initialSeed}-${row.advances}-${pidPart}`;
+}
+
 function useCalibrationURLState() {
     const [searchParams, setSearchParams] = useSearchParams();
     const game = searchParams.get("game") || "r_painting";
@@ -319,6 +328,7 @@ export default function CalibrationForm({
     >("calibration-compare-history", []);
     const [compareSettingsOpen, setCompareSettingsOpen] = useState(false);
     const [compareFeedback, setCompareFeedback] = useState("");
+    const [blockedAutoAddKey, setBlockedAutoAddKey] = useState("");
     const [compareFloating, setCompareFloating] = useState(false);
     const [compareFloatingPosition, setCompareFloatingPosition] = useState(
         FLOATING_COMPARE_DEFAULT_POSITION
@@ -476,6 +486,10 @@ export default function CalibrationForm({
     const compareFloatingMinHeight = compareSettings.calculatorEnabled
         ? 520
         : 400;
+    const currentAutoAddKey = useMemo(
+        () => getCompareRowAutoAddKey(visibleRows[0]),
+        [visibleRows]
+    );
 
     const clampFloatingPosition = useCallback((
         x: number,
@@ -506,6 +520,7 @@ export default function CalibrationForm({
 
     const addCompareTarget = useCallback((row: CalibrationCompareRow) => {
         setCompareTarget(createCompareEntry(row));
+        setBlockedAutoAddKey("");
         setDynamicToolTargetAdv(row.advances);
         setCompareFeedback(t("compare.addedTarget"));
     }, [setCompareTarget, setCompareFeedback, t]);
@@ -542,10 +557,12 @@ export default function CalibrationForm({
     };
 
     const deleteCompareTarget = () => {
+        setBlockedAutoAddKey(currentAutoAddKey);
         setCompareTarget(null);
     };
 
     const clearCompareEntries = () => {
+        setBlockedAutoAddKey(currentAutoAddKey);
         setCompareTarget(null);
         setCompareHistory([]);
     };
@@ -763,6 +780,8 @@ export default function CalibrationForm({
         if (
             !compareSettings.autoAddTarget ||
             compareTarget ||
+            currentAutoAddKey === "" ||
+            blockedAutoAddKey === currentAutoAddKey ||
             visibleRows.length === 0
         ) {
             return;
@@ -770,8 +789,10 @@ export default function CalibrationForm({
         addCompareTarget(visibleRows[0]);
     }, [
         addCompareTarget,
+        blockedAutoAddKey,
         compareSettings.autoAddTarget,
         compareTarget,
+        currentAutoAddKey,
         visibleRows,
     ]);
 
