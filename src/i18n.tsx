@@ -468,6 +468,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             settingsSeedButton: "Seed Button",
             settingsExtraButton: "Extra Button",
             matchingSynchronizeSuffix: "Synchronize",
+            invalidTargetSeed:
+                "Please enter an existing target seed from the current seed list.",
         },
         imageImport: {
             title: "Import From Screenshot",
@@ -859,6 +861,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             settingsSeedButton: "Seed \u6309\u952e",
             settingsExtraButton: "\u989d\u5916\u6309\u952e",
             matchingSynchronizeSuffix: "\u540c\u6b65",
+            invalidTargetSeed:
+                "\u8bf7\u8f93\u5165\u5f53\u524d Seed \u5217\u8868\u4e2d\u5b58\u5728\u7684\u76ee\u6807 Seed\u3002",
         },
         imageImport: {
             title: "\u4ece\u622a\u56fe\u5bfc\u5165",

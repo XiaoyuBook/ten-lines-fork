@@ -52,7 +52,7 @@ function WildEncounterSelector({
                 locations.includes(wildLocation)
                     ? wildLocation
                     : locations.length > 0
-                      ? 0
+                      ? locations[0]
                       : 0,
                 wildPokemon,
                 wildLead,
@@ -60,7 +60,7 @@ function WildEncounterSelector({
             );
         };
         fetchWildLocations();
-    }, [game, wildCategory]);
+    }, [game, wildCategory, wildLead, wildLocation, wildPokemon, shouldFilterPokemon, onChange]);
 
     useEffect(() => {
         const fetchAreaSpecies = async () => {
@@ -74,13 +74,21 @@ function WildEncounterSelector({
             onChange(
                 wildCategory,
                 wildLocation,
-                allowAnyPokemon ? -1 : species.length > 0 ? species[0] : 0,
+                allowAnyPokemon
+                    ? wildPokemon === -1 || species.includes(wildPokemon)
+                        ? wildPokemon
+                        : -1
+                    : species.includes(wildPokemon)
+                      ? wildPokemon
+                      : species.length > 0
+                        ? species[0]
+                        : 0,
                 wildLead,
                 shouldFilterPokemon
             );
         };
         fetchAreaSpecies();
-    }, [game, wildCategory, wildLocation]);
+    }, [allowAnyPokemon, game, wildCategory, wildLead, wildLocation, wildPokemon, shouldFilterPokemon, onChange]);
 
     const isEmerald = (game & Game.Emerald) == Game.Emerald;
 
@@ -111,7 +119,7 @@ function WildEncounterSelector({
                 <MenuItem value="8">{t("options.superRod")}</MenuItem>
             </TextField>
             <Autocomplete
-                options={wildLocations.map((_, index) => index)}
+                options={wildLocations}
                 onChange={(_event, newValue) => {
                     onChange(
                         wildCategory,
@@ -122,12 +130,13 @@ function WildEncounterSelector({
                     );
                 }}
                 getOptionLabel={(option) =>
-                    getLocation(resources, game, wildLocations[option]) || ""
+                    getLocation(resources, game, option) || ""
                 }
                 renderInput={(params) => (
                     <TextField {...params} label={t("labels.location")} margin="normal" />
                 )}
-                value={wildLocation}
+                value={wildLocations.includes(wildLocation) ? wildLocation : undefined}
+                isOptionEqualToValue={(option, value) => option === value}
                 disablePortal
                 disableClearable
                 selectOnFocus

@@ -314,6 +314,27 @@ export default function CalibrationForm({
         searcherFormState.staticPokemon,
     ]);
 
+    useEffect(() => {
+        let nextStaticCategory = searcherFormState.staticCategory;
+
+        if (nextStaticCategory === 3 && !isFRLG) {
+            nextStaticCategory = 0;
+        }
+        if (nextStaticCategory === 6 && !isFRLGE) {
+            nextStaticCategory = 0;
+        }
+        if (nextStaticCategory === 8 && isFRLG) {
+            nextStaticCategory = 0;
+        }
+
+        if (nextStaticCategory !== searcherFormState.staticCategory) {
+            setSearcherFormState((current) => ({
+                ...current,
+                staticCategory: nextStaticCategory,
+            }));
+        }
+    }, [isFRLG, isFRLGE, searcherFormState.staticCategory]);
+
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (isNotSubmittable) return;
@@ -455,19 +476,6 @@ export default function CalibrationForm({
         };
         submit();
     };
-
-    if (searcherFormState.staticCategory == 3 && !isFRLG) {
-        searcherFormState.staticCategory = 0;
-        setSearcherFormState(searcherFormState);
-    }
-    if (searcherFormState.staticCategory == 6 && !isFRLGE) {
-        searcherFormState.staticCategory = 0;
-        setSearcherFormState(searcherFormState);
-    }
-    if (searcherFormState.staticCategory == 8 && isFRLG) {
-        searcherFormState.staticCategory = 0;
-        setSearcherFormState(searcherFormState);
-    }
 
     if (hidden) {
         return null;

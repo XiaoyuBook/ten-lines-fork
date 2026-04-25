@@ -93,7 +93,7 @@ const DEFAULT_COMPARE_SETTINGS: CalibrationCompareSettings = {
     calculatorEnabled: false,
     autoAddTarget: true,
     wildLevelFilterEnabled: false,
-    dynamicToolEnabled: false,
+    dynamicToolEnabled: true,
     historyWildDetailsEnabled: true,
 };
 
@@ -415,10 +415,13 @@ export default function CalibrationForm({
 
     const [seedList, setSeedList] = useState<FRLGContiguousSeedEntry[]>([]);
     const [seedDialogOpen, setSeedDialogOpen] = useState(false);
+    const [targetSeedInput, setTargetSeedInput] = useState("");
+    const [targetSeedIsValid, setTargetSeedIsValid] = useState(true);
 
     const isNotSubmittable =
         searching ||
         seedList.length === 0 ||
+        !targetSeedIsValid ||
         !trainerIDIsValid ||
         !secretIDIsValid ||
         !seedLeewayIsValid ||
@@ -468,6 +471,11 @@ export default function CalibrationForm({
         void fetchSeedList();
     }, [game, sound, buttonMode, button, heldButton]);
 
+    const normalizeSeedInput = useCallback(
+        (value: string) => value.trim().replace(/^0x/i, "").toUpperCase(),
+        []
+    );
+
     const targetSeedIndex = useMemo(
         () =>
             seedList.findIndex((seed) => seed.initialSeed === targetSeedValue),
@@ -478,6 +486,14 @@ export default function CalibrationForm({
         targetSeedIndex === -1
             ? { initialSeed: 0xdead, seedTime: 0 }
             : seedList[targetSeedIndex];
+
+    useEffect(() => {
+        setTargetSeedInput(hexSeed(targetSeedValue, 16));
+    }, [targetSeedValue]);
+
+    useEffect(() => {
+        setTargetSeedIsValid(seedList.length === 0 || targetSeedIndex !== -1);
+    }, [seedList.length, targetSeedIndex]);
     const orderedVisibleColumns = CALIBRATION_COMPARE_COLUMN_OPTIONS.filter(
         (column) => compareSettings.visibleColumns.includes(column)
     );
@@ -1188,10 +1204,10 @@ export default function CalibrationForm({
                     alignItems: "start",
                     gridTemplateColumns: {
                         xs: "1fr",
-                        lg: "minmax(280px, 340px) minmax(0, 1fr)",
+                        lg: "minmax(0, 1fr) minmax(0, 960px) minmax(0, 1fr)",
                         xl: compareSettings.enabled
                             ? "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
-                            : "minmax(280px, 340px) minmax(0, 1fr)",
+                            : "minmax(0, 1fr) minmax(0, 960px) minmax(0, 1fr)",
                     },
                 }}
             >
@@ -1203,7 +1219,7 @@ export default function CalibrationForm({
                             top: { lg: 16 },
                             alignSelf: "start",
                             minWidth: 0,
-                            gridColumn: { xs: "1", lg: "1", xl: "1" },
+                            gridColumn: { xs: "1", lg: "2", xl: "1" },
                         }}
                     >
                         {dynamicToolPanel}
@@ -1484,9 +1500,44 @@ export default function CalibrationForm({
                             ))}
                         </TextField>
                         <Autocomplete
+                            freeSolo
                             options={seedList}
-                            value={targetSeed}
+                            value={targetSeedIndex === -1 ? null : targetSeed}
+                            inputValue={targetSeedInput}
+                            onInputChange={(_event, newInputValue) => {
+                                const normalized = normalizeSeedInput(
+                                    newInputValue
+                                );
+                                setTargetSeedInput(normalized);
+                                if (normalized === "") {
+                                    setTargetSeedIsValid(false);
+                                    return;
+                                }
+                                const parsedSeed = Number.parseInt(
+                                    normalized,
+                                    16
+                                );
+                                const exists = seedList.some(
+                                    (seed) => seed.initialSeed === parsedSeed
+                                );
+                                setTargetSeedIsValid(exists);
+                                if (exists) {
+                                    setCalibrationURLState({
+                                        targetInitialSeed: hexSeed(
+                                            parsedSeed,
+                                            16
+                                        ),
+                                    });
+                                }
+                            }}
                             onChange={(_event, newValue) => {
+                                if (!newValue || typeof newValue === "string") {
+                                    return;
+                                }
+                                setTargetSeedInput(
+                                    hexSeed(newValue.initialSeed, 16)
+                                );
+                                setTargetSeedIsValid(true);
                                 setCalibrationURLState({
                                     targetInitialSeed: hexSeed(
                                         newValue.initialSeed,
@@ -1495,28 +1546,37 @@ export default function CalibrationForm({
                                 });
                             }}
                             getOptionLabel={(item_) => {
+                                if (typeof item_ === "string") {
+                                    return item_;
+                                }
                                 const item = item_ as FRLGContiguousSeedEntry;
                                 return `${hexSeed(item.initialSeed, 16)} (${frameToMS(
                                     item.seedTime / 16,
                                     gameConsole
                                 )}ms)`;
                             }}
+                            isOptionEqualToValue={(option, value) =>
+                                option.initialSeed === value.initialSeed
+                            }
                             filterOptions={targetSeedFilterOptions}
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
                                     label={t("labels.targetSeed")}
                                     margin="normal"
-                                    error={seedList.length === 0}
+                                    error={
+                                        seedList.length === 0 || !targetSeedIsValid
+                                    }
                                     helperText={
                                         seedList.length === 0
                                             ? t("messages.noKnownSeeds")
-                                            : undefined
+                                            : !targetSeedIsValid
+                                              ? t("messages.invalidTargetSeed")
+                                              : undefined
                                     }
                                 />
                             )}
                             disablePortal
-                            disableClearable
                             selectOnFocus
                             fullWidth
                         />
@@ -2015,7 +2075,7 @@ export default function CalibrationForm({
                             minWidth: 0,
                             gridColumn: {
                                 xs: "1",
-                                lg: "1 / -1",
+                                lg: "2",
                                 xl: "3",
                             },
                         }}
