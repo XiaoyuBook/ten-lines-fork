@@ -1,48 +1,53 @@
 #root {
     max-width: 100%;
     margin: 0 auto;
-    padding: 2rem;
+    min-height: 100vh;
+    padding: 18px 20px 28px;
     text-align: center;
 }
 
 .app-shell {
     position: relative;
-    width: calc(100vw - 3rem);
-    margin-left: calc(50% - 50vw + 1.5rem);
-    min-height: calc(100vh - 7rem);
-    padding-left: 6.5rem;
+    width: 100%;
+    min-height: calc(100vh - 46px);
+    padding-top: 76px;
+    padding-left: 66px;
 }
 
 .app-sidebar {
     position: fixed;
-    top: 1.5rem;
-    left: 1.5rem;
-    bottom: 1.5rem;
+    top: 88px;
+    left: 20px;
+    bottom: 20px;
     z-index: 20;
-    width: 76px;
+    width: 54px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 1.25rem;
-    padding: 1rem 0.75rem;
-    border: 1px solid rgba(124, 145, 255, 0.18);
-    border-radius: 28px;
+    justify-content: flex-start;
+    padding: 10px 8px;
+    border: 1px solid rgba(113, 137, 198, 0.18);
+    border-radius: 22px;
     background:
-        linear-gradient(180deg, rgba(11, 16, 31, 0.96), rgba(10, 13, 26, 0.88)),
-        radial-gradient(circle at top, rgba(76, 125, 255, 0.18), transparent 45%);
-    box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+        linear-gradient(180deg, rgba(10, 18, 33, 0.96), rgba(11, 16, 28, 0.9)),
+        radial-gradient(circle at top, rgba(76, 125, 255, 0.14), transparent 48%);
+    box-shadow: 0 18px 42px rgba(2, 6, 23, 0.28);
 }
 
 .app-brand {
+    position: fixed;
+    top: 24px;
+    left: 20px;
+    z-index: 25;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    padding: 0 10px 0 2px;
 }
 
 .app-brand-mark {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     padding: 2px;
     background: linear-gradient(180deg, #ff5959 0 49%, #f6f7fb 49% 100%);
@@ -85,27 +90,33 @@
 }
 
 .app-brand-text {
-    font-size: 0.85rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.04em;
+    font-size: 0 !important;
+}
+
+.app-brand-text::after {
+    content: "PokeRNG";
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #f8fbff;
 }
 
 .app-sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.9rem;
     width: 100%;
     align-items: center;
 }
 
 .app-nav-button.MuiButton-root {
     min-width: 0;
-    width: 48px;
-    height: 48px;
-    border-radius: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
     color: rgba(226, 232, 240, 0.78);
-    background: rgba(148, 163, 184, 0.08);
-    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(148, 163, 184, 0.05);
+    border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .app-nav-button.MuiButton-root[data-active="true"] {
@@ -123,21 +134,59 @@
 .app-main {
     min-width: 0;
     width: 100%;
-    padding-left: 0.5rem;
+    padding-left: 12px;
 }
 
 .app-topbar {
+    position: fixed;
+    top: 16px;
+    left: 86px;
+    right: 20px;
+    z-index: 15;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1rem;
-    border-radius: 24px;
-    border: 1px solid rgba(124, 145, 255, 0.14);
+    min-height: 48px;
+    padding: 0.3rem 0.35rem 0.3rem 0.9rem;
+    border-radius: 18px;
+    border: 1px solid rgba(124, 145, 255, 0.12);
     background:
-        linear-gradient(180deg, rgba(12, 18, 34, 0.96), rgba(10, 14, 28, 0.92)),
-        radial-gradient(circle at left top, rgba(76, 125, 255, 0.16), transparent 40%);
+        linear-gradient(180deg, rgba(8, 14, 26, 0.96), rgba(9, 15, 28, 0.92)),
+        radial-gradient(circle at left top, rgba(76, 125, 255, 0.12), transparent 34%);
+    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.2);
+    text-align: left;
+}
+
+.app-topbar-controls,
+.app-topbar > :last-child {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.app-topbar .MuiButtonGroup-root .MuiButton-root,
+.app-theme-button.MuiButton-root {
+    height: 32px;
+    border-radius: 10px !important;
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+    color: rgba(241, 245, 255, 0.92);
+}
+
+.app-topbar .MuiButtonGroup-root .MuiButton-contained,
+.app-theme-button.MuiButton-root:hover {
+    background: linear-gradient(135deg, rgba(64, 105, 255, 0.92), rgba(86, 143, 255, 0.88));
+}
+
+.app-pagebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.4rem 0.25rem 0.95rem;
     text-align: left;
 }
 
@@ -155,7 +204,7 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.1rem;
 }
 
 .modern-page-surface {
@@ -202,8 +251,8 @@
 
 .calibration-layout--modern {
     align-items: stretch;
-    column-gap: 1rem;
-    row-gap: 1.1rem;
+    column-gap: 1.15rem;
+    row-gap: 1rem;
 }
 
 .calibration-layout__left,
@@ -323,8 +372,8 @@
 }
 
 .calibration-right-rail {
-    height: min(78vh, 920px);
-    grid-template-rows: minmax(220px, 0.26fr) minmax(520px, 0.74fr);
+    height: min(calc(100vh - 168px), 980px);
+    grid-template-rows: minmax(240px, 0.3fr) minmax(460px, 0.7fr);
     min-width: 0;
 }
 
@@ -528,7 +577,7 @@
 }
 
 .dynamic-tool-panel {
-    height: min(78vh, 920px);
+    height: min(calc(100vh - 168px), 980px);
     overflow: hidden;
     box-shadow: 0 18px 44px rgba(2, 6, 23, 0.28);
 }
@@ -568,6 +617,7 @@ footer {
     margin-top: 2rem;
     line-height: 1.6;
     overflow-wrap: anywhere;
+    color: rgba(148, 163, 184, 0.72);
 }
 
 @media (max-width: 900px) {
@@ -577,8 +627,8 @@ footer {
 
     .app-shell {
         width: 100%;
-        margin-left: 0;
         padding-left: 0;
+        padding-top: 0;
     }
 
     .app-sidebar {
@@ -587,11 +637,13 @@ footer {
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
+        margin-top: 0.75rem;
         padding: 0.85rem 1rem;
     }
 
     .app-brand {
-        flex-direction: row;
+        position: static;
+        padding: 0;
     }
 
     .app-sidebar-nav {
@@ -601,8 +653,15 @@ footer {
     }
 
     .app-topbar {
+        position: static;
+        left: auto;
+        right: auto;
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .app-main {
+        padding-left: 0;
     }
 }
 

@@ -66,6 +66,22 @@ function NavIcon({
     );
 }
 
+function ThemeIcon() {
+    return (
+        <NavIcon>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.8" />
+                <path
+                    d="M12 2.75V5.1M12 18.9v2.35M4.75 12H2.4M21.6 12h-2.35M5.64 5.64l1.67 1.67M16.69 16.69l1.67 1.67M18.36 5.64l-1.67 1.67M7.31 16.69l-1.67 1.67"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                />
+            </svg>
+        </NavIcon>
+    );
+}
+
 function SearchIcon() {
     return (
         <NavIcon>
@@ -382,6 +398,17 @@ function TenLinesPages() {
                         </Typography>
                     </Box>
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                        <Button
+                            variant="outlined"
+                            aria-label="theme"
+                            sx={{
+                                minWidth: 44,
+                                width: 44,
+                                px: 0,
+                            }}
+                        >
+                            <ThemeIcon />
+                        </Button>
                         <ButtonGroup size="small" variant="outlined">
                             <Button
                                 variant={uiMode === "legacy" ? "contained" : "outlined"}

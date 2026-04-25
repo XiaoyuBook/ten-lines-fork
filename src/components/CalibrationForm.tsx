@@ -1046,12 +1046,12 @@ export default function CalibrationForm({
                         xs: "1fr",
                         lg: showComparePanel
                             ? isModernUI
-                                ? "minmax(300px, 360px) minmax(0, 1fr)"
+                                ? "minmax(280px, 330px) minmax(0, 1fr)"
                                 : "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
                             : "minmax(280px, 340px) minmax(0, 1fr)",
                         xl: showComparePanel
                             ? isModernUI
-                                ? "minmax(320px, 388px) minmax(0, 1.26fr) minmax(320px, 0.96fr)"
+                                ? "minmax(300px, 340px) minmax(0, 1.2fr) minmax(380px, 0.98fr)"
                                 : undefined
                             : undefined,
                     },
@@ -1932,13 +1932,13 @@ export default function CalibrationForm({
                         sx={{
                             order: { xs: 3, lg: 3 },
                             gridColumn: isModernUI
-                                ? { xs: "auto", lg: "1 / -1", xl: "auto" }
+                                ? { xs: "auto", lg: "auto" }
                                 : undefined,
                             position: isModernUI
-                                ? { xs: "static", lg: "static", xl: "sticky" }
+                                ? { xs: "static", lg: "sticky" }
                                 : { lg: "sticky" },
                             top: isModernUI
-                                ? { xs: 0, lg: 0, xl: 8 }
+                                ? { xs: 0, lg: 8 }
                                 : { lg: 16 },
                             alignSelf: "start",
                             minWidth: 0,
