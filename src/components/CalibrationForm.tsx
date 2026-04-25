@@ -1032,26 +1032,30 @@ export default function CalibrationForm({
                 ...sx,
                 width: "100%",
                 position: "relative",
-                overflow: "visible",
+                overflow: isModernUI ? "hidden" : "visible",
+                height: isModernUI ? "calc(100vh - 138px)" : "auto",
+                minHeight: isModernUI ? "calc(100vh - 138px)" : undefined,
             }}
         >
             <Box
                 className={isModernUI ? "calibration-layout calibration-layout--modern" : undefined}
                 sx={{
                     width: "100%",
+                    height: isModernUI ? "100%" : "auto",
                     display: "grid",
                     gap: isModernUI ? 2.5 : 2,
                     alignItems: "start",
+                    justifyContent: isModernUI ? "center" : undefined,
                     gridTemplateColumns: {
                         xs: "1fr",
                         lg: showComparePanel
                             ? isModernUI
-                                ? "minmax(280px, 330px) minmax(0, 1fr)"
+                                ? "minmax(260px, 310px) minmax(640px, 820px)"
                                 : "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
                             : "minmax(280px, 340px) minmax(0, 1fr)",
                         xl: showComparePanel
                             ? isModernUI
-                                ? "minmax(300px, 340px) minmax(0, 1.2fr) minmax(380px, 0.98fr)"
+                                ? "minmax(280px, 320px) minmax(700px, 860px) minmax(380px, 500px)"
                                 : undefined
                             : undefined,
                     },
@@ -1143,10 +1147,12 @@ export default function CalibrationForm({
                     sx={{
                         order: { xs: 2, lg: 2 },
                         width: "100%",
+                        height: isModernUI ? "100%" : "auto",
                         minWidth: 0,
                         minInlineSize: { lg: isModernUI ? 0 : 720 },
                         borderRadius: isModernUI ? 5 : 4,
                         p: { xs: 1.5, sm: isModernUI ? 3 : 2.5 },
+                        overflow: isModernUI ? "hidden" : "visible",
                         borderColor: isModernUI
                             ? "rgba(124, 145, 255, 0.16)"
                             : undefined,
@@ -1162,6 +1168,12 @@ export default function CalibrationForm({
                         component="form"
                         onSubmit={handleSubmit}
                         className={isModernUI ? "calibration-form calibration-form--modern" : undefined}
+                        sx={{
+                            height: isModernUI ? "100%" : "auto",
+                            overflowY: isModernUI ? "auto" : "visible",
+                            overflowX: "hidden",
+                            pr: isModernUI ? 0.5 : 0,
+                        }}
                     >
                         {isModernUI && (
                             <Box className="modern-form-divider">

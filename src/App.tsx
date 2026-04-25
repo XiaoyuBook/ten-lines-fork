@@ -457,16 +457,18 @@ function TenLinesPages() {
         <ThemeProvider theme={darkTheme}>
             <CssBaseline />
             {uiMode === "legacy" ? legacyLayout : modernLayout}
-            <footer>
-                {t("footer.credit")}
-                <br />
-                {t("footer.poweredBy")}{" "}
-                <a href="https://github.com/Admiral-Fish/PokeFinder">
-                    PokeFinderCore
-                </a>
-                <br />
-                {t("footer.seedDataAsOf")} {frlgSeedsTimestamp}
-            </footer>
+            {uiMode === "legacy" && (
+                <footer>
+                    {t("footer.credit")}
+                    <br />
+                    {t("footer.poweredBy")}{" "}
+                    <a href="https://github.com/Admiral-Fish/PokeFinder">
+                        PokeFinderCore
+                    </a>
+                    <br />
+                    {t("footer.seedDataAsOf")} {frlgSeedsTimestamp}
+                </footer>
+            )}
         </ThemeProvider>
     );
 }

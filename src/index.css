@@ -1,14 +1,11 @@
 :root {
-    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
     font-weight: 400;
 
     color-scheme: light dark;
-    color: rgba(244, 247, 255, 0.92);
-    background:
-        radial-gradient(circle at top left, rgba(48, 88, 206, 0.22), transparent 28%),
-        radial-gradient(circle at top right, rgba(34, 197, 94, 0.08), transparent 20%),
-        linear-gradient(180deg, #070d18 0%, #0a111d 38%, #0a0f18 100%);
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #242424;
 
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -27,9 +24,10 @@ a:hover {
 
 body {
     margin: 0;
+    display: flex;
+    place-items: center;
     min-width: 320px;
     min-height: 100vh;
-    background: inherit;
 }
 
 h1 {
