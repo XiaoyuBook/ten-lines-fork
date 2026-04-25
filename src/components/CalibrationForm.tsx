@@ -1050,12 +1050,12 @@ export default function CalibrationForm({
                         xs: "1fr",
                         lg: showComparePanel
                             ? isModernUI
-                                ? "minmax(260px, 310px) minmax(640px, 820px)"
+                                ? "minmax(340px, 400px) minmax(620px, 760px)"
                                 : "minmax(260px, 1fr) minmax(720px, 2fr) minmax(260px, 1fr)"
                             : "minmax(280px, 340px) minmax(0, 1fr)",
                         xl: showComparePanel
                             ? isModernUI
-                                ? "minmax(280px, 320px) minmax(700px, 860px) minmax(380px, 500px)"
+                                ? "minmax(360px, 420px) minmax(640px, 780px) minmax(400px, 520px)"
                                 : undefined
                             : undefined,
                     },

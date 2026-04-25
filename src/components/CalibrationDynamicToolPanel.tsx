@@ -78,6 +78,7 @@ function ReadonlyValue({ label, value, helperText }: { label: string; value: str
             onClick={(event) => event.currentTarget.querySelector("input")?.select()}
             fullWidth
             sx={{
+                minWidth: 0,
                 "& .MuiOutlinedInput-root": {
                     borderRadius: 3,
                     backgroundColor: "rgba(255,255,255,0.02)",
@@ -250,9 +251,8 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             sx={{
                                 mb: 2,
                                 display: "grid",
-                                gridTemplateColumns: { xs: "1fr 1fr", sm: "180px 180px" },
+                                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                                 gap: 1,
-                                justifyContent: "start",
                             }}
                         >
                             <Button
@@ -373,9 +373,8 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                             sx={{
                                 mb: 2,
                                 display: "grid",
-                                gridTemplateColumns: { xs: "1fr 1fr", sm: "180px 180px" },
+                                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                                 gap: 1,
-                                justifyContent: "start",
                             }}
                         >
                             <Button
@@ -439,7 +438,16 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                         }}
                     >
                         <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{t("dynamicTool.currentResultSection")}</Typography>
-                        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 1.5 }}>
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: {
+                                    xs: "1fr",
+                                    sm: "repeat(2, minmax(0, 1fr))",
+                                },
+                                gap: 1.5,
+                            }}
+                        >
                             <ReadonlyValue label={t("dynamicTool.currentParityLabel")} value={state.parityTime} />
                             <ReadonlyValue label={t("dynamicTool.currentTvLabel")} value={state.useTv === "tv" ? state.tvTime : t("dynamicTool.notUsedShort")} />
                             <ReadonlyValue label={t("dynamicTool.currentWaitLabel")} value={state.remainTime} />
@@ -471,17 +479,17 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel() 
                                 sx={{
                                     border: "1px solid rgba(255,255,255,0.08)",
                                     borderRadius: 2.5,
-                                    overflow: "hidden",
+                                    overflow: "auto",
                                 }}
                             >
-                                <Box sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)", backgroundColor: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                                <Box sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px repeat(3, minmax(72px, 1fr))" : "72px repeat(2, minmax(72px, 1fr))", backgroundColor: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyRound")}</Typography></Box>
                                     {state.useTv === "tv" ? <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyTvShort")}</Typography></Box> : null}
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyWaitShort")}</Typography></Box>
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyParityShort")}</Typography></Box>
                                 </Box>
                                 {state.logs.filter((entry) => entry.mode === state.useTv).map((entry, index, filtered) => (
-                                    <Box key={entry.id} sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)", borderBottom: index === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)", backgroundColor: index % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.035)" }}>
+                                    <Box key={entry.id} sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px repeat(3, minmax(72px, 1fr))" : "72px repeat(2, minmax(72px, 1fr))", borderBottom: index === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)", backgroundColor: index % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.035)" }}>
                                         <Box sx={{ px: 1.5, py: 1.25 }}><Typography variant="body2">#{filtered.length - index}</Typography></Box>
                                         {state.useTv === "tv" ? <Box sx={{ px: 1.5, py: 1.25 }}><Typography variant="body2">{entry.tvTime}</Typography></Box> : null}
                                         <Box sx={{ px: 1.5, py: 1.25 }}><Typography variant="body2">{entry.remainTime}</Typography></Box>
