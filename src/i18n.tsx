@@ -373,6 +373,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             historyWildDetails: "Pokemon / Level",
             historyWildDetailsToggle:
                 "Show Pokemon species and level in history",
+            manualTeachyTVToggle:
+                "Allow manual TeachyTV mode toggle in calibration",
             wildLevelFilterStaticHint:
                 "This filter is only available when the calibration method is wild.",
             wildLevelFilterHint:
@@ -758,6 +760,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             historyWildDetails: "\u5b9d\u53ef\u68a6 / \u7b49\u7ea7",
             historyWildDetailsToggle:
                 "\u5728\u5386\u53f2\u8868\u4e2d\u663e\u793a\u5b9d\u53ef\u68a6\u79cd\u7c7b\u548c\u7b49\u7ea7",
+            manualTeachyTVToggle:
+                "\u5141\u8bb8\u5728\u6821\u51c6\u9875\u624b\u52a8\u5207\u6362\u6559\u5b66\u7535\u89c6\u6a21\u5f0f",
             wildLevelFilterStaticHint:
                 "\u8be5\u7b5b\u9009\u53ea\u6709\u5728\u6821\u51c6\u65b9\u6cd5\u4e3a\u91ce\u751f\u65f6\u624d\u53ef\u7528\u3002",
             wildLevelFilterHint:

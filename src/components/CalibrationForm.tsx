@@ -96,6 +96,7 @@ const DEFAULT_COMPARE_SETTINGS: CalibrationCompareSettings = {
     wildLevelFilterEnabled: false,
     dynamicToolEnabled: true,
     historyWildDetailsEnabled: true,
+    manualTeachyTVEnabled: false,
 };
 
 const FLOATING_COMPARE_DEFAULT_SIZE = {
@@ -386,7 +387,9 @@ export default function CalibrationForm({
     const advancesRange = advancesRangeIsValid
         ? [parseInt(advancesMin, 10), parseInt(advancesMax, 10)]
         : [0, 0];
-    const isTeachyTVMode = teachyTVMode === "true" && isFRLG;
+    const canManuallyToggleTeachyTV =
+        compareSettings.manualTeachyTVEnabled && isFRLG;
+    const isTeachyTVMode = teachyTVMode === "true" && canManuallyToggleTeachyTV;
     const [ttvAdvancesRangeIsValid, setTTVAdvancesRangeIsValid] =
         useState(true);
     const ttvAdvancesRange = !isTeachyTVMode
@@ -1705,7 +1708,7 @@ export default function CalibrationForm({
                                 value={overworldFrames}
                             ></NumericalInput>
                         )}
-                        {isFRLG && (
+                        {canManuallyToggleTeachyTV && (
                             <TeachyTVEntry
                                 isTeachyTVMode={isTeachyTVMode}
                                 teachyTVRegularOut={teachyTVRegularOut}
@@ -2157,6 +2160,28 @@ export default function CalibrationForm({
                                     />
                                 }
                                 label={t("dynamicTool.toggleInSettings")}
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={
+                                            compareSettings.manualTeachyTVEnabled
+                                        }
+                                        onChange={(event) => {
+                                            setCompareSettings((current: CalibrationCompareSettings) => ({
+                                                ...current,
+                                                manualTeachyTVEnabled:
+                                                    event.target.checked,
+                                            }));
+                                            if (!event.target.checked) {
+                                                setCalibrationURLState({
+                                                    teachyTVMode: "false",
+                                                });
+                                            }
+                                        }}
+                                    />
+                                }
+                                label={t("compare.manualTeachyTVToggle")}
                             />
                             <FormControlLabel
                                 control={

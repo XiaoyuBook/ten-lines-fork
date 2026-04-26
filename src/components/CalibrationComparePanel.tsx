@@ -82,6 +82,7 @@ export interface CalibrationCompareSettings {
     wildLevelFilterEnabled: boolean;
     dynamicToolEnabled: boolean;
     historyWildDetailsEnabled: boolean;
+    manualTeachyTVEnabled: boolean;
 }
 
 export interface CalibrationCompareEntry {
