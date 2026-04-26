@@ -32,6 +32,7 @@ function TenLinesPages() {
     const [frlgSeedsTimestamp, setFrlgSeedsTimestamp] = useState(
         EmbeddedFrLgSeedsTimestamp.trim()
     );
+    const buildTimestamp = __APP_BUILD_TIME__;
     const currentPage = parseInt(searchParams.get("page") || "0") ?? 0;
     const bingoActive = getBingoActive();
     const pageSx = { maxWidth: 1100, width: "100%", minWidth: 0 };
@@ -144,6 +145,8 @@ function TenLinesPages() {
                 <a href="https://github.com/Admiral-Fish/PokeFinder">
                     PokeFinderCore
                 </a>
+                <br />
+                {t("footer.siteUpdatedAt")} {buildTimestamp}
                 <br />
                 {t("footer.seedDataAsOf")} {frlgSeedsTimestamp}
             </footer>

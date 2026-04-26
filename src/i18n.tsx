@@ -192,8 +192,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         },
         footer: {
             credit:
-                'Original "10 lines" was created by Shao, FRLG seeds farmed by blisy, po, HunarPG, 10Ben, Real96, Papa Jefé, and 銉堛儙',
+                'Original "10 lines" was created by Shao, FRLG seeds farmed by blisy, po, HunarPG, 10Ben, Real96, Papa Jefé, and トノ',
             poweredBy: "Powered by",
+            siteUpdatedAt: "Website updated at",
             seedDataAsOf: "FRLG seed data as of",
         },
         labels: {
@@ -571,8 +572,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         },
         footer: {
             credit:
-                '\u539f\u59cb "10 lines" \u7531 Shao \u5236\u4f5c\uff0cFRLG seed \u6570\u636e\u7531 blisy\u3001po\u3001HunarPG\u300110Ben\u3001Real96\u3001Papa Jef\u00e9 \u4e0e \u9299\u5806\u5139 \u6536\u96c6',
+                '\u539f\u59cb "10 lines" \u7531 Shao \u5236\u4f5c\uff0cFRLG seed \u6570\u636e\u7531 blisy\u3001po\u3001HunarPG\u300110Ben\u3001Real96\u3001Papa Jef\u00e9 \u4e0e \u30c8\u30ce \u6536\u96c6',
             poweredBy: "\u6280\u672f\u652f\u6301",
+            siteUpdatedAt: "\u7f51\u7ad9\u6700\u65b0\u66f4\u65b0\u65f6\u95f4",
             seedDataAsOf: "FRLG seed \u6570\u636e\u66f4\u65b0\u65f6\u95f4",
         },
         labels: {

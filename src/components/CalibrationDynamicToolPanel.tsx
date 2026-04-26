@@ -74,6 +74,10 @@ const createSnapshot = (state: DynamicToolStoredState): DynamicToolSnapshot => (
     lastDiff: state.lastDiff,
     tvBlacklist: [...state.tvBlacklist],
 });
+const getLogsForMode = (
+    logs: DynamicToolLogEntry[],
+    mode: DynamicToolMode
+) => logs.filter((entry) => entry.mode === mode);
 const appendLog = (logs: DynamicToolLogEntry[], entry: Omit<DynamicToolLogEntry, "id">) =>
     [{ id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`, ...entry }, ...logs].slice(0, MAX_LOG_ITEMS);
 
@@ -154,6 +158,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
     const [feedbackSeverity, setFeedbackSeverity] = useState<"success" | "warning">("success");
     const [rollbackCandidate, setRollbackCandidate] = useState<DynamicToolLogEntry | null>(null);
     const state = normalizeState(storedState);
+    const displayedLogs = getLogsForMode(state.logs, state.useTv);
     const setField = (key: keyof DynamicToolStoredState, value: string | boolean) =>
         setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), [key]: value }));
 
@@ -303,23 +308,27 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
             const rollbackIndex = next.logs.findIndex(
                 (entry) => entry.id === rollbackCandidate.id
             );
+            if (rollbackIndex === -1) {
+                return next;
+            }
+
+            const rollbackEntry = next.logs[rollbackIndex];
+            const rollbackLogs = next.logs.slice(rollbackIndex);
+
             return {
                 ...next,
-                targetAdv: rollbackCandidate.targetAdv,
-                actualHit: rollbackCandidate.actualHit,
-                parityTime: rollbackCandidate.parityTime,
-                tvTime: rollbackCandidate.tvTime,
-                remainTime: rollbackCandidate.remainTime,
-                baseTimeTv: rollbackCandidate.baseTimeTv,
-                baseTimeNoTv: rollbackCandidate.baseTimeNoTv,
-                useTv: rollbackCandidate.useTv,
-                hitSeed: rollbackCandidate.hitSeed,
-                lastDiff: rollbackCandidate.lastDiff,
-                tvBlacklist: [...rollbackCandidate.tvBlacklist],
-                logs:
-                    rollbackIndex === -1
-                        ? next.logs
-                        : next.logs.slice(rollbackIndex),
+                targetAdv: rollbackEntry.targetAdv,
+                actualHit: rollbackEntry.actualHit,
+                parityTime: rollbackEntry.parityTime,
+                tvTime: rollbackEntry.tvTime,
+                remainTime: rollbackEntry.remainTime,
+                baseTimeTv: rollbackEntry.baseTimeTv,
+                baseTimeNoTv: rollbackEntry.baseTimeNoTv,
+                useTv: rollbackEntry.useTv,
+                hitSeed: rollbackEntry.hitSeed,
+                lastDiff: rollbackEntry.lastDiff,
+                tvBlacklist: [...rollbackEntry.tvBlacklist],
+                logs: rollbackLogs,
             };
         });
         setRollbackCandidate(null);
@@ -609,7 +618,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                             <Typography variant="subtitle2">{t("dynamicTool.historySection")}</Typography>
                             <Typography variant="caption" color="text.secondary">{t("dynamicTool.historyUnit")}</Typography>
                         </Box>
-                        {state.logs.length === 0 ? <Typography variant="body2" color="text.secondary">{t("dynamicTool.emptyHistory")}</Typography> : (
+                        {displayedLogs.length === 0 ? <Typography variant="body2" color="text.secondary">{t("dynamicTool.emptyHistory")}</Typography> : (
                             <Box sx={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2.5, overflow: "hidden" }}>
                                 <Box sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)", backgroundColor: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyRound")}</Typography></Box>
@@ -617,7 +626,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyWaitShort")}</Typography></Box>
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyParityShort")}</Typography></Box>
                                 </Box>
-                                {state.logs.filter((entry) => entry.mode === state.useTv).map((entry, index, filtered) => (
+                                {displayedLogs.map((entry, index) => (
                                     <Box
                                         key={entry.id}
                                         onClick={() => setRollbackCandidate(entry)}
@@ -625,7 +634,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                                         sx={{
                                             display: "grid",
                                             gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)",
-                                            borderBottom: index === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
+                                            borderBottom: index === displayedLogs.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
                                             backgroundColor: index % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.035)",
                                             cursor: "pointer",
                                             transition: "background-color 0.16s ease",
@@ -638,7 +647,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                                         }}
                                     >
                                         <Box sx={{ px: 1.5, py: 1.25, display: "flex", alignItems: "center", gap: 0.75 }}>
-                                            <Typography variant="body2">#{filtered.length - index}</Typography>
+                                            <Typography variant="body2">#{displayedLogs.length - index}</Typography>
                                             <Typography
                                                 variant="caption"
                                                 className="dynamic-tool-rollback-label"
@@ -665,7 +674,9 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                 <DialogContent>
                     <Typography variant="body2">
                         {t("dynamicTool.rollbackDialogBody", {
-                            round: rollbackCandidate ? `#${state.logs.filter((entry) => entry.mode === state.useTv).length - state.logs.filter((entry) => entry.mode === state.useTv).findIndex((entry) => entry.id === rollbackCandidate.id)}` : "-",
+                            round: rollbackCandidate
+                                ? `#${displayedLogs.length - displayedLogs.findIndex((entry) => entry.id === rollbackCandidate.id)}`
+                                : "-",
                         })}
                     </Typography>
                 </DialogContent>
