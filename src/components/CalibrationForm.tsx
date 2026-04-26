@@ -67,6 +67,7 @@ import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 import StaticEncounterSelector from "./StaticEncounterSelector";
+import TeachyTVEntry from "./TeachyTVEntry";
 import WildEncounterSelector from "./WildEncounterSelector";
 import { filterNatureOptions } from "../utils/natureSearch";
 
@@ -155,6 +156,7 @@ export interface CalibrationURLState {
     trainerID: string;
     secretID: string;
     teachyTVMode: string;
+    teachyTVRegularOut: string;
 }
 
 function createCompareEntry(row: CalibrationCompareRow): CalibrationCompareEntry {
@@ -220,6 +222,8 @@ function useCalibrationURLState() {
     const trainerID = searchParams.get("trainerID") || "0";
     const secretID = searchParams.get("secretID") || "0";
     const teachyTVMode = searchParams.get("teachyTVMode") || "false";
+    const teachyTVRegularOut =
+        searchParams.get("teachyTVRegularOut") || "3600";
     const targetSeedValue =
         parseInt(searchParams.get("targetInitialSeed") || "DEAD", 16) ?? 0xdead;
     const setCalibrationURLState = (state: Partial<CalibrationURLState>) => {
@@ -247,6 +251,7 @@ function useCalibrationURLState() {
         trainerID,
         secretID,
         teachyTVMode,
+        teachyTVRegularOut,
         setCalibrationURLState,
     };
 }
@@ -300,6 +305,7 @@ export default function CalibrationForm({
         trainerID,
         secretID,
         teachyTVMode,
+        teachyTVRegularOut,
         setCalibrationURLState,
     } = useCalibrationURLState();
 
@@ -1700,18 +1706,15 @@ export default function CalibrationForm({
                             ></NumericalInput>
                         )}
                         {isFRLG && (
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={isTeachyTVMode}
-                                        onChange={(e) => {
-                                            setCalibrationURLState({
-                                                teachyTVMode: e.target.checked.toString(),
-                                            });
-                                        }}
-                                    />
-                                }
-                                label={t("labels.teachyTvMode")}
+                            <TeachyTVEntry
+                                isTeachyTVMode={isTeachyTVMode}
+                                teachyTVRegularOut={teachyTVRegularOut}
+                                onChange={(teachyMode, regularOut) => {
+                                    setCalibrationURLState({
+                                        teachyTVMode: teachyMode.toString(),
+                                        teachyTVRegularOut: regularOut.value,
+                                    });
+                                }}
                             />
                         )}
                         <Box sx={{ flexDirection: "row", display: "flex" }}>
