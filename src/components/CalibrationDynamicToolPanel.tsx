@@ -298,20 +298,30 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
     const handleReset = () => { setState(DEFAULT_STATE); ok("dynamicTool.clearedState"); };
     const handleRollbackConfirm = () => {
         if (!rollbackCandidate) return;
-        setState((current: DynamicToolStoredState) => ({
-            ...normalizeState(current),
-            targetAdv: rollbackCandidate.targetAdv,
-            actualHit: rollbackCandidate.actualHit,
-            parityTime: rollbackCandidate.parityTime,
-            tvTime: rollbackCandidate.tvTime,
-            remainTime: rollbackCandidate.remainTime,
-            baseTimeTv: rollbackCandidate.baseTimeTv,
-            baseTimeNoTv: rollbackCandidate.baseTimeNoTv,
-            useTv: rollbackCandidate.useTv,
-            hitSeed: rollbackCandidate.hitSeed,
-            lastDiff: rollbackCandidate.lastDiff,
-            tvBlacklist: [...rollbackCandidate.tvBlacklist],
-        }));
+        setState((current: DynamicToolStoredState) => {
+            const next = normalizeState(current);
+            const rollbackIndex = next.logs.findIndex(
+                (entry) => entry.id === rollbackCandidate.id
+            );
+            return {
+                ...next,
+                targetAdv: rollbackCandidate.targetAdv,
+                actualHit: rollbackCandidate.actualHit,
+                parityTime: rollbackCandidate.parityTime,
+                tvTime: rollbackCandidate.tvTime,
+                remainTime: rollbackCandidate.remainTime,
+                baseTimeTv: rollbackCandidate.baseTimeTv,
+                baseTimeNoTv: rollbackCandidate.baseTimeNoTv,
+                useTv: rollbackCandidate.useTv,
+                hitSeed: rollbackCandidate.hitSeed,
+                lastDiff: rollbackCandidate.lastDiff,
+                tvBlacklist: [...rollbackCandidate.tvBlacklist],
+                logs:
+                    rollbackIndex === -1
+                        ? next.logs
+                        : next.logs.slice(rollbackIndex),
+            };
+        });
         setRollbackCandidate(null);
         ok("dynamicTool.rollbackCompleted");
     };
