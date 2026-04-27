@@ -19,7 +19,15 @@ inline EncounterArea3 get_encounter_area(
 {
     EncounterSettings3 settings;
     auto encounter_areas = Encounters3::getEncounters(encounter_category, settings, game);
-    return encounter_areas[location];
+    auto area = std::find_if(
+        encounter_areas.begin(),
+        encounter_areas.end(),
+        [location](const EncounterArea3& encounter_area) {
+            return encounter_area.getLocation() == location;
+        }
+    );
+
+    return area != encounter_areas.end() ? *area : encounter_areas.front();
 }
 
 inline StateFilter build_static_filter(

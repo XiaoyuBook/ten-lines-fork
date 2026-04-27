@@ -20,9 +20,11 @@ emscripten::typed_array<u16> get_wild_locations(u32 game, u8 encounter_category)
 
 emscripten::typed_array<u16> get_area_species(u32 game, u8 encounter_category, u16 location)
 {
-    EncounterSettings3 settings;
-    auto encounter_areas = Encounters3::getEncounters(Encounter(encounter_category), settings, Game(game));
-    EncounterArea3 area = encounter_areas[location];
+    EncounterArea3 area = get_encounter_area(
+        Encounter(encounter_category),
+        location,
+        Game(game)
+    );
     return area.getUniqueSpecies();
 }
 
