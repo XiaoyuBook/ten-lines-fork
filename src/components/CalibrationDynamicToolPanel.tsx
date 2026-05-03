@@ -81,6 +81,59 @@ const getLogsForMode = (
 const appendLog = (logs: DynamicToolLogEntry[], entry: Omit<DynamicToolLogEntry, "id">) =>
     [{ id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`, ...entry }, ...logs].slice(0, MAX_LOG_ITEMS);
 
+const sectionCardSx = {
+    p: { xs: 1.5, md: 2 },
+    minWidth: 0,
+    overflow: "hidden",
+    textAlign: "left",
+    borderRadius: 3,
+    borderColor: "rgba(166, 214, 255, 0.12)",
+    background:
+        "linear-gradient(180deg, rgba(255,255,255,0.032), rgba(255,255,255,0.012))",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+};
+
+const fieldSx = {
+    minWidth: 0,
+    "& .MuiOutlinedInput-root": {
+        minWidth: 0,
+        borderRadius: 3,
+        backgroundColor: "rgba(255,255,255,0.03)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+    },
+};
+
+const toggleGridSx = {
+    mb: 2,
+    display: "grid",
+    gridTemplateColumns: {
+        xs: "repeat(2, minmax(0, 1fr))",
+        sm: "repeat(2, minmax(0, 180px))",
+    },
+    gap: 1,
+    justifyContent: "start",
+    minWidth: 0,
+};
+
+const metricGridSx = {
+    display: "grid",
+    gridTemplateColumns: {
+        xs: "1fr",
+        sm: "repeat(2, minmax(0, 1fr))",
+    },
+    gap: 1.5,
+    minWidth: 0,
+};
+
+const toggleButtonBaseSx = {
+    minWidth: 0,
+    minHeight: 48,
+    borderRadius: 3,
+    fontWeight: 700,
+    boxShadow: "none",
+    whiteSpace: "nowrap",
+};
+
 function alignToSafePhase(targetMs: number, blacklist: number[]) {
     const frames = Math.round(targetMs / FRAME_MS - 0.5);
     let phaseLocked = (frames + 0.5) * FRAME_MS;
@@ -134,10 +187,7 @@ function ReadonlyValue({ label, value, helperText }: { label: string; value: str
             onClick={(event) => event.currentTarget.querySelector("input")?.select()}
             fullWidth
             sx={{
-                "& .MuiOutlinedInput-root": {
-                    borderRadius: 3,
-                    backgroundColor: "rgba(255,255,255,0.02)",
-                },
+                ...fieldSx,
             }}
         />
     );
@@ -350,15 +400,29 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                 variant="outlined"
                 sx={{
                     width: "100%",
+                    minWidth: 0,
+                    overflow: "hidden",
+                    position: "relative",
+                    boxSizing: "border-box",
                     borderRadius: 4,
                     p: { xs: 1.5, md: 2.25 },
                     background:
-                        "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.012))",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    boxShadow: "0 18px 50px rgba(0,0,0,0.22)",
+                        "linear-gradient(180deg, rgba(29,34,40,0.96), rgba(18,21,26,0.98))",
+                    borderColor: "rgba(166,214,255,0.16)",
+                    boxShadow:
+                        "0 20px 52px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)",
+                    "&::before": {
+                        content: '""',
+                        position: "absolute",
+                        inset: 0,
+                        pointerEvents: "none",
+                        background:
+                            "linear-gradient(135deg, rgba(143,200,247,0.16), transparent 28%, transparent 72%, rgba(143,200,247,0.08))",
+                    },
                 }}
             >
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1, mb: 0.5 }}>
+                <Box sx={{ position: "relative", zIndex: 1, minWidth: 0 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1, mb: 1.25, minWidth: 0 }}>
                     <Box
                         sx={{
                             display: "flex",
@@ -371,7 +435,14 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                         }}
                         onMouseDown={onHeaderMouseDown}
                     >
-                        <Typography variant="h6" sx={{ textAlign: "left" }}>{t("dynamicTool.title")}</Typography>
+                        <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="h6" sx={{ textAlign: "left", fontWeight: 800, letterSpacing: 0.2 }}>
+                                {t("dynamicTool.title")}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "left", mt: 0.35 }}>
+                                {t("dynamicTool.historyUnit")}
+                            </Typography>
+                        </Box>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                             {onToggleFloating ? (
                                 <IconButton
@@ -395,36 +466,19 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                         </Box>
                     </Box>
                 </Box>
-                <Box sx={{ display: "grid", gap: 2 }}>
+                <Box sx={{ display: "grid", gap: 2, minWidth: 0 }}>
                     <Paper
                         variant="outlined"
-                        sx={{
-                            p: { xs: 1.5, md: 2 },
-                            textAlign: "left",
-                            borderRadius: 3,
-                            borderColor: "rgba(255,255,255,0.08)",
-                            background:
-                                "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-                        }}
+                        sx={sectionCardSx}
                     >
-                        <Typography variant="subtitle2" sx={{ mb: 1.75 }}>{t("dynamicTool.modeSection")}</Typography>
+                        <Typography variant="subtitle2" sx={{ mb: 1.75, fontWeight: 700 }}>{t("dynamicTool.modeSection")}</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.modeLabel")}</Typography>
-                        <Box
-                            sx={{
-                                mb: 2,
-                                display: "grid",
-                                gridTemplateColumns: { xs: "1fr 1fr", sm: "180px 180px" },
-                                gap: 1,
-                                justifyContent: "start",
-                            }}
-                        >
+                        <Box sx={toggleGridSx}>
                             <Button
                                 variant={state.useTv === "tv" ? "contained" : "outlined"}
                                 onClick={() => setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), useTv: "tv" }))}
                                 sx={{
-                                    minHeight: 48,
-                                    borderRadius: 3,
-                                    fontWeight: 700,
+                                    ...toggleButtonBaseSx,
                                     color: state.useTv === "tv" ? "#0f1720" : "rgba(255,255,255,0.92)",
                                     borderColor: "rgba(143,200,247,0.45)",
                                     background: state.useTv === "tv" ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
@@ -436,9 +490,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                                 variant={state.useTv === "no-tv" ? "contained" : "outlined"}
                                 onClick={() => setState((current: DynamicToolStoredState) => ({ ...normalizeState(current), useTv: "no-tv" }))}
                                 sx={{
-                                    minHeight: 48,
-                                    borderRadius: 3,
-                                    fontWeight: 700,
+                                    ...toggleButtonBaseSx,
                                     color: state.useTv === "no-tv" ? "#0f1720" : "rgba(255,255,255,0.92)",
                                     borderColor: "rgba(143,200,247,0.45)",
                                     background: state.useTv === "no-tv" ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
@@ -453,25 +505,13 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                             value={state.targetAdv}
                             onChange={(event) => setField("targetAdv", event.target.value)}
                             fullWidth
-                            sx={{
-                                "& .MuiOutlinedInput-root": {
-                                    borderRadius: 3,
-                                    backgroundColor: "rgba(255,255,255,0.02)",
-                                },
-                            }}
+                            sx={fieldSx}
                         />
                     </Paper>
 
                     <Paper
                         variant="outlined"
-                        sx={{
-                            p: { xs: 1.5, md: 2 },
-                            textAlign: "left",
-                            borderRadius: 3,
-                            borderColor: "rgba(255,255,255,0.08)",
-                            background:
-                                "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-                        }}
+                        sx={sectionCardSx}
                     >
                         <Typography variant="subtitle2" sx={{ mb: 1.75 }}>
                             {state.useTv === "tv" ? t("dynamicTool.tvParams") : t("dynamicTool.noTvParams")}
@@ -487,10 +527,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                                 fullWidth
                                 sx={{
                                     mb: 0.75,
-                                    "& .MuiOutlinedInput-root": {
-                                        borderRadius: 3,
-                                        backgroundColor: "rgba(255,255,255,0.02)",
-                                    },
+                                    ...fieldSx,
                                 }}
                             />
                         ) : (
@@ -500,10 +537,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                                 fullWidth
                                 sx={{
                                     mb: 0.75,
-                                    "& .MuiOutlinedInput-root": {
-                                        borderRadius: 3,
-                                        backgroundColor: "rgba(255,255,255,0.02)",
-                                    },
+                                    ...fieldSx,
                                 }}
                             />
                         )}
@@ -521,10 +555,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                             fullWidth
                             sx={{
                                 mb: 0.75,
-                                "& .MuiOutlinedInput-root": {
-                                    borderRadius: 3,
-                                    backgroundColor: "rgba(255,255,255,0.02)",
-                                },
+                                ...fieldSx,
                             }}
                         />
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -532,22 +563,13 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                         </Typography>
 
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t("dynamicTool.seedStatusLabel")}</Typography>
-                        <Box
-                            sx={{
-                                mb: 2,
-                                display: "grid",
-                                gridTemplateColumns: { xs: "1fr 1fr", sm: "180px 180px" },
-                                gap: 1,
-                                justifyContent: "start",
-                            }}
-                        >
+                        <Box sx={toggleGridSx}>
                             <Button
                                 variant={state.hitSeed ? "contained" : "outlined"}
                                 onClick={() => setField("hitSeed", true)}
                                 sx={{
+                                    ...toggleButtonBaseSx,
                                     minHeight: 46,
-                                    borderRadius: 3,
-                                    fontWeight: 700,
                                     color: state.hitSeed ? "#0f1720" : "rgba(255,255,255,0.92)",
                                     borderColor: "rgba(143,200,247,0.45)",
                                     background: state.hitSeed ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
@@ -559,9 +581,8 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                                 variant={!state.hitSeed ? "contained" : "outlined"}
                                 onClick={() => setField("hitSeed", false)}
                                 sx={{
+                                    ...toggleButtonBaseSx,
                                     minHeight: 46,
-                                    borderRadius: 3,
-                                    fontWeight: 700,
                                     color: !state.hitSeed ? "#0f1720" : "rgba(255,255,255,0.92)",
                                     borderColor: "rgba(143,200,247,0.45)",
                                     background: !state.hitSeed ? "linear-gradient(135deg, #8fc8f7, #74aee2)" : "transparent",
@@ -591,17 +612,10 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
 
                     <Paper
                         variant="outlined"
-                        sx={{
-                            p: { xs: 1.5, md: 2 },
-                            textAlign: "left",
-                            borderRadius: 3,
-                            borderColor: "rgba(255,255,255,0.08)",
-                            background:
-                                "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-                        }}
+                        sx={sectionCardSx}
                     >
-                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{t("dynamicTool.currentResultSection")}</Typography>
-                        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 1.5 }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>{t("dynamicTool.currentResultSection")}</Typography>
+                        <Box sx={metricGridSx}>
                             <ReadonlyValue label={t("dynamicTool.currentParityLabel")} value={state.parityTime} />
                             <ReadonlyValue label={t("dynamicTool.currentTvLabel")} value={state.useTv === "tv" ? state.tvTime : t("dynamicTool.notUsedShort")} />
                             <ReadonlyValue label={t("dynamicTool.currentWaitLabel")} value={state.remainTime} />
@@ -614,22 +628,15 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
 
                     <Paper
                         variant="outlined"
-                        sx={{
-                            p: { xs: 1.5, md: 2 },
-                            textAlign: "left",
-                            borderRadius: 3,
-                            borderColor: "rgba(255,255,255,0.08)",
-                            background:
-                                "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-                        }}
+                        sx={sectionCardSx}
                     >
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
                             <Typography variant="subtitle2">{t("dynamicTool.historySection")}</Typography>
                             <Typography variant="caption" color="text.secondary">{t("dynamicTool.historyUnit")}</Typography>
                         </Box>
                         {displayedLogs.length === 0 ? <Typography variant="body2" color="text.secondary">{t("dynamicTool.emptyHistory")}</Typography> : (
-                            <Box sx={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2.5, overflow: "hidden" }}>
-                                <Box sx={{ display: "grid", gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)", backgroundColor: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                            <Box sx={{ minWidth: 0, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2.5, overflow: "hidden" }}>
+                                <Box sx={{ display: "grid", minWidth: 0, gridTemplateColumns: state.useTv === "tv" ? "72px repeat(3, minmax(0, 1fr))" : "72px repeat(2, minmax(0, 1fr))", backgroundColor: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyRound")}</Typography></Box>
                                     {state.useTv === "tv" ? <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyTvShort")}</Typography></Box> : null}
                                     <Box sx={{ px: 1.5, py: 1 }}><Typography variant="caption" color="text.secondary">{t("dynamicTool.historyWaitShort")}</Typography></Box>
@@ -642,7 +649,8 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                                         title={t("dynamicTool.rollbackHint")}
                                         sx={{
                                             display: "grid",
-                                            gridTemplateColumns: state.useTv === "tv" ? "72px minmax(88px, 1fr) minmax(88px, 1fr) minmax(88px, 1fr)" : "72px minmax(88px, 1fr) minmax(88px, 1fr)",
+                                            minWidth: 0,
+                                            gridTemplateColumns: state.useTv === "tv" ? "72px repeat(3, minmax(0, 1fr))" : "72px repeat(2, minmax(0, 1fr))",
                                             borderBottom: index === displayedLogs.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
                                             backgroundColor: index % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.035)",
                                             cursor: "pointer",
@@ -673,6 +681,7 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
                             </Box>
                         )}
                     </Paper>
+                </Box>
                 </Box>
             </Paper>
             <Snackbar open={Boolean(feedback)} autoHideDuration={2200} onClose={() => setFeedback("")} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
