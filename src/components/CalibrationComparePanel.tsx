@@ -514,6 +514,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     onDeleteHistoryEntry,
     onReAddHistoryEntry,
     onClearAll,
+    onClearHistory,
     onOpenSettings,
     onToggleFloating,
     onHeaderMouseDown,
@@ -527,6 +528,7 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
     onDeleteHistoryEntry: (id: string) => void;
     onReAddHistoryEntry: (id: string) => void;
     onClearAll: () => void;
+    onClearHistory: () => void;
     onOpenSettings: () => void;
     onToggleFloating: () => void;
     onHeaderMouseDown?: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -689,12 +691,27 @@ const CalibrationComparePanel = memo(function CalibrationComparePanel({
                     overflow: "hidden",
                 }}
             >
-                <Typography
-                    variant="subtitle2"
-                    sx={{ textAlign: "left", mb: 1.25 }}
+                <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 1,
+                        mb: 1.25,
+                    }}
                 >
-                    {t("compare.history")}
-                </Typography>
+                    <Typography variant="subtitle2" sx={{ textAlign: "left" }}>
+                        {t("compare.history")}
+                    </Typography>
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={onClearHistory}
+                        disabled={historyEntries.length === 0}
+                    >
+                        {t("compare.clearHistory")}
+                    </Button>
+                </Box>
                 {historyEntries.length === 0 ? (
                     <Typography
                         variant="body2"

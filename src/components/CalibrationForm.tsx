@@ -635,6 +635,11 @@ export default function CalibrationForm({
         setCompareHistory([]);
     };
 
+    const clearCompareHistory = () => {
+        setBlockedAutoAddKey(currentAutoAddKey);
+        setCompareHistory([]);
+    };
+
     useEffect(() => {
         if (!compareFloating) {
             return undefined;
@@ -1180,6 +1185,7 @@ export default function CalibrationForm({
                 }
             }}
             onClearAll={clearCompareEntries}
+            onClearHistory={clearCompareHistory}
             onOpenSettings={() => setCompareSettingsOpen(true)}
             onToggleFloating={toggleCompareFloating}
             onHeaderMouseDown={startCompareFloatingDrag}

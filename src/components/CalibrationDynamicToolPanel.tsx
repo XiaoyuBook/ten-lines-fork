@@ -300,7 +300,16 @@ const CalibrationDynamicToolPanel = memo(function CalibrationDynamicToolPanel({
         handleInitialize();
     };
 
-    const handleReset = () => { setState(DEFAULT_STATE); ok("dynamicTool.clearedState"); };
+    const handleReset = () => {
+        setState((current: DynamicToolStoredState) => {
+            const next = normalizeState(current);
+            return {
+                ...DEFAULT_STATE,
+                targetAdv: next.targetAdv,
+            };
+        });
+        ok("dynamicTool.clearedState");
+    };
     const handleRollbackConfirm = () => {
         if (!rollbackCandidate) return;
         setState((current: DynamicToolStoredState) => {
