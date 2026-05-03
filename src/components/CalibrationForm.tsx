@@ -509,16 +509,20 @@ export default function CalibrationForm({
     const orderedTableVisibleColumns = CALIBRATION_TABLE_COLUMN_OPTIONS.filter(
         (column) => tableVisibleColumns.includes(column)
     );
+    const ivCalculatorEnabled = calibrationFormState.nature !== -1;
     const firstIvCalculatorLevel = useMemo(
         () =>
-            parseFirstIvCalculatorLevel(
-                calibrationFormState.ivCalculatorText
-            ),
-        [calibrationFormState.ivCalculatorText]
+            ivCalculatorEnabled
+                ? parseFirstIvCalculatorLevel(
+                      calibrationFormState.ivCalculatorText
+                  )
+                : null,
+        [ivCalculatorEnabled, calibrationFormState.ivCalculatorText]
     );
     const visibleRows = useMemo(() => {
         if (
             isStatic ||
+            !ivCalculatorEnabled ||
             !compareSettings.wildLevelFilterEnabled ||
             firstIvCalculatorLevel === null
         ) {
@@ -529,6 +533,7 @@ export default function CalibrationForm({
             (row) => row.level === firstIvCalculatorLevel
         );
     }, [
+        ivCalculatorEnabled,
         compareSettings.wildLevelFilterEnabled,
         firstIvCalculatorLevel,
         isStatic,
