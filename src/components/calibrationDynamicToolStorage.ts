@@ -29,3 +29,9 @@ export function setDynamicToolActualHit(actualHit: number | string) {
         actualHit: String(actualHit),
     });
 }
+
+export function setDynamicToolHitSeed(hitSeed: boolean) {
+    updateDynamicToolStorage({
+        hitSeed,
+    });
+}

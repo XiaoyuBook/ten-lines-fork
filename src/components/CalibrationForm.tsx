@@ -60,6 +60,7 @@ import CalibrationTable, {
 import CalibrationDynamicToolPanel from "./CalibrationDynamicToolPanel";
 import {
     setDynamicToolActualHit,
+    setDynamicToolHitSeed,
     setDynamicToolTargetAdv,
 } from "./calibrationDynamicToolStorage";
 import IvCalculator from "./IvCalculator";
@@ -590,13 +591,20 @@ export default function CalibrationForm({
         }),
         []
     );
+    const syncDynamicToolSeedHit = useCallback(
+        (row: CalibrationCompareRow) => {
+            setDynamicToolHitSeed(row.initialSeed === targetSeed.initialSeed);
+        },
+        [targetSeed.initialSeed]
+    );
 
     const addCompareTarget = useCallback((row: CalibrationCompareRow) => {
         setCompareTarget(createCompareEntry(row));
         setBlockedAutoAddKey("");
         setDynamicToolTargetAdv(row.advances);
+        syncDynamicToolSeedHit(row);
         setCompareFeedback(t("compare.addedTarget"));
-    }, [setCompareTarget, setCompareFeedback, t]);
+    }, [setCompareTarget, setCompareFeedback, syncDynamicToolSeedHit, t]);
 
     const addCompareHistory = (row: CalibrationResultRow) => {
         setCompareHistory((history: CalibrationCompareEntry[]) => [
@@ -614,8 +622,9 @@ export default function CalibrationForm({
         if ("ivs" in row && "pid" in row) {
             setDynamicToolActualHit(row.advances);
         }
+        syncDynamicToolSeedHit(row);
         setCompareFeedback(t("compare.addedHistory"));
-    }, [setCompareHistory, t]);
+    }, [setCompareHistory, syncDynamicToolSeedHit, t]);
 
     const handleQuickAdd = (
         row: CalibrationResultRow,
@@ -626,6 +635,7 @@ export default function CalibrationForm({
             return;
         }
         setDynamicToolActualHit(row.advances);
+        syncDynamicToolSeedHit(row);
         addCompareHistory(row);
     };
 
