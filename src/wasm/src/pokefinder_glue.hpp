@@ -9,6 +9,7 @@
 #include <Core/Parents/States/State.hpp>
 #include <Core/Parents/States/WildState.hpp>
 #include <Core/Parents/States/IDState.hpp>
+#include <algorithm>
 #include <emscripten.h>
 #include <emscripten/bind.h>
 

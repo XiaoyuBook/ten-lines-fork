@@ -11,6 +11,18 @@ import {
 import { getLocation, getName, useI18n } from "../i18n";
 import fetchTenLines, { Game } from "../tenLines";
 
+function normalizeWildLocation(locations: number[], location: number) {
+    if (locations.includes(location)) {
+        return location;
+    }
+
+    return location >= 0 && location < locations.length
+        ? locations[location]
+        : locations.length > 0
+          ? locations[0]
+          : 0;
+}
+
 function WildEncounterSelector({
     wildCategory,
     wildLocation,
@@ -49,11 +61,7 @@ function WildEncounterSelector({
             setWildLocations(locations);
             onChange(
                 wildCategory,
-                locations.includes(wildLocation)
-                    ? wildLocation
-                    : locations.length > 0
-                      ? locations[0]
-                      : 0,
+                normalizeWildLocation(locations, wildLocation),
                 wildPokemon,
                 wildLead,
                 shouldFilterPokemon
@@ -64,16 +72,36 @@ function WildEncounterSelector({
 
     useEffect(() => {
         const fetchAreaSpecies = async () => {
+            if (wildLocations.length === 0) {
+                setAreaSpecies([]);
+                return;
+            }
+
+            const normalizedLocation = normalizeWildLocation(
+                wildLocations,
+                wildLocation
+            );
+            if (normalizedLocation !== wildLocation) {
+                onChange(
+                    wildCategory,
+                    normalizedLocation,
+                    wildPokemon,
+                    wildLead,
+                    shouldFilterPokemon
+                );
+                return;
+            }
+
             const tenLines = await fetchTenLines();
             const species = await tenLines.get_area_species(
                 game,
                 wildCategory,
-                wildLocation
+                normalizedLocation
             );
             setAreaSpecies(species);
             onChange(
                 wildCategory,
-                wildLocation,
+                normalizedLocation,
                 allowAnyPokemon
                     ? wildPokemon === -1 || species.includes(wildPokemon)
                         ? wildPokemon
@@ -88,7 +116,7 @@ function WildEncounterSelector({
             );
         };
         fetchAreaSpecies();
-    }, [allowAnyPokemon, game, wildCategory, wildLead, wildLocation, wildPokemon, shouldFilterPokemon, onChange]);
+    }, [allowAnyPokemon, game, wildCategory, wildLead, wildLocation, wildPokemon, shouldFilterPokemon, onChange, wildLocations]);
 
     const isEmerald = (game & Game.Emerald) == Game.Emerald;
 

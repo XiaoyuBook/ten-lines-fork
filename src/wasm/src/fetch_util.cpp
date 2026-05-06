@@ -1,4 +1,5 @@
 #include "blisy_events.hpp"
+#include "pokefinder_glue.hpp"
 #include "util.hpp"
 #include <Core/Gen3/EncounterArea3.hpp>
 #include <Core/Gen3/Encounters3.hpp>
