@@ -28,7 +28,15 @@ inline EncounterArea3 get_encounter_area(
         }
     );
 
-    return area != encounter_areas.end() ? *area : encounter_areas.front();
+    if (area != encounter_areas.end()) {
+        return *area;
+    }
+
+    if (location < encounter_areas.size()) {
+        return encounter_areas[location];
+    }
+
+    return encounter_areas.front();
 }
 
 inline StateFilter build_static_filter(
