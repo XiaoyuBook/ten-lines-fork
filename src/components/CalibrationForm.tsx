@@ -184,7 +184,7 @@ function parseFirstIvCalculatorLevel(value: string) {
         return null;
     }
 
-    const firstToken = firstLine.split(/\s+/)[0];
+    const firstToken = firstLine.split(/[\s-]+/)[0];
     const parsedLevel = Number.parseInt(firstToken, 10);
     if (!Number.isInteger(parsedLevel) || parsedLevel < 1 || parsedLevel > 100) {
         return null;

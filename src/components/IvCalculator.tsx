@@ -4,6 +4,12 @@ import React from "react";
 import { useI18n } from "../i18n";
 import type { IVRange } from "../tenLines/generated";
 
+const splitIvLine = (line: string) =>
+    line
+        .trim()
+        .split(/[\s-]+/)
+        .filter((entry) => entry !== "");
+
 function IvCalculator({
     value,
     onChange,
@@ -35,8 +41,8 @@ function IvCalculator({
         const lines = currentValue.split("\n");
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            const lineEntries = line.split(" ");
-            if (line == "") {
+            const lineEntries = splitIvLine(line);
+            if (line.trim() == "") {
                 return t("errors.lineMissing", {
                     line: `${i + 1}`,
                     field: t("labels.level"),
@@ -146,7 +152,7 @@ function IvCalculator({
         }
         const lines = event.target.value.split("\n");
         const parsedLines = lines.map((line) =>
-            line.split(" ").map((entry) => parseInt(entry))
+            splitIvLine(line).map((entry) => parseInt(entry, 10))
         );
 
         const calculate = async () => {
