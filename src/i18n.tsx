@@ -245,11 +245,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             fireRedJpn10: "FireRed (JPN) (1.0)",
             fireRedJpn11: "FireRed (JPN) (1.1)",
             switchFireRed: "Switch FireRed (ENG/SPA/FRE/ITA/GER)",
+            switchFireRedJpn: "Switch FireRed (JPN)",
             fireRedMgba: "FireRed (ENG) (MGBA 10.5)",
             leafGreenEng: "LeafGreen (ENG)",
             leafGreenEu: "LeafGreen (SPA/FRE/ITA/GER)",
             leafGreenJpn: "LeafGreen (JPN)",
             switchLeafGreen: "Switch LeafGreen (ENG/SPA/FRE/ITA/GER)",
+            switchLeafGreenJpn: "Switch LeafGreen (JPN)",
             leafGreenMgba: "LeafGreen (ENG) (MGBA 10.5)",
             help: "Help",
             startupSelect: "Startup Select",
@@ -627,6 +629,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             fireRedJpn11: "\u706b\u7ea2\uff08\u65e5\u7248\uff091.1",
             switchFireRed:
                 "Switch \u706b\u7ea2\uff08\u82f1/\u897f/\u6cd5/\u610f/\u5fb7\uff09",
+            switchFireRedJpn: "Switch \u706b\u7ea2\uff08\u65e5\u7248\uff09",
             fireRedMgba:
                 "\u706b\u7ea2\uff08\u82f1\u6587\uff09\uff08mGBA 10.5\uff09",
             leafGreenEng: "\u53f6\u7eff\uff08\u82f1\u6587\uff09",
@@ -634,6 +637,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             leafGreenJpn: "\u53f6\u7eff\uff08\u65e5\u7248\uff09",
             switchLeafGreen:
                 "Switch \u53f6\u7eff\uff08\u82f1/\u897f/\u6cd5/\u610f/\u5fb7\uff09",
+            switchLeafGreenJpn: "Switch \u53f6\u7eff\uff08\u65e5\u7248\uff09",
             leafGreenMgba:
                 "\u53f6\u7eff\uff08\u82f1\u6587\uff09\uff08mGBA 10.5\uff09",
             help: "\u5e2e\u52a9",
@@ -1031,11 +1035,13 @@ export function getAllGameOptions(t: (key: string) => string) {
         { value: "fr_jpn_1_0", label: t("options.fireRedJpn10") },
         { value: "fr_jpn_1_1", label: t("options.fireRedJpn11") },
         { value: "fr_nx", label: t("options.switchFireRed") },
+        { value: "fr_jpn_nx", label: t("options.switchFireRedJpn") },
         { value: "fr_mgba", label: t("options.fireRedMgba") },
         { value: "lg", label: t("options.leafGreenEng") },
         { value: "lg_eu", label: t("options.leafGreenEu") },
         { value: "lg_jpn", label: t("options.leafGreenJpn") },
         { value: "lg_nx", label: t("options.switchLeafGreen") },
+        { value: "lg_jpn_nx", label: t("options.switchLeafGreenJpn") },
         { value: "lg_mgba", label: t("options.leafGreenMgba") },
     ];
 }

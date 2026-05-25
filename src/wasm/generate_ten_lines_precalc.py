@@ -22,6 +22,8 @@ FRLG_SEED_FILES = (
     "lg_eng_mgba.bin",
     "fr_eng_nx.bin",
     "lg_eng_nx.bin",
+    "fr_jpn_nx.bin",
+    "lg_jpn_nx.bin",
 )
 
 FR_ENG_SHEET = "https://docs.google.com/spreadsheets/d/1ZNchTvoCpHFVPBscEJZG3JaaqR41D8VVnbXb23fzc44/gviz/tq?tqx=out:csv&gid=0"
@@ -37,6 +39,9 @@ LG_ENG_MGBA_SHEET = "https://docs.google.com/spreadsheets/d/1YiQiII2v3AJK6RANMsQ
 
 FR_ENG_NX_SHEET = "https://docs.google.com/spreadsheets/d/1mbn2-XAtmV7HZ1p4esgvUG710VX6FlfhN_HYL_zLJSk/gviz/tq?tqx=out:csv&sheet=FireRed%20Seeds"
 LG_ENG_NX_SHEET = "https://docs.google.com/spreadsheets/d/1mbn2-XAtmV7HZ1p4esgvUG710VX6FlfhN_HYL_zLJSk/gviz/tq?tqx=out:csv&sheet=LeafGreen%20Seeds"
+
+FR_JPN_NX_SHEET = "https://docs.google.com/spreadsheets/d/1mbn2-XAtmV7HZ1p4esgvUG710VX6FlfhN_HYL_zLJSk/gviz/tq?tqx=out:csv&sheet=JPN%20FireRed%20Seeds"
+LG_JPN_NX_SHEET = "https://docs.google.com/spreadsheets/d/1mbn2-XAtmV7HZ1p4esgvUG710VX6FlfhN_HYL_zLJSk/gviz/tq?tqx=out:csv&sheet=JPN%20LeafGreen%20Seeds"
 
 
 class SeedDataStore:
@@ -131,6 +136,9 @@ def copy_generated_bins_to_public(root: str):
         os.makedirs(root + "/../../public/generated", exist_ok=True)
         for file in glob.glob(root + GENERATED_DIR + "/*.bin"):
             shutil.copy(file, root + "/../../public/generated")
+        timestamp_file = generated_path(root, "frlg_seeds_timestamp.txt")
+        if os.path.exists(timestamp_file):
+            shutil.copy(timestamp_file, root + "/../../public/generated")
     else:
         print("Can't find public dir, assuming building standalone")
 
@@ -312,7 +320,7 @@ def pull_frlg_seeds():
             fr_eng_nx_seeds.add_seed_time_str(row[1])
             fr_eng_nx_seeds.add_str_seed("mono", "h", "a", row[2])
             fr_eng_nx_seeds.add_str_seed("stereo", "h", "a", row[3])
-            # fr_eng_nx_seeds.add_str_seed("mono", "h", "start", row[4])
+            fr_eng_nx_seeds.add_str_seed("mono", "h", "start", row[4])
             # fr_eng_nx_seeds.add_str_seed("stereo", "h", "start", row[5])
             # fr_eng_nx_seeds.add_str_seed("mono", "r", "a", row[6])
             # fr_eng_nx_seeds.add_str_seed("stereo", "r", "a", row[7])
@@ -339,10 +347,10 @@ def pull_frlg_seeds():
             lg_eng_nx_seeds.add_seed_time_str(row[1])
             lg_eng_nx_seeds.add_str_seed("mono", "h", "a", row[2])
             lg_eng_nx_seeds.add_str_seed("stereo", "h", "a", row[3])
-            # lg_eng_nx_seeds.add_str_seed("mono", "h", "start", row[4])
+            lg_eng_nx_seeds.add_str_seed("mono", "h", "start", row[4])
             # lg_eng_nx_seeds.add_str_seed("stereo", "h", "start", row[5])
             # lg_eng_nx_seeds.add_str_seed("mono", "r", "a", row[6])
-            # lg_eng_nx_seeds.add_str_seed("stereo", "r", "a", row[7])
+            lg_eng_nx_seeds.add_str_seed("stereo", "r", "a", row[7])
             # lg_eng_nx_seeds.add_str_seed("mono", "r", "start", row[8])
             # lg_eng_nx_seeds.add_str_seed("stereo", "r", "start", row[9])
             # lg_eng_nx_seeds.add_str_seed("mono", "a", "a", row[10])
@@ -351,6 +359,34 @@ def pull_frlg_seeds():
             # lg_eng_nx_seeds.add_str_seed("stereo", "a", "start", row[13])
             # lg_eng_nx_seeds.add_str_seed("mono", "a", "l", row[14])
             # lg_eng_nx_seeds.add_str_seed("stereo", "a", "l", row[15])
+
+    sheet_txt = requests.get(
+        FR_JPN_NX_SHEET,
+        timeout=15,
+    ).text
+    sheet_csv = csv.reader(sheet_txt.split("\n"))
+    fr_jpn_nx_seeds = NXSeedDataStore()
+    for i, row in enumerate(sheet_csv):
+        if i < 2:
+            continue
+
+        if row[0]:
+            fr_jpn_nx_seeds.add_seed_time_str(row[1])
+            fr_jpn_nx_seeds.add_str_seed("mono", "h", "a", row[2])
+
+    sheet_txt = requests.get(
+        LG_JPN_NX_SHEET,
+        timeout=15,
+    ).text
+    sheet_csv = csv.reader(sheet_txt.split("\n"))
+    lg_jpn_nx_seeds = NXSeedDataStore()
+    for i, row in enumerate(sheet_csv):
+        if i < 2:
+            continue
+
+        if row[0]:
+            lg_jpn_nx_seeds.add_seed_time_str(row[1])
+            lg_jpn_nx_seeds.add_str_seed("mono", "h", "a", row[2])
 
     fr_eng_seeds.save(generated_path(sys.argv[1], "fr_eng.bin"))
     lg_eng_seeds.save(generated_path(sys.argv[1], "lg_eng.bin"))
@@ -361,6 +397,8 @@ def pull_frlg_seeds():
     lg_eng_mgba_seeds.save(generated_path(sys.argv[1], "lg_eng_mgba.bin"))
     fr_eng_nx_seeds.save(generated_path(sys.argv[1], "fr_eng_nx.bin"))
     lg_eng_nx_seeds.save(generated_path(sys.argv[1], "lg_eng_nx.bin"))
+    fr_jpn_nx_seeds.save(generated_path(sys.argv[1], "fr_jpn_nx.bin"))
+    lg_jpn_nx_seeds.save(generated_path(sys.argv[1], "lg_jpn_nx.bin"))
 
     copy_generated_bins_to_public(sys.argv[1])
 
