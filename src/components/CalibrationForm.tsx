@@ -1970,37 +1970,48 @@ export default function CalibrationForm({
                             <span>{t("messages.ivCalculationDisabled")}</span>
                         )}
                         {bingoActive && (
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                type="button"
-                                onClick={() => {
-                                    if (isNotSubmittable) return;
-                                    const searchSeeds = seedList.slice(
-                                        Math.max(0, targetSeedIndex - seedLeeway),
-                                        Math.min(
-                                            seedList.length,
-                                            targetSeedIndex + seedLeeway + 1
-                                        )
-                                    );
-                                    fetchBingo(
-                                        searchSeeds,
-                                        advancesRange,
-                                        offset,
-                                        isStatic,
-                                        trainerID,
-                                        secretID,
-                                        game,
-                                        calibrationFormState,
-                                        setBingoBoard,
-                                        setBingoCounters
-                                    );
-                                }}
-                                fullWidth
-                                sx={{ my: 0.5 }}
+                            <Tooltip
+                                title={
+                                    isNotSubmittable
+                                        ? t("messages.bingoRequiresValidCalibration")
+                                        : ""
+                                }
                             >
-                                Bingo
-                            </Button>
+                                <Box component="span" sx={{ display: "block", width: "100%" }}>
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        type="button"
+                                        disabled={isNotSubmittable}
+                                        onClick={() => {
+                                            if (isNotSubmittable) return;
+                                            const searchSeeds = seedList.slice(
+                                                Math.max(0, targetSeedIndex - seedLeeway),
+                                                Math.min(
+                                                    seedList.length,
+                                                    targetSeedIndex + seedLeeway + 1
+                                                )
+                                            );
+                                            fetchBingo(
+                                                searchSeeds,
+                                                advancesRange,
+                                                offset,
+                                                isStatic,
+                                                trainerID,
+                                                secretID,
+                                                game,
+                                                calibrationFormState,
+                                                setBingoBoard,
+                                                setBingoCounters
+                                            );
+                                        }}
+                                        fullWidth
+                                        sx={{ my: 0.5 }}
+                                    >
+                                        Bingo
+                                    </Button>
+                                </Box>
+                            </Tooltip>
                         )}
                         <Button
                             variant="contained"
