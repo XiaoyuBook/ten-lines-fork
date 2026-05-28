@@ -230,12 +230,18 @@ export default function BingoPage({
 
     if (hidden) return null;
     return (
+        <Box sx={{ width: "100%", maxWidth: "100%", overflowX: "auto", ...sx }}>
         <Box
             display="grid"
-            gridTemplateColumns={`repeat(${width + 1}, 1fr)`}
+            gridTemplateColumns={`minmax(4.5rem, max-content) repeat(${width}, minmax(10rem, 1fr))`}
             gap={2}
             my={2}
-            sx={sx}
+            sx={{
+                minWidth: {
+                    xs: `calc(4.5rem + ${width} * 10rem + ${width} * 16px)`,
+                    md: 0,
+                },
+            }}
         >
             {Array.from({ length: (width + 1) * (height + 1) }, (_, i) => {
                 const [x, y] = [i % (width + 1), Math.floor(i / (width + 1))];
@@ -354,6 +360,7 @@ export default function BingoPage({
                     </Box>
                 );
             })}
+        </Box>
         </Box>
     );
 }

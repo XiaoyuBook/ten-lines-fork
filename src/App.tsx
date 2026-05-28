@@ -111,8 +111,10 @@ function TenLinesPages() {
                                 return prev;
                             });
                         }}
-                        variant="fullWidth"
-                        sx={{ flex: 1, minWidth: 400 }}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        allowScrollButtonsMobile
+                        sx={{ flex: 1, minWidth: 0 }}
                     >
                         <Tab label={t("tabs.searcher")} value={2} />
                         <Tab label={t("tabs.idCombo")} value={4} />
