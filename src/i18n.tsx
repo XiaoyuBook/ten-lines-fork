@@ -453,6 +453,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "No matching static targets found for the selected filters.",
             noMatchingAdvances:
                 "No matching targets fall within the selected advances range.",
+            emptyBingoBoard:
+                "No Bingo board has been generated yet. Return to Calibration and run Bingo after the calibration inputs are valid.",
             calibrationNoResultsTitle:
                 "No calibration results were found. Please check:",
             calibrationNoResultsCheck1:
@@ -848,6 +850,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u6240\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u7684\u9759\u6001\u76ee\u6807\u3002",
             noMatchingAdvances:
                 "\u6ca1\u6709\u76ee\u6807\u843d\u5728\u6240\u9009\u6d88\u8017\u5e27\u8303\u56f4\u5185\u3002",
+            emptyBingoBoard:
+                "\u5f53\u524d\u8fd8\u6ca1\u6709\u751f\u6210\u5bbe\u679c\u68cb\u76d8\u3002\u8bf7\u5148\u56de\u5230\u6821\u51c6\u9875\uff0c\u5728\u8f93\u5165\u6709\u6548\u540e\u70b9\u51fb Bingo\u3002",
             calibrationNoResultsTitle:
                 "\u672a\u641c\u7d22\u5230\u6821\u51c6\u7ed3\u679c\uff0c\u8bf7\u68c0\u67e5\uff1a",
             calibrationNoResultsCheck1:

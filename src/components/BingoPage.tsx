@@ -1,4 +1,4 @@
-import { Box, Button } from "@mui/material";
+import { Alert, Box, Button } from "@mui/material";
 import { useState } from "react";
 import type {
     ExtendedGeneratorState,
@@ -163,7 +163,7 @@ export default function BingoPage({
     sx?: any;
     hidden?: boolean;
 }) {
-    const { resources } = useI18n();
+    const { resources, t } = useI18n();
     const [bingoBoard, _setBingoBoard, counters, setCounters] = useBingoBoard();
     const [, setCompareHistory] = useLocalStorage<CalibrationCompareEntry[]>(
         "calibration-compare-history",
@@ -229,6 +229,15 @@ export default function BingoPage({
     };
 
     if (hidden) return null;
+    if (width === 0 || height === 0) {
+        return (
+            <Box my={2} sx={sx}>
+                <Alert severity="info" sx={{ textAlign: "left" }}>
+                    {t("messages.emptyBingoBoard")}
+                </Alert>
+            </Box>
+        );
+    }
     return (
         <Box sx={{ width: "100%", maxWidth: "100%", overflowX: "auto", ...sx }}>
         <Box
