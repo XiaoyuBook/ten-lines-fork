@@ -1,6 +1,6 @@
 import type { FilterOptionsState } from "@mui/material/useAutocomplete";
 
-import { EN_NATURES, ZH_NATURES, ZH_NATURES_RAW } from "../i18n";
+import { EN_NATURES, JA_NATURES, ZH_NATURES, ZH_NATURES_RAW } from "../i18n";
 
 const normalizeNatureSearchText = (value: string) =>
     value.trim().toLocaleLowerCase();
@@ -12,6 +12,7 @@ const getNatureSearchAliases = (nature: number) => {
 
     return [
         EN_NATURES[nature] ?? "",
+        JA_NATURES[nature] ?? "",
         ZH_NATURES_RAW[nature] ?? "",
         ZH_NATURES[nature] ?? "",
     ];

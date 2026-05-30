@@ -63,6 +63,14 @@ import {
     setDynamicToolHitSeed,
     setDynamicToolTargetAdv,
 } from "./calibrationDynamicToolStorage";
+import {
+    getSwitchJapaneseFRLGButtonModeLabel,
+    getSwitchJapaneseFRLGExtraButtonLabel,
+    getSwitchJapaneseFRLGNatureLabel,
+    getSwitchJapaneseFRLGSeedButtonLabel,
+    getSwitchJapaneseFRLGSoundLabel,
+    isSwitchJapaneseFRLGGame,
+} from "./calibrationJapaneseLabels";
 import IvCalculator from "./IvCalculator";
 import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";
@@ -319,6 +327,60 @@ export default function CalibrationForm({
     const isFRLG = game.startsWith("fr") || game.startsWith("lg");
     const isFRLGE = isFRLG || game.startsWith("e_");
     const isSwitch = game.endsWith("nx");
+    const usesSwitchJapaneseFRLGLabels = isSwitchJapaneseFRLGGame(game);
+    const soundOptionLabels = {
+        mono: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSoundLabel("mono")
+            : t("common.mono"),
+        stereo: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSoundLabel("stereo")
+            : t("common.stereo"),
+    };
+    const buttonModeOptionLabels = {
+        a: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGButtonModeLabel("a")
+            : "L=A",
+        h: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGButtonModeLabel("h")
+            : t("options.help"),
+        r: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGButtonModeLabel("r")
+            : "LR",
+    };
+    const seedButtonOptionLabels = {
+        a: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSeedButtonLabel("a")
+            : "A",
+        start: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSeedButtonLabel("start")
+            : t("options.start"),
+        l: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSeedButtonLabel("l")
+            : "L (L=A)",
+    };
+    const extraButtonOptionLabels = {
+        none: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("none")
+            : t("common.none"),
+        startup_select: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("startup_select")
+            : t("options.startupSelect"),
+        startup_a: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("startup_a")
+            : t("options.startupA"),
+        blackout_r: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_r")
+            : t("options.blackoutR"),
+        blackout_a: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_a")
+            : t("options.blackoutA"),
+        blackout_l: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_l")
+            : t("options.blackoutL"),
+        blackout_al: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_al")
+            : t("options.blackoutAL"),
+    };
 
     const [rows, setRows] = useState<
         ExtendedGeneratorState[] | ExtendedWildGeneratorState[]
@@ -1435,8 +1497,12 @@ export default function CalibrationForm({
                                     select
                                     fullWidth
                                 >
-                                    <MenuItem value="mono">{t("common.mono")}</MenuItem>
-                                    <MenuItem value="stereo">{t("common.stereo")}</MenuItem>
+                                    <MenuItem value="mono">
+                                        {soundOptionLabels.mono}
+                                    </MenuItem>
+                                    <MenuItem value="stereo">
+                                        {soundOptionLabels.stereo}
+                                    </MenuItem>
                                 </TextField>
                                 <TextField
                                     label={t("labels.buttonMode")}
@@ -1451,9 +1517,15 @@ export default function CalibrationForm({
                                     select
                                     fullWidth
                                 >
-                                    <MenuItem value="a">L=A</MenuItem>
-                                    <MenuItem value="h">{t("options.help")}</MenuItem>
-                                    <MenuItem value="r">LR</MenuItem>
+                                    <MenuItem value="a">
+                                        {buttonModeOptionLabels.a}
+                                    </MenuItem>
+                                    <MenuItem value="h">
+                                        {buttonModeOptionLabels.h}
+                                    </MenuItem>
+                                    <MenuItem value="r">
+                                        {buttonModeOptionLabels.r}
+                                    </MenuItem>
                                 </TextField>
                                 <TextField
                                     label={t("labels.seedButton")}
@@ -1468,9 +1540,15 @@ export default function CalibrationForm({
                                     select
                                     fullWidth
                                 >
-                                    <MenuItem value="a">A</MenuItem>
-                                    <MenuItem value="start">{t("options.start")}</MenuItem>
-                                    <MenuItem value="l">L (L=A)</MenuItem>
+                                    <MenuItem value="a">
+                                        {seedButtonOptionLabels.a}
+                                    </MenuItem>
+                                    <MenuItem value="start">
+                                        {seedButtonOptionLabels.start}
+                                    </MenuItem>
+                                    <MenuItem value="l">
+                                        {seedButtonOptionLabels.l}
+                                    </MenuItem>
                                 </TextField>
                                 <TextField
                                     label={t("labels.extraButton")}
@@ -1485,24 +1563,26 @@ export default function CalibrationForm({
                                     select
                                     fullWidth
                                 >
-                                    <MenuItem value="none">{t("common.none")}</MenuItem>
+                                    <MenuItem value="none">
+                                        {extraButtonOptionLabels.none}
+                                    </MenuItem>
                                     <MenuItem value="startup_select">
-                                        {t("options.startupSelect")}
+                                        {extraButtonOptionLabels.startup_select}
                                     </MenuItem>
                                     <MenuItem value="startup_a">
-                                        {t("options.startupA")}
+                                        {extraButtonOptionLabels.startup_a}
                                     </MenuItem>
                                     <MenuItem value="blackout_r">
-                                        {t("options.blackoutR")}
+                                        {extraButtonOptionLabels.blackout_r}
                                     </MenuItem>
                                     <MenuItem value="blackout_a">
-                                        {t("options.blackoutA")}
+                                        {extraButtonOptionLabels.blackout_a}
                                     </MenuItem>
                                     <MenuItem value="blackout_l">
-                                        {t("options.blackoutL")}
+                                        {extraButtonOptionLabels.blackout_l}
                                     </MenuItem>
                                     <MenuItem value="blackout_al">
-                                        {t("options.blackoutAL")}
+                                        {extraButtonOptionLabels.blackout_al}
                                     </MenuItem>
                                 </TextField>
                             </React.Fragment>
@@ -1872,7 +1952,9 @@ export default function CalibrationForm({
                             getOptionLabel={(option) =>
                                 option === -1
                                     ? t("common.any")
-                                    : resources.natures[option]
+                                    : usesSwitchJapaneseFRLGLabels
+                                      ? getSwitchJapaneseFRLGNatureLabel(option)
+                                      : resources.natures[option]
                             }
                             isOptionEqualToValue={(option, value) =>
                                 option === value

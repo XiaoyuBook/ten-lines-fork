@@ -8,6 +8,7 @@ import natures_en_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/en/
 import powers_en_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/en/powers_en.txt?raw";
 import rs_en_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/en/rs_en.txt?raw";
 import species_en_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/en/species_en.txt?raw";
+import natures_ja_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/ja/natures_ja.txt?raw";
 import abilities_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/abilities_zh.txt?raw";
 import e_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/e_zh.txt?raw";
 import forms_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/forms_zh.txt?raw";
@@ -70,6 +71,7 @@ const parseMap = (text: string) =>
     );
 
 export const EN_NATURES = parseList(natures_en_txt);
+export const JA_NATURES = parseList(natures_ja_txt);
 export const ZH_NATURES_RAW = parseList(natures_zh_txt);
 export const ZH_NATURES = ZH_NATURES_RAW.map((nature, index) => {
     const english = EN_NATURES[index];
