@@ -175,6 +175,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             initialSeed: "Initial Seed",
             calibration: "Calibration",
             bingo: "Bingo",
+            egg: "Egg",
         },
         language: {
             chinese: "中文",
@@ -223,6 +224,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             nature: "Nature",
             gender: "Gender",
             hiddenPower: "Hidden Power",
+            ability: "Ability",
             perfectIvCount: "Perfect IV Count",
             category: "Category",
             pokemon: "Pokemon",
@@ -236,6 +238,20 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             ivCalculator: "IV Calculator",
             minimumAdvancesOutsideTeachyTv:
                 "Minimum Advances Outside of TeachyTV",
+            heldSeedSettings: "Held Seed Settings",
+            pickupSeedSettings: "Pickup Seed Settings",
+            heldAdvances: "Held Advances",
+            pickupAdvances: "Pickup Advances",
+            heldOffset: "Held Offset",
+            pickupOffset: "Pickup Offset",
+            eggSettings: "Egg Settings",
+            eggSpecies: "Egg Species",
+            parentA: "Parent A",
+            parentB: "Parent B",
+            compatibility: "Compatibility",
+            parentIvs: "Parent IVs",
+            parentGender: "Parent Gender",
+            showInheritance: "Show Inheritance",
         },
         options: {
             rubyPaintingSeed: "Ruby Painting Seed",
@@ -304,6 +320,14 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             select: "Select",
             startup: "Startup",
             blackout: "Blackout",
+            rsfrlgBred: "RS/FRLG Bred",
+            rsfrlgBredSplit: "RS/FRLG Bred Split",
+            rsfrlgBredAlternate: "RS/FRLG Bred Alternate",
+            rsfrlgBredMixed: "RS/FRLG Bred Mixed",
+            male: "Male",
+            female: "Female",
+            genderless: "Genderless",
+            ditto: "Ditto",
         },
         table: {
             actions: "Actions",
@@ -339,6 +363,15 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             settings: "Calibration Page Settings",
             calibration: "Calibration",
             initialSeed: "Initial Seed",
+            heldSeed: "Held Seed",
+            heldSeedTime: "Held Seed Time",
+            heldSettings: "Held Settings",
+            heldAdvances: "Held Advances",
+            pickupSeed: "Pickup Seed",
+            pickupSeedTime: "Pickup Seed Time",
+            pickupSettings: "Pickup Settings",
+            pickupAdvances: "Pickup Advances",
+            inheritance: "Inheritance",
         },
         compare: {
             title: "Calibration Compare",
@@ -444,6 +477,15 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         },
         messages: {
             noKnownSeeds: "No known seeds for this game & settings",
+            incompatibleEggParents:
+                "Gender of selected parents are not compatible for breeding.",
+            noHeldEggSeeds:
+                "No held seeds found for the selected game and settings.",
+            noPickupEggSeeds:
+                "No pickup seeds found for the selected game and settings.",
+            eggResultsCapHit:
+                "Result cap reached. Narrow the filters or raise max results.",
+            noEggResults: "No egg results found for the selected filters.",
             requiredForIvCalculation: "Required for IV calculation",
             ivCalculationDisabled:
                 "IV calculation disabled. Searching all Natures.",
@@ -562,6 +604,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             initialSeed: "\u521d\u59cb Seed",
             calibration: "\u6821\u51c6",
             bingo: "\u5bbe\u679c",
+            egg: "\u5b75\u5316",
         },
         language: {
             chinese: "\u4e2d\u6587",
@@ -610,6 +653,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             nature: "\u6027\u683c",
             gender: "\u6027\u522b",
             hiddenPower: "\u89c9\u9192\u529b\u91cf",
+            ability: "\u7279\u6027",
             perfectIvCount: "\u6ee1\u80fd\u529b\u6570\u91cf",
             category: "\u5206\u7c7b",
             pokemon: "\u5b9d\u53ef\u68a6",
@@ -623,6 +667,20 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             ivCalculator: "IV \u8ba1\u7b97\u5668",
             minimumAdvancesOutsideTeachyTv:
                 "\u6559\u5b66\u7535\u89c6\u5916\u7684\u6700\u5c11\u6d88\u8017\u5e27",
+            heldSeedSettings: "\u6301\u6709\u86cb Seed \u8bbe\u7f6e",
+            pickupSeedSettings: "\u53d6\u86cb Seed \u8bbe\u7f6e",
+            heldAdvances: "\u6301\u6709\u86cb\u6d88\u8017\u5e27",
+            pickupAdvances: "\u53d6\u86cb\u6d88\u8017\u5e27",
+            heldOffset: "\u6301\u6709\u86cb\u504f\u79fb",
+            pickupOffset: "\u53d6\u86cb\u504f\u79fb",
+            eggSettings: "\u86cb\u8bbe\u7f6e",
+            eggSpecies: "\u86cb\u79cd\u7c7b",
+            parentA: "\u4eb2\u4ee3 A",
+            parentB: "\u4eb2\u4ee3 B",
+            compatibility: "\u76f8\u6027",
+            parentIvs: "\u4eb2\u4ee3 IV",
+            parentGender: "\u4eb2\u4ee3\u6027\u522b",
+            showInheritance: "\u663e\u793a\u9057\u4f20",
         },
         options: {
             rubyPaintingSeed: "\u7ea2\u5b9d\u77f3\u7ed8\u753b Seed",
@@ -696,6 +754,14 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             select: "\u9009\u62e9",
             startup: "\u542f\u52a8",
             blackout: "\u9ed1\u5c4f",
+            rsfrlgBred: "RS/FRLG \u5b75\u5316",
+            rsfrlgBredSplit: "RS/FRLG \u5b75\u5316 Split",
+            rsfrlgBredAlternate: "RS/FRLG \u5b75\u5316 Alternate",
+            rsfrlgBredMixed: "RS/FRLG \u5b75\u5316 Mixed",
+            male: "\u516c",
+            female: "\u6bcd",
+            genderless: "\u65e0\u6027\u522b",
+            ditto: "\u767e\u53d8\u602a",
         },
         table: {
             actions: "\u64cd\u4f5c",
@@ -731,6 +797,15 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             settings: "\u6821\u51c6\u9875\u9762\u8bbe\u7f6e",
             calibration: "\u6821\u51c6",
             initialSeed: "\u521d\u59cb Seed",
+            heldSeed: "\u6301\u6709\u86cb Seed",
+            heldSeedTime: "\u6301\u6709\u86cb Seed \u65f6\u95f4",
+            heldSettings: "\u6301\u6709\u86cb\u8bbe\u7f6e",
+            heldAdvances: "\u6301\u6709\u86cb\u6d88\u8017\u5e27",
+            pickupSeed: "\u53d6\u86cb Seed",
+            pickupSeedTime: "\u53d6\u86cb Seed \u65f6\u95f4",
+            pickupSettings: "\u53d6\u86cb\u8bbe\u7f6e",
+            pickupAdvances: "\u53d6\u86cb\u6d88\u8017\u5e27",
+            inheritance: "\u9057\u4f20",
         },
         compare: {
             title: "\u6821\u51c6\u5bf9\u7167",
@@ -840,6 +915,16 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         messages: {
             noKnownSeeds:
                 "\u5f53\u524d\u6e38\u620f\u548c\u8bbe\u7f6e\u4e0b\u6ca1\u6709\u5df2\u77e5 Seed",
+            incompatibleEggParents:
+                "\u6240\u9009\u4eb2\u4ee3\u6027\u522b\u7ec4\u5408\u4e0d\u80fd\u751f\u86cb\u3002",
+            noHeldEggSeeds:
+                "\u5f53\u524d\u6e38\u620f\u548c\u8bbe\u7f6e\u4e0b\u6ca1\u6709\u6301\u6709\u86cb Seed\u3002",
+            noPickupEggSeeds:
+                "\u5f53\u524d\u6e38\u620f\u548c\u8bbe\u7f6e\u4e0b\u6ca1\u6709\u53d6\u86cb Seed\u3002",
+            eggResultsCapHit:
+                "\u5df2\u8fbe\u5230\u7ed3\u679c\u4e0a\u9650\uff0c\u8bf7\u6536\u7a84\u7b5b\u9009\u6216\u63d0\u9ad8\u6700\u5927\u7ed3\u679c\u6570\u3002",
+            noEggResults:
+                "\u6240\u9009\u7b5b\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5b75\u5316\u7ed3\u679c\u3002",
             requiredForIvCalculation:
                 "\u8fdb\u884c IV \u8ba1\u7b97\u65f6\u5fc5\u586b",
             ivCalculationDisabled:
