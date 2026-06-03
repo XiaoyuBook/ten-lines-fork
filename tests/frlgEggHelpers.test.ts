@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 
 import {
+    DEFAULT_FRLG_EGG_METHOD,
+    FRLG_EGG_COMPATIBILITY_OPTIONS,
     EGG_GENDER_OPTIONS,
     FRLG_EGG_METHODS,
     buildSeedSettingKey,
@@ -48,11 +50,17 @@ assert.deepEqual(
     FRLG_EGG_METHODS.map((option: { value: number }) => option.value),
     [11, 12, 13, 14]
 );
+assert.equal(DEFAULT_FRLG_EGG_METHOD, 12);
 assert.deepEqual(FRLG_EGG_METHODS, [
-    { value: 11, labelKey: "options.rsfrlgBred" },
-    { value: 12, labelKey: "options.rsfrlgBredSplit" },
-    { value: 13, labelKey: "options.rsfrlgBredAlternate" },
-    { value: 14, labelKey: "options.rsfrlgBredMixed" },
+    { value: 11, labelKey: "options.normal" },
+    { value: 12, labelKey: "options.split" },
+    { value: 13, labelKey: "options.alternate" },
+    { value: 14, labelKey: "options.mixed" },
+]);
+assert.deepEqual(FRLG_EGG_COMPATIBILITY_OPTIONS, [
+    { value: 20, labelKey: "options.eggCompatibilityLow" },
+    { value: 50, labelKey: "options.eggCompatibilityMedium" },
+    { value: 70, labelKey: "options.eggCompatibilityHigh" },
 ]);
 assert.deepEqual(
     EGG_GENDER_OPTIONS.map((option: { value: number }) => option.value),

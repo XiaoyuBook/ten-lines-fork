@@ -1,12 +1,21 @@
 export type GameOption = { value: string; label: string };
 export type EggMethodOption = { value: number; labelKey: string };
+export type EggCompatibilityOption = { value: number; labelKey: string };
 export type EggGenderOption = { value: number; labelKey: string };
 
+export const DEFAULT_FRLG_EGG_METHOD = 12;
+
 export const FRLG_EGG_METHODS: EggMethodOption[] = [
-    { value: 11, labelKey: "options.rsfrlgBred" },
-    { value: 12, labelKey: "options.rsfrlgBredSplit" },
-    { value: 13, labelKey: "options.rsfrlgBredAlternate" },
-    { value: 14, labelKey: "options.rsfrlgBredMixed" },
+    { value: 11, labelKey: "options.normal" },
+    { value: 12, labelKey: "options.split" },
+    { value: 13, labelKey: "options.alternate" },
+    { value: 14, labelKey: "options.mixed" },
+];
+
+export const FRLG_EGG_COMPATIBILITY_OPTIONS: EggCompatibilityOption[] = [
+    { value: 20, labelKey: "options.eggCompatibilityLow" },
+    { value: 50, labelKey: "options.eggCompatibilityMedium" },
+    { value: 70, labelKey: "options.eggCompatibilityHigh" },
 ];
 
 export const EGG_GENDER_OPTIONS: EggGenderOption[] = [

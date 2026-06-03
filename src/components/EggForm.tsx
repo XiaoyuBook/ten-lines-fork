@@ -1,6 +1,7 @@
 import { proxy } from "comlink";
 import { useMemo, useState } from "react";
 import {
+    Autocomplete,
     Box,
     Button,
     Checkbox,
@@ -12,15 +13,25 @@ import {
     type Theme,
 } from "@mui/material";
 
-import { getAllGameOptions, getName, useI18n } from "../i18n";
+import { getAllGameOptions, useI18n } from "../i18n";
 import fetchTenLines, { fetchSeedData, SEED_IDENTIFIER_TO_GAME } from "../tenLines";
 import type { ExtendedEggGeneratorState } from "../tenLines/generated";
+import { filterNatureOptions } from "../utils/natureSearch";
 import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 import EggParentSettings, { type EggParentState } from "./EggParentSettings";
 import EggTable from "./EggTable";
 import {
+    getSwitchJapaneseFRLGButtonModeLabel,
+    getSwitchJapaneseFRLGExtraButtonLabel,
+    getSwitchJapaneseFRLGSeedButtonLabel,
+    getSwitchJapaneseFRLGSoundLabel,
+    isSwitchJapaneseFRLGGame,
+} from "./calibrationJapaneseLabels";
+import {
+    DEFAULT_FRLG_EGG_METHOD,
+    FRLG_EGG_COMPATIBILITY_OPTIONS,
     FRLG_EGG_METHODS,
     buildSeedSettingKey,
     filterFrlgEggGameOptions,
@@ -74,10 +85,11 @@ export default function EggForm({
     const [game, setGame] = useState("fr");
     const [trainerID, setTrainerID] = useState("0");
     const [secretID, setSecretID] = useState("0");
-    const [method, setMethod] = useState("11");
+    const [method, setMethod] = useState(DEFAULT_FRLG_EGG_METHOD.toString());
     const [compatibility, setCompatibility] = useState("70");
     const [maxResults, setMaxResults] = useState("1000");
     const [eggSpecies, setEggSpecies] = useState("1");
+    const [eggSpeciesValid, setEggSpeciesValid] = useState(true);
     const [heldSettings, setHeldSettings] = useState(copySeedSettings);
     const [pickupSettings, setPickupSettings] = useState(copySeedSettings);
     const [heldAdvances, setHeldAdvances] = useState<[string, string]>([
@@ -103,7 +115,7 @@ export default function EggForm({
     const [parentAValid, setParentAValid] = useState(true);
     const [parentBValid, setParentBValid] = useState(true);
     const [shininess, setShininess] = useState("255");
-    const [nature, setNature] = useState("-1");
+    const [natures, setNatures] = useState<number[]>([]);
     const [gender, setGender] = useState("255");
     const [ability, setAbility] = useState("255");
     const [hiddenPower, setHiddenPower] = useState("-1");
@@ -122,12 +134,15 @@ export default function EggForm({
         parseDecimal(parentA.gender),
         parseDecimal(parentB.gender)
     );
+    const selectedNatureSet = useMemo(() => new Set(natures), [natures]);
     const inputsAreValid =
         parentAValid &&
         parentBValid &&
+        eggSpeciesValid &&
         heldAdvancesValid &&
         pickupAdvancesValid &&
         ivRangesValid;
+    const submittedNatureFilters = natures.length === 0 ? [-1] : natures;
 
     const runSearch = async () => {
         setMessage("");
@@ -178,36 +193,44 @@ export default function EggForm({
                 return;
             }
 
-            await tenLines.check_seeds_frlg_egg(
-                heldSeeds,
-                pickupSeeds,
-                parseRange(heldAdvances),
-                parseRange(pickupAdvances),
-                parseDecimal(heldOffset),
-                parseDecimal(pickupOffset),
-                SEED_IDENTIFIER_TO_GAME[game],
-                parseDecimal(trainerID),
-                parseDecimal(secretID),
-                parseDecimal(method),
-                parseDecimal(compatibility),
-                [parseIvs(parentA.ivs), parseIvs(parentB.ivs)],
-                [parseDecimal(parentA.gender), parseDecimal(parentB.gender)],
-                parseDecimal(eggSpecies),
-                parseDecimal(shininess),
-                parseDecimal(nature),
-                parseDecimal(gender),
-                parseDecimal(ability),
-                parseDecimal(hiddenPower),
-                ivRanges.map(parseRange),
-                parseDecimal(maxResults),
-                heldKey,
-                pickupKey,
-                proxy((batch: ExtendedEggGeneratorState[]) => {
-                    receivedResults += batch.length;
-                    setRows((currentRows) => [...currentRows, ...batch]);
-                }),
-                proxy((nextSearching: boolean) => setSearching(nextSearching))
-            );
+            const resultLimit = parseDecimal(maxResults);
+            for (const natureFilter of submittedNatureFilters) {
+                const remainingResults = resultLimit - receivedResults;
+                if (remainingResults <= 0) {
+                    break;
+                }
+
+                await tenLines.check_seeds_frlg_egg(
+                    heldSeeds,
+                    pickupSeeds,
+                    parseRange(heldAdvances),
+                    parseRange(pickupAdvances),
+                    parseDecimal(heldOffset),
+                    parseDecimal(pickupOffset),
+                    SEED_IDENTIFIER_TO_GAME[game],
+                    parseDecimal(trainerID),
+                    parseDecimal(secretID),
+                    parseDecimal(method),
+                    parseDecimal(compatibility),
+                    [parseIvs(parentA.ivs), parseIvs(parentB.ivs)],
+                    [parseDecimal(parentA.gender), parseDecimal(parentB.gender)],
+                    parseDecimal(eggSpecies),
+                    parseDecimal(shininess),
+                    natureFilter,
+                    parseDecimal(gender),
+                    parseDecimal(ability),
+                    parseDecimal(hiddenPower),
+                    ivRanges.map(parseRange),
+                    remainingResults,
+                    heldKey,
+                    pickupKey,
+                    proxy((batch: ExtendedEggGeneratorState[]) => {
+                        receivedResults += batch.length;
+                        setRows((currentRows) => [...currentRows, ...batch]);
+                    }),
+                    proxy((nextSearching: boolean) => setSearching(nextSearching))
+                );
+            }
 
             if (receivedResults === 0) {
                 setMessage(t("messages.noEggResults"));
@@ -257,7 +280,7 @@ export default function EggForm({
                     ))}
                 </TextField>
                 <TextField
-                    label={t("labels.method")}
+                    label={t("labels.eggMethod")}
                     value={method}
                     onChange={(event) => setMethod(event.target.value)}
                     select
@@ -297,9 +320,14 @@ export default function EggForm({
                     fullWidth
                     margin="normal"
                 >
-                    <MenuItem value="20">20</MenuItem>
-                    <MenuItem value="50">50</MenuItem>
-                    <MenuItem value="70">70</MenuItem>
+                    {FRLG_EGG_COMPATIBILITY_OPTIONS.map((option) => (
+                        <MenuItem
+                            key={option.value}
+                            value={option.value.toString()}
+                        >
+                            {t(option.labelKey)}
+                        </MenuItem>
+                    ))}
                 </TextField>
                 <NumericalInput
                     label={t("labels.maxResults")}
@@ -314,7 +342,11 @@ export default function EggForm({
             <Typography variant="h6" sx={{ mt: 2 }}>
                 {t("labels.heldSeedSettings")}
             </Typography>
-            <SeedSettingsFields value={heldSettings} onChange={setHeldSettings} />
+            <SeedSettingsFields
+                game={game}
+                value={heldSettings}
+                onChange={setHeldSettings}
+            />
             <RangeInput
                 label={t("labels.heldAdvances")}
                 name="heldAdvances"
@@ -339,6 +371,7 @@ export default function EggForm({
                 {t("labels.pickupSeedSettings")}
             </Typography>
             <SeedSettingsFields
+                game={game}
                 value={pickupSettings}
                 onChange={setPickupSettings}
             />
@@ -365,20 +398,17 @@ export default function EggForm({
             <Typography variant="h6" sx={{ mt: 2 }}>
                 {t("labels.eggSettings")}
             </Typography>
-            <TextField
+            <NumericalInput
                 label={t("labels.eggSpecies")}
+                name="eggSpecies"
                 value={eggSpecies}
-                onChange={(event) => setEggSpecies(event.target.value)}
-                select
-                fullWidth
-                margin="normal"
-            >
-                {resources.species.slice(1, 387).map((_species, index) => (
-                    <MenuItem key={index + 1} value={(index + 1).toString()}>
-                        {getName(resources, index + 1)}
-                    </MenuItem>
-                ))}
-            </TextField>
+                minimumValue={1}
+                maximumValue={386}
+                onChange={(_, next) => {
+                    setEggSpecies(next.value);
+                    setEggSpeciesValid(next.isValid);
+                }}
+            />
             <Box
                 sx={{
                     display: "grid",
@@ -420,21 +450,59 @@ export default function EggForm({
                     <MenuItem value="2">{t("options.square")}</MenuItem>
                     <MenuItem value="3">{t("options.starSquare")}</MenuItem>
                 </TextField>
-                <TextField
-                    label={t("labels.nature")}
-                    value={nature}
-                    onChange={(event) => setNature(event.target.value)}
-                    select
+                <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={resources.natures.map((_nature, index) => index)}
+                    value={natures}
+                    filterOptions={filterNatureOptions}
+                    onChange={(_event, value) => setNatures(value)}
+                    getOptionLabel={(option) => resources.natures[option]}
+                    renderOption={(props, option) => {
+                        const { key, ...optionProps } = props;
+                        const isSelected = selectedNatureSet.has(option);
+                        return (
+                            <Box
+                                component="li"
+                                key={key}
+                                {...optionProps}
+                                sx={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    width: "100%",
+                                }}
+                            >
+                                <span>{resources.natures[option]}</span>
+                                <span
+                                    aria-hidden="true"
+                                    style={{
+                                        visibility: isSelected
+                                            ? "visible"
+                                            : "hidden",
+                                        fontWeight: 700,
+                                    }}
+                                >
+                                    {"\u2713"}
+                                </span>
+                            </Box>
+                        );
+                    }}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label={t("labels.nature")}
+                            margin="normal"
+                            style={{ textAlign: "left" }}
+                            placeholder={
+                                natures.length === 0
+                                    ? t("common.any")
+                                    : undefined
+                            }
+                        />
+                    )}
                     fullWidth
-                    margin="normal"
-                >
-                    <MenuItem value="-1">{t("common.any")}</MenuItem>
-                    {resources.natures.map((name, index) => (
-                        <MenuItem key={index} value={index.toString()}>
-                            {name}
-                        </MenuItem>
-                    ))}
-                </TextField>
+                />
                 <TextField
                     label={t("labels.gender")}
                     value={gender}
@@ -519,13 +587,69 @@ export default function EggForm({
 }
 
 function SeedSettingsFields({
+    game,
     value,
     onChange,
 }: {
+    game: string;
     value: SeedSettings;
     onChange: (value: SeedSettings) => void;
 }) {
     const { t } = useI18n();
+    const usesSwitchJapaneseFRLGLabels = isSwitchJapaneseFRLGGame(game);
+    const soundOptionLabels = {
+        mono: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSoundLabel("mono")
+            : t("common.mono"),
+        stereo: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSoundLabel("stereo")
+            : t("common.stereo"),
+    };
+    const buttonModeOptionLabels = {
+        a: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGButtonModeLabel("a")
+            : "L=A",
+        h: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGButtonModeLabel("h")
+            : t("options.help"),
+        r: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGButtonModeLabel("r")
+            : "LR",
+    };
+    const seedButtonOptionLabels = {
+        a: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSeedButtonLabel("a")
+            : "A",
+        start: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSeedButtonLabel("start")
+            : t("options.start"),
+        l: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGSeedButtonLabel("l")
+            : "L (L=A)",
+    };
+    const extraButtonOptionLabels = {
+        none: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("none")
+            : t("common.none"),
+        startup_select: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("startup_select")
+            : t("options.startupSelect"),
+        startup_a: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("startup_a")
+            : t("options.startupA"),
+        blackout_r: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_r")
+            : t("options.blackoutR"),
+        blackout_a: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_a")
+            : t("options.blackoutA"),
+        blackout_l: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_l")
+            : t("options.blackoutL"),
+        blackout_al: usesSwitchJapaneseFRLGLabels
+            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_al")
+            : t("options.blackoutAL"),
+    };
 
     return (
         <Box
@@ -545,8 +669,8 @@ function SeedSettingsFields({
                 fullWidth
                 margin="normal"
             >
-                <MenuItem value="mono">{t("common.mono")}</MenuItem>
-                <MenuItem value="stereo">{t("common.stereo")}</MenuItem>
+                <MenuItem value="mono">{soundOptionLabels.mono}</MenuItem>
+                <MenuItem value="stereo">{soundOptionLabels.stereo}</MenuItem>
             </TextField>
             <TextField
                 label={t("labels.buttonMode")}
@@ -558,9 +682,9 @@ function SeedSettingsFields({
                 fullWidth
                 margin="normal"
             >
-                <MenuItem value="a">A</MenuItem>
-                <MenuItem value="h">{t("options.help")}</MenuItem>
-                <MenuItem value="r">R</MenuItem>
+                <MenuItem value="a">{buttonModeOptionLabels.a}</MenuItem>
+                <MenuItem value="h">{buttonModeOptionLabels.h}</MenuItem>
+                <MenuItem value="r">{buttonModeOptionLabels.r}</MenuItem>
             </TextField>
             <TextField
                 label={t("labels.seedButton")}
@@ -572,9 +696,9 @@ function SeedSettingsFields({
                 fullWidth
                 margin="normal"
             >
-                <MenuItem value="a">A</MenuItem>
-                <MenuItem value="start">{t("options.start")}</MenuItem>
-                <MenuItem value="l">L</MenuItem>
+                <MenuItem value="a">{seedButtonOptionLabels.a}</MenuItem>
+                <MenuItem value="start">{seedButtonOptionLabels.start}</MenuItem>
+                <MenuItem value="l">{seedButtonOptionLabels.l}</MenuItem>
             </TextField>
             <TextField
                 label={t("labels.extraButton")}
@@ -586,16 +710,24 @@ function SeedSettingsFields({
                 fullWidth
                 margin="normal"
             >
-                <MenuItem value="none">{t("common.none")}</MenuItem>
+                <MenuItem value="none">{extraButtonOptionLabels.none}</MenuItem>
                 <MenuItem value="startup_select">
-                    {t("options.startupSelect")}
+                    {extraButtonOptionLabels.startup_select}
                 </MenuItem>
-                <MenuItem value="startup_a">{t("options.startupA")}</MenuItem>
-                <MenuItem value="blackout_r">{t("options.blackoutR")}</MenuItem>
-                <MenuItem value="blackout_a">{t("options.blackoutA")}</MenuItem>
-                <MenuItem value="blackout_l">{t("options.blackoutL")}</MenuItem>
+                <MenuItem value="startup_a">
+                    {extraButtonOptionLabels.startup_a}
+                </MenuItem>
+                <MenuItem value="blackout_r">
+                    {extraButtonOptionLabels.blackout_r}
+                </MenuItem>
+                <MenuItem value="blackout_a">
+                    {extraButtonOptionLabels.blackout_a}
+                </MenuItem>
+                <MenuItem value="blackout_l">
+                    {extraButtonOptionLabels.blackout_l}
+                </MenuItem>
                 <MenuItem value="blackout_al">
-                    {t("options.blackoutAL")}
+                    {extraButtonOptionLabels.blackout_al}
                 </MenuItem>
             </TextField>
         </Box>
