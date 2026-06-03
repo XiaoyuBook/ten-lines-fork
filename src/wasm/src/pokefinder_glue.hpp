@@ -4,6 +4,7 @@
 #include <Core/Gen3/EncounterArea3.hpp>
 #include <Core/Gen3/Encounters3.hpp>
 #include <Core/Gen3/Profile3.hpp>
+#include <Core/Gen3/States/EggState3.hpp>
 #include <Core/Gen3/StaticTemplate3.hpp>
 #include <Core/Parents/Filters/StateFilter.hpp>
 #include <Core/Parents/States/State.hpp>
@@ -12,6 +13,8 @@
 #include <algorithm>
 #include <emscripten.h>
 #include <emscripten/bind.h>
+#include <string>
+#include <utility>
 
 inline EncounterArea3 get_encounter_area(
     Encounter encounter_category,
@@ -174,6 +177,59 @@ public:
     u32 seedTime;
     u32 ttvAdvances;
     int method;
+};
+
+class ExtendedEggGeneratorState {
+public:
+    ExtendedEggGeneratorState(
+        u16 held_initial_seed,
+        u32 held_seed_time,
+        std::string held_settings,
+        u16 pickup_initial_seed,
+        u32 pickup_seed_time,
+        std::string pickup_settings,
+        const EggState3& state)
+        : heldInitialSeed(held_initial_seed)
+        , heldSeedTime(held_seed_time)
+        , heldSettings(std::move(held_settings))
+        , pickupInitialSeed(pickup_initial_seed)
+        , pickupSeedTime(pickup_seed_time)
+        , pickupSettings(std::move(pickup_settings))
+        , heldAdvances(state.getAdvances())
+        , pickupAdvances(state.getPickupAdvances())
+        , pid(state.getPID())
+        , nature(state.getNature())
+        , ability(state.getAbility())
+        , abilityIndex(state.getAbilityIndex())
+        , gender(state.getGender())
+        , ivs(state.getIVs())
+        , stats(state.getStats())
+        , shiny(state.getShiny())
+        , hiddenPower(state.getHiddenPower())
+        , hiddenPowerStrength(state.getHiddenPowerStrength())
+        , inheritance(state.getInheritance())
+    {
+    }
+
+    u16 heldInitialSeed;
+    u32 heldSeedTime;
+    std::string heldSettings;
+    u16 pickupInitialSeed;
+    u32 pickupSeedTime;
+    std::string pickupSettings;
+    u32 heldAdvances;
+    u32 pickupAdvances;
+    u32 pid;
+    u8 nature;
+    u8 ability;
+    u16 abilityIndex;
+    u8 gender;
+    std::array<u8, 6> ivs;
+    std::array<u16, 6> stats;
+    u8 shiny;
+    u8 hiddenPower;
+    u8 hiddenPowerStrength;
+    std::array<u8, 6> inheritance;
 };
 
 class EnumeratedStaticTemplate3 : public StaticTemplate3 {

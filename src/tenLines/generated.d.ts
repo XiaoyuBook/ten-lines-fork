@@ -59,6 +59,29 @@ export interface ExtendedWildGeneratorState extends ExtendedGeneratorState {
     method: number;
 }
 
+export interface ExtendedEggGeneratorState {
+    heldInitialSeed: number;
+    heldSeedTime: number;
+    heldSettings: string;
+    pickupInitialSeed: number;
+    pickupSeedTime: number;
+    pickupSettings: string;
+    heldAdvances: number;
+    pickupAdvances: number;
+    pid: number;
+    nature: number;
+    ability: number;
+    abilityIndex: number;
+    gender: number;
+    ivs: [number, number, number, number, number, number];
+    stats: [number, number, number, number, number, number];
+    shiny: number;
+    hiddenPower: number;
+    hiddenPowerStrength: number;
+    inheritance: [number, number, number, number, number, number];
+    [key: string]: any;
+}
+
 export interface ExtendedSearcherState {
     seed: number;
     pid: number;
@@ -102,6 +125,7 @@ export interface StatsOcrResult {
 export interface MainModule {
     check_seeds_static: (...args: any[]) => any;
     check_seeds_wild: (...args: any[]) => any;
+    check_seeds_frlg_egg: (...args: any[]) => any;
     calc_ivs_static: (...args: any[]) => IVRange[] | Promise<IVRange[]>;
     calc_ivs_generic: (...args: any[]) => IVRange[] | Promise<IVRange[]>;
     get_contiguous_seed_list: (...args: any[]) => FRLGContiguousSeedEntry[] | Promise<FRLGContiguousSeedEntry[]>;
