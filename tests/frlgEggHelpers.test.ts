@@ -48,10 +48,22 @@ assert.deepEqual(
     FRLG_EGG_METHODS.map((option: { value: number }) => option.value),
     [11, 12, 13, 14]
 );
+assert.deepEqual(FRLG_EGG_METHODS, [
+    { value: 11, labelKey: "options.rsfrlgBred" },
+    { value: 12, labelKey: "options.rsfrlgBredSplit" },
+    { value: 13, labelKey: "options.rsfrlgBredAlternate" },
+    { value: 14, labelKey: "options.rsfrlgBredMixed" },
+]);
 assert.deepEqual(
     EGG_GENDER_OPTIONS.map((option: { value: number }) => option.value),
     [0, 1, 2, 3]
 );
+assert.deepEqual(EGG_GENDER_OPTIONS, [
+    { value: 0, labelKey: "options.male" },
+    { value: 1, labelKey: "options.female" },
+    { value: 2, labelKey: "options.genderless" },
+    { value: 3, labelKey: "options.ditto" },
+]);
 
 assert.equal(formatInheritanceSlot(0), "");
 assert.equal(formatInheritanceSlot(1), "A");
