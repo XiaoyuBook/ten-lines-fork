@@ -18,6 +18,7 @@ generated
 !public/generated/
 !public/generated/**
 .cache
+.tools
 *.local
 
 # Editor directories and files

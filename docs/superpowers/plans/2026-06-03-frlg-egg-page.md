@@ -4,7 +4,7 @@
 
 **Goal:** Add a dedicated FireRed/LeafGreen Egg page that generates egg RNG results only from FRLG seed-library held and pickup seeds.
 
-**Architecture:** Reuse ten-lines' existing React/Vite frontend, Comlink worker, generated FRLG seed binaries, and PokeFinderCore WASM build. Add a focused Egg page and a focused WASM binding that accepts two library-derived seed lists, builds PokeFinder `Daycare`, `Profile3`, and `StateFilter` objects, then calls `EggGenerator3` for held/pickup seed pairs.
+**Architecture:** Reuse ten-lines' existing React/Vite frontend, Comlink worker, generated FRLG seed binaries, and PokeFinderCore WASM build. Use the locally downloaded PokeFinder source at `..\PokeFinder-master` as the functional reference for Gen 3 egg generation/search behavior. Add a focused Egg page and a focused WASM binding that accepts two library-derived seed lists, builds PokeFinder `Daycare`, `Profile3`, and `StateFilter` objects, then calls `EggGenerator3` for held/pickup seed pairs.
 
 **Tech Stack:** React 19, TypeScript, MUI, Vite, Comlink, Emscripten embind, CMake/Ninja, PokeFinderCore Gen 3 egg generator.
 
@@ -43,6 +43,8 @@
 - Verify: `src/wasm/lib/PokeFinder`
 - Verify: `src/wasm/lib/PokeFinder/Source/Core/Gen3/Generators/EggGenerator3.hpp`
 - Verify: `src/wasm/lib/PokeFinder/Source/Core/Gen3/Generators/EggGenerator3.cpp`
+- Reference: `..\PokeFinder-master\Form\Gen3\Eggs3.cpp`
+- Reference: `..\PokeFinder-master\Core\Gen3\Generators\EggGenerator3.cpp`
 
 - [ ] **Step 1: Initialize the PokeFinder submodule**
 
@@ -70,7 +72,23 @@ True
 True
 ```
 
-- [ ] **Step 3: Install JavaScript dependencies if needed**
+- [ ] **Step 3: Verify the locally downloaded PokeFinder reference source**
+
+Run:
+
+```powershell
+Test-Path -LiteralPath '..\PokeFinder-master\Form\Gen3\Eggs3.cpp'
+Test-Path -LiteralPath '..\PokeFinder-master\Core\Gen3\Generators\EggGenerator3.cpp'
+```
+
+Expected:
+
+```text
+True
+True
+```
+
+- [ ] **Step 4: Install JavaScript dependencies if needed**
 
 Run:
 
