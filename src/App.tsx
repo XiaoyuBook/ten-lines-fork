@@ -14,6 +14,7 @@ import { BrowserRouter, useSearchParams } from "react-router-dom";
 
 import CalibrationForm from "./components/CalibrationForm";
 import BingoPage, { getBingoActive } from "./components/BingoPage";
+import EggForm from "./components/EggForm";
 import IdComboForm from "./components/IdComboForm";
 import InitialSeedForm from "./components/InitialSeedForm";
 import SearcherForm from "./components/SearcherForm";
@@ -88,6 +89,11 @@ function TenLinesPages() {
             sx={pageSx}
             hidden={currentPage != 4}
         />,
+        <EggForm
+            key={5}
+            sx={calibrationPageSx}
+            hidden={currentPage != 5}
+        />,
         bingoActive && <BingoPage key={3} hidden={currentPage != 3} />,
     ];
 
@@ -117,6 +123,7 @@ function TenLinesPages() {
                         sx={{ flex: 1, minWidth: 0 }}
                     >
                         <Tab label={t("tabs.searcher")} value={2} />
+                        <Tab label={t("tabs.egg")} value={5} />
                         <Tab label={t("tabs.idCombo")} value={4} />
                         <Tab label={t("tabs.initialSeed")} value={0} />
                         <Tab label={t("tabs.calibration")} value={1} />
