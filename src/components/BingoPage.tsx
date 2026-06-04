@@ -1,5 +1,5 @@
-import { Alert, Box, Button } from "@mui/material";
-import { useState } from "react";
+import { Alert, Box, Button, Tab, Tabs } from "@mui/material";
+import { useEffect, useState } from "react";
 import type {
     ExtendedGeneratorState,
     ExtendedWildGeneratorState,
@@ -12,11 +12,93 @@ import { createStoredCompareEntry } from "./CalibrationForm";
 import { proxy } from "comlink";
 import useLocalStorage from "../hooks/useLocalStorage";
 import type { CalibrationCompareEntry } from "./CalibrationComparePanel";
+import { buildBingoAdvanceRangePages } from "./bingoHelpers";
+
+type BingoState = ExtendedGeneratorState | ExtendedWildGeneratorState;
+export type BingoBoardPage = {
+    label: string;
+    board: BingoState[][];
+};
+export type BingoCounterPage = {
+    label: string;
+    counters: number[][];
+};
+type StoredBingoBoard = BingoBoardPage[] | BingoState[][];
+type StoredBingoCounters = BingoCounterPage[] | number[][];
+
+function isBingoBoardPage(value: unknown): value is BingoBoardPage {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        "label" in value &&
+        "board" in value
+    );
+}
+
+function isBingoCounterPage(value: unknown): value is BingoCounterPage {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        "label" in value &&
+        "counters" in value
+    );
+}
+
+function normalizeBingoBoardPages(value: StoredBingoBoard): BingoBoardPage[] {
+    if (value.length === 0) {
+        return [];
+    }
+    if (isBingoBoardPage(value[0])) {
+        return value as BingoBoardPage[];
+    }
+    return [{ label: "0", board: value as BingoState[][] }];
+}
+
+function normalizeBingoCounterPages(
+    value: StoredBingoCounters
+): BingoCounterPage[] {
+    if (value.length === 0) {
+        return [];
+    }
+    if (isBingoCounterPage(value[0])) {
+        return value as BingoCounterPage[];
+    }
+    return [{ label: "0", counters: value as number[][] }];
+}
 
 export function useBingoBoard() {
-    const [bingoBoard, setBingoBoard] = useLocalStorage("bingo-board", []);
-    const [counters, setCounters] = useLocalStorage("bingo-counters", []);
-    return [bingoBoard, setBingoBoard, counters, setCounters] as const;
+    const [storedBingoPages, setStoredBingoPages] = useLocalStorage<StoredBingoBoard>(
+        "bingo-board",
+        []
+    );
+    const [storedCounterPages, setStoredCounterPages] = useLocalStorage<StoredBingoCounters>(
+        "bingo-counters",
+        []
+    );
+    const bingoPages = normalizeBingoBoardPages(storedBingoPages);
+    const counterPages = normalizeBingoCounterPages(storedCounterPages);
+    const setBingoPages: React.Dispatch<
+        React.SetStateAction<BingoBoardPage[]>
+    > = (value) => {
+        setStoredBingoPages((currentValue: StoredBingoBoard) => {
+            const currentPages = normalizeBingoBoardPages(currentValue);
+            return typeof value === "function"
+                ? value(currentPages)
+                : value;
+        });
+    };
+    const setCounterPages: React.Dispatch<
+        React.SetStateAction<BingoCounterPage[]>
+    > = (value) => {
+        setStoredCounterPages((currentValue: StoredBingoCounters) => {
+            const currentPages = normalizeBingoCounterPages(currentValue);
+            return typeof value === "function"
+                ? value(currentPages)
+                : value;
+        });
+    };
+
+    return [bingoPages, setBingoPages, counterPages, setCounterPages] as const;
 }
 
 export function getBingoActive() {
@@ -33,88 +115,118 @@ export async function fetchBingo(
     game: string,
     calibrationFormState: CalibrationFormState,
     setBingoBoard: React.Dispatch<
-        React.SetStateAction<
-            | ExtendedGeneratorState[][]
-            | ExtendedWildGeneratorState[][]
-            | undefined
-        >
+        React.SetStateAction<BingoBoardPage[]>
     >,
     setBingoCounters: React.Dispatch<
-        React.SetStateAction<number[][] | undefined>
-    >
+        React.SetStateAction<BingoCounterPage[]>
+    >,
+    tvFluctuationMode = false
 ) {
     const tenLines = await fetchTenLines();
-    const bingo_board: ExtendedGeneratorState[][] = [];
-    const bingo_counters: number[][] = [];
-    setBingoBoard(bingo_board);
-    setBingoCounters(bingo_counters);
+    const advanceRangePages = buildBingoAdvanceRangePages(
+        advancesRange,
+        tvFluctuationMode
+    );
+    setBingoBoard(
+        advanceRangePages.map((page) => ({
+            label: page.label,
+            board: [],
+        }))
+    );
+    setBingoCounters(
+        advanceRangePages.map((page) => ({
+            label: page.label,
+            counters: [],
+        }))
+    );
     const doneCallback = () => {};
-    const resultCallback = (results: ExtendedGeneratorState[]) => {
-        setBingoBoard((last_bingo_board) => {
-            const new_bingo_board = [...(last_bingo_board ?? [])];
-            new_bingo_board.push(results);
-            return new_bingo_board;
-        });
-        setBingoCounters((last_bingo_counters) => {
-            const new_bingo_counters = [...(last_bingo_counters ?? [])];
-            new_bingo_counters.push(results.map(() => 0));
-            return new_bingo_counters;
-        });
-    };
-    if (isStatic) {
-        await tenLines.check_seeds_static(
-            searchSeeds,
-            advancesRange,
-            [0, 0],
-            parseInt(offset),
-            SEED_IDENTIFIER_TO_GAME[game],
-            parseInt(trainerID),
-            parseInt(secretID),
-            calibrationFormState.staticCategory,
-            calibrationFormState.staticPokemon,
-            calibrationFormState.method,
-            255,
-            -1,
-            -1,
-            [
-                [0, 31],
-                [0, 31],
-                [0, 31],
-                [0, 31],
-                [0, 31],
-                [0, 31],
-            ],
-            proxy(resultCallback),
-            proxy(doneCallback)
-        );
-    } else {
-        await tenLines.check_seeds_wild(
-            searchSeeds,
-            advancesRange,
-            [0, 0],
-            parseInt(offset),
-            SEED_IDENTIFIER_TO_GAME[game],
-            parseInt(trainerID),
-            parseInt(secretID),
-            calibrationFormState.wildCategory,
-            calibrationFormState.wildLocation,
-            -1,
-            -1,
-            calibrationFormState.method,
-            calibrationFormState.wildLead,
-            255,
-            -1,
-            [
-                [0, 31],
-                [0, 31],
-                [0, 31],
-                [0, 31],
-                [0, 31],
-                [0, 31],
-            ],
-            proxy(resultCallback),
-            proxy(doneCallback)
-        );
+
+    for (
+        let pageIndex = 0;
+        pageIndex < advanceRangePages.length;
+        pageIndex += 1
+    ) {
+        const advanceRangePage = advanceRangePages[pageIndex];
+        const resultCallback = (results: BingoState[]) => {
+            setBingoBoard((currentPages) =>
+                currentPages.map((page, index) =>
+                    index === pageIndex
+                        ? {
+                              ...page,
+                              board: [...page.board, [...results]],
+                          }
+                        : page
+                )
+            );
+            setBingoCounters((currentPages) =>
+                currentPages.map((page, index) =>
+                    index === pageIndex
+                        ? {
+                              ...page,
+                              counters: [
+                                  ...page.counters,
+                                  results.map(() => 0),
+                              ],
+                          }
+                        : page
+                )
+            );
+        };
+        if (isStatic) {
+            await tenLines.check_seeds_static(
+                searchSeeds,
+                advanceRangePage.range,
+                [0, 0],
+                parseInt(offset),
+                SEED_IDENTIFIER_TO_GAME[game],
+                parseInt(trainerID),
+                parseInt(secretID),
+                calibrationFormState.staticCategory,
+                calibrationFormState.staticPokemon,
+                calibrationFormState.method,
+                255,
+                -1,
+                -1,
+                [
+                    [0, 31],
+                    [0, 31],
+                    [0, 31],
+                    [0, 31],
+                    [0, 31],
+                    [0, 31],
+                ],
+                proxy(resultCallback),
+                proxy(doneCallback)
+            );
+        } else {
+            await tenLines.check_seeds_wild(
+                searchSeeds,
+                advanceRangePage.range,
+                [0, 0],
+                parseInt(offset),
+                SEED_IDENTIFIER_TO_GAME[game],
+                parseInt(trainerID),
+                parseInt(secretID),
+                calibrationFormState.wildCategory,
+                calibrationFormState.wildLocation,
+                -1,
+                -1,
+                calibrationFormState.method,
+                calibrationFormState.wildLead,
+                255,
+                -1,
+                [
+                    [0, 31],
+                    [0, 31],
+                    [0, 31],
+                    [0, 31],
+                    [0, 31],
+                    [0, 31],
+                ],
+                proxy(resultCallback),
+                proxy(doneCallback)
+            );
+        }
     }
 }
 
@@ -164,12 +276,25 @@ export default function BingoPage({
     hidden?: boolean;
 }) {
     const { resources, t } = useI18n();
-    const [bingoBoard, _setBingoBoard, counters, setCounters] = useBingoBoard();
+    const [bingoPages, _setBingoPages, counterPages, setCounterPages] =
+        useBingoBoard();
     const [, setCompareHistory] = useLocalStorage<CalibrationCompareEntry[]>(
         "calibration-compare-history",
         []
     );
+    const [activePageIndex, setActivePageIndex] = useState(0);
 
+    useEffect(() => {
+        if (activePageIndex > Math.max(0, bingoPages.length - 1)) {
+            setActivePageIndex(Math.max(0, bingoPages.length - 1));
+        }
+    }, [activePageIndex, bingoPages.length]);
+
+    const activePage = bingoPages[activePageIndex] ?? bingoPages[0];
+    const activeCounterPage =
+        counterPages[activePageIndex] ?? counterPages[0];
+    const bingoBoard = activePage?.board ?? [];
+    const counters = activeCounterPage?.counters ?? [];
     const width = bingoBoard[0]?.length ?? 0;
     const height = bingoBoard.length;
 
@@ -228,8 +353,10 @@ export default function BingoPage({
         };
     };
 
-    if (hidden) return null;
-    if (width === 0 || height === 0) {
+    if (hidden) {
+        return null;
+    }
+    if (bingoPages.length === 0) {
         return (
             <Box my={2} sx={sx}>
                 <Alert severity="info" sx={{ textAlign: "left" }}>
@@ -240,6 +367,25 @@ export default function BingoPage({
     }
     return (
         <Box sx={{ width: "100%", maxWidth: "100%", overflowX: "auto", ...sx }}>
+        {bingoPages.length > 1 && (
+            <Tabs
+                value={activePageIndex}
+                onChange={(_event, nextPage) => setActivePageIndex(nextPage)}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+                sx={{ mb: 2 }}
+            >
+                {bingoPages.map((page, index) => (
+                    <Tab key={`${page.label}-${index}`} label={page.label} />
+                ))}
+            </Tabs>
+        )}
+        {width === 0 || height === 0 ? (
+            <Alert severity="info" sx={{ textAlign: "left", my: 2 }}>
+                {t("messages.emptyBingoBoard")}
+            </Alert>
+        ) : (
         <Box
             display="grid"
             gridTemplateColumns={`minmax(4.5rem, max-content) repeat(${width}, minmax(10rem, 1fr))`}
@@ -309,10 +455,21 @@ export default function BingoPage({
                             }}
                             style={{ display: "block", lineHeight: 1 }}
                             onClick={() => {
-                                const newCounters = [...(counters ?? [])];
+                                const newCounters = counters.map((row) => [
+                                    ...row,
+                                ]);
                                 const nextCounter = counter + 1;
                                 newCounters[y - 1][x - 1] = nextCounter;
-                                setCounters(newCounters);
+                                setCounterPages((currentPages) =>
+                                    currentPages.map((page, pageIndex) =>
+                                        pageIndex === activePageIndex
+                                            ? {
+                                                  ...page,
+                                                  counters: newCounters,
+                                              }
+                                            : page
+                                    )
+                                );
                                 setCompareHistory(
                                     (history: CalibrationCompareEntry[]) => [
                                         ...history,
@@ -323,11 +480,22 @@ export default function BingoPage({
                             onMouseDown={(e) => {
                                 if (e.button === 1) {
                                     e.preventDefault();
-                                    const newCounters = [...(counters ?? [])];
+                                    const newCounters = counters.map((row) => [
+                                        ...row,
+                                    ]);
                                     newCounters[y - 1][x - 1] = counter - 1;
                                     if (newCounters[y - 1][x - 1] < 0)
                                         newCounters[y - 1][x - 1] = 0;
-                                    setCounters(newCounters);
+                                    setCounterPages((currentPages) =>
+                                        currentPages.map((page, pageIndex) =>
+                                            pageIndex === activePageIndex
+                                                ? {
+                                                      ...page,
+                                                      counters: newCounters,
+                                                  }
+                                                : page
+                                        )
+                                    );
                                 }
                             }}
                         >
@@ -370,6 +538,7 @@ export default function BingoPage({
                 );
             })}
         </Box>
+        )}
         </Box>
     );
 }

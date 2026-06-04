@@ -41,6 +41,7 @@ endif()
 
 add_executable(ten_lines
     src/calibration.cpp
+    src/egg.cpp
     src/fetch_util.cpp
     src/id_combo.cpp
     src/initial_seed.cpp

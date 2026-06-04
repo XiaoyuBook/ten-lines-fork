@@ -167,6 +167,7 @@ export interface CalibrationURLState {
     secretID: string;
     teachyTVMode: string;
     teachyTVRegularOut: string;
+    bingoTvFluctuationMode: string;
 }
 
 function createCompareEntry(row: CalibrationCompareRow): CalibrationCompareEntry {
@@ -234,6 +235,8 @@ function useCalibrationURLState() {
     const teachyTVMode = searchParams.get("teachyTVMode") || "false";
     const teachyTVRegularOut =
         searchParams.get("teachyTVRegularOut") || "3600";
+    const bingoTvFluctuationMode =
+        searchParams.get("bingoTvFluctuationMode") || "false";
     const targetSeedValue =
         parseInt(searchParams.get("targetInitialSeed") || "DEAD", 16) ?? 0xdead;
     const setCalibrationURLState = (state: Partial<CalibrationURLState>) => {
@@ -262,6 +265,7 @@ function useCalibrationURLState() {
         secretID,
         teachyTVMode,
         teachyTVRegularOut,
+        bingoTvFluctuationMode,
         setCalibrationURLState,
     };
 }
@@ -316,12 +320,14 @@ export default function CalibrationForm({
         secretID,
         teachyTVMode,
         teachyTVRegularOut,
+        bingoTvFluctuationMode,
         setCalibrationURLState,
     } = useCalibrationURLState();
 
     const [, setBingoBoard, , setBingoCounters] = useBingoBoard();
 
     const bingoActive = getBingoActive();
+    const isBingoTvFluctuationMode = bingoTvFluctuationMode === "true";
 
     const isStatic = calibrationFormState.method <= STATIC_4;
     const isFRLG = game.startsWith("fr") || game.startsWith("lg");
@@ -2052,6 +2058,22 @@ export default function CalibrationForm({
                             <span>{t("messages.ivCalculationDisabled")}</span>
                         )}
                         {bingoActive && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={isBingoTvFluctuationMode}
+                                        onChange={(event) =>
+                                            setCalibrationURLState({
+                                                bingoTvFluctuationMode:
+                                                    event.target.checked.toString(),
+                                            })
+                                        }
+                                    />
+                                }
+                                label={t("labels.bingoTvFluctuationMode")}
+                            />
+                        )}
+                        {bingoActive && (
                             <Tooltip
                                 title={
                                     isNotSubmittable
@@ -2084,7 +2106,8 @@ export default function CalibrationForm({
                                                 game,
                                                 calibrationFormState,
                                                 setBingoBoard,
-                                                setBingoCounters
+                                                setBingoCounters,
+                                                isBingoTvFluctuationMode
                                             );
                                         }}
                                         fullWidth
