@@ -2,8 +2,34 @@ export type GameOption = { value: string; label: string };
 export type EggMethodOption = { value: number; labelKey: string };
 export type EggCompatibilityOption = { value: number; labelKey: string };
 export type EggGenderOption = { value: number; labelKey: string };
+export type EggIvPresetValue = "6v" | "0a" | "0s" | "0a0s";
+export type EggIvPresetOption = { value: EggIvPresetValue; labelKey: string };
+export type EggSeedSettings = {
+    sound: string;
+    buttonMode: string;
+    seedButton: string;
+    extraButton: string;
+};
+export type EggSeedWithSettings = { settings?: string };
+export type SeedWithInitialSeed = { initialSeed: number };
+export type EggSeedSearchPhase<T> = {
+    heldSeeds: T[];
+    pickupSeeds: T[];
+    pairOffset: number;
+    pairCount: number;
+};
 
 export const DEFAULT_FRLG_EGG_METHOD = 12;
+export const DEFAULT_FRLG_EGG_COMPATIBILITY = 20;
+export const DEFAULT_FRLG_EGG_ADVANCE_RANGE = [1000, 5000] as const;
+export const DEFAULT_FRLG_EGG_PARENT_IVS = [31, 31, 31, 31, 31, 31] as const;
+export const DEFAULT_FRLG_EGG_MAX_RESULTS = 10;
+export const DEFAULT_EGG_SEED_SETTINGS: EggSeedSettings = {
+    sound: "mono",
+    buttonMode: "a",
+    seedButton: "a",
+    extraButton: "none",
+};
 
 export const FRLG_EGG_METHODS: EggMethodOption[] = [
     { value: 11, labelKey: "options.normal" },
@@ -25,6 +51,13 @@ export const EGG_GENDER_OPTIONS: EggGenderOption[] = [
     { value: 3, labelKey: "options.ditto" },
 ];
 
+export const FRLG_EGG_IV_PRESETS: EggIvPresetOption[] = [
+    { value: "6v", labelKey: "options.ivPreset6v" },
+    { value: "0a", labelKey: "options.ivPreset0a" },
+    { value: "0s", labelKey: "options.ivPreset0s" },
+    { value: "0a0s", labelKey: "options.ivPreset0a0s" },
+];
+
 export function isFrlgEggGame(game: string): boolean {
     return game.startsWith("fr") || game.startsWith("lg");
 }
@@ -37,6 +70,24 @@ export function buildSeedSettingKey(sound: string, buttonMode: string, seedButto
     return `${sound}_${buttonMode}_${seedButton}`;
 }
 
+export function buildEggSeedSettings(settings: EggSeedSettings): string {
+    return `${buildSeedSettingKey(settings.sound, settings.buttonMode, settings.seedButton)}_${settings.extraButton}`;
+}
+
+export function parseEggSeedSettings(settings: string | undefined): EggSeedSettings {
+    const parts = settings?.split("_") ?? [];
+    if (parts.length < 4) {
+        return { ...DEFAULT_EGG_SEED_SETTINGS };
+    }
+
+    return {
+        sound: parts[0] || DEFAULT_EGG_SEED_SETTINGS.sound,
+        buttonMode: parts[1] || DEFAULT_EGG_SEED_SETTINGS.buttonMode,
+        seedButton: parts[2] || DEFAULT_EGG_SEED_SETTINGS.seedButton,
+        extraButton: parts.slice(3).join("_") || DEFAULT_EGG_SEED_SETTINGS.extraButton,
+    };
+}
+
 export function isCompatibleEggParentPair(parentAGender: number, parentBGender: number): boolean {
     if (parentAGender === 0 && parentBGender === 1) {
         return true;
@@ -47,6 +98,108 @@ export function isCompatibleEggParentPair(parentAGender: number, parentBGender: 
     }
 
     return parentAGender !== parentBGender && (parentAGender === 3 || parentBGender === 3);
+}
+
+export function calculateEggSearchProgress(
+    completedNatureFilters: number,
+    totalNatureFilters: number,
+    checkedSeedPairs: number,
+    totalSeedPairs: number
+): number {
+    if (totalNatureFilters <= 0 || totalSeedPairs <= 0) {
+        return 0;
+    }
+
+    const completedUnits = Math.max(0, completedNatureFilters) * totalSeedPairs;
+    const currentUnits = Math.max(0, checkedSeedPairs);
+    const totalUnits = totalNatureFilters * totalSeedPairs;
+    const progress = ((completedUnits + currentUnits) / totalUnits) * 100;
+
+    return Math.min(100, Math.max(0, progress));
+}
+
+export function isNoExtraButtonEggSeed(seed: EggSeedWithSettings): boolean {
+    return seed.settings?.endsWith("_none") === true;
+}
+
+export function buildEggSeedSearchPhases<T extends EggSeedWithSettings>(
+    seeds: T[]
+): EggSeedSearchPhase<T>[] {
+    const noExtraSeeds = seeds.filter(isNoExtraButtonEggSeed);
+    const extraSeeds = seeds.filter((seed) => !isNoExtraButtonEggSeed(seed));
+    const orderedGroups: [T[], T[]][] = [
+        [noExtraSeeds, noExtraSeeds],
+        [noExtraSeeds, extraSeeds],
+        [extraSeeds, noExtraSeeds],
+        [extraSeeds, extraSeeds],
+    ];
+    const phases: EggSeedSearchPhase<T>[] = [];
+    let pairOffset = 0;
+
+    for (const [heldSeeds, pickupSeeds] of orderedGroups) {
+        const pairCount = heldSeeds.length * pickupSeeds.length;
+        if (pairCount === 0) {
+            continue;
+        }
+        phases.push({ heldSeeds, pickupSeeds, pairOffset, pairCount });
+        pairOffset += pairCount;
+    }
+
+    return phases;
+}
+
+export function getSeedRangeAroundTarget<T extends SeedWithInitialSeed>(
+    seeds: T[],
+    targetSeed: number,
+    leeway: number
+): T[] {
+    const targetIndex = seeds.findIndex((seed) => seed.initialSeed === targetSeed);
+    if (targetIndex === -1) {
+        return [];
+    }
+
+    return seeds.slice(
+        Math.max(0, targetIndex - leeway),
+        Math.min(seeds.length, targetIndex + leeway + 1)
+    );
+}
+
+export function buildFrameLeewayRange(frame: number, leeway: number): [number, number] {
+    return [Math.max(0, frame - leeway), frame + leeway];
+}
+
+export function applyEggIvPreset(
+    preset: EggIvPresetValue
+): [string, string][] {
+    const ranges: [string, string][] = DEFAULT_FRLG_EGG_PARENT_IVS.map(() => [
+        "31",
+        "31",
+    ]);
+
+    if (preset === "0a" || preset === "0a0s") {
+        ranges[1] = ["0", "0"];
+    }
+    if (preset === "0s" || preset === "0a0s") {
+        ranges[5] = ["0", "0"];
+    }
+
+    return ranges;
+}
+
+export function paginateEggResults<T>(
+    rows: T[],
+    page: number,
+    rowsPerPage: number
+): T[] {
+    return rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+}
+
+export function formatEggSeedTime(
+    seedTime: number,
+    gameConsole: string,
+    frameToMs: (frame: number, system: string) => number
+): number {
+    return frameToMs(seedTime / 16, gameConsole);
 }
 
 export function formatInheritanceSlot(value: number): string {

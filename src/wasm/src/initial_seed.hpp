@@ -14,6 +14,7 @@ struct InitialSeedResult {
 struct FRLGContiguousSeedEntry {
     u32 seedTime;
     u16 initialSeed;
+    std::string settings;
 };
 
 struct InitialSeedReachability {

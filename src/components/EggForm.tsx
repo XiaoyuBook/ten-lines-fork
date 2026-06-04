@@ -6,6 +6,7 @@ import {
     Button,
     Checkbox,
     FormControlLabel,
+    LinearProgress,
     MenuItem,
     TextField,
     Typography,
@@ -13,8 +14,12 @@ import {
     type Theme,
 } from "@mui/material";
 
-import { getAllGameOptions, useI18n } from "../i18n";
-import fetchTenLines, { fetchSeedData, SEED_IDENTIFIER_TO_GAME } from "../tenLines";
+import { getAllGameOptions, getConsoleOptions, getName, useI18n } from "../i18n";
+import fetchTenLines, {
+    fetchSeedData,
+    fixGameConsole,
+    SEED_IDENTIFIER_TO_GAME,
+} from "../tenLines";
 import type { ExtendedEggGeneratorState } from "../tenLines/generated";
 import { filterNatureOptions } from "../utils/natureSearch";
 import IvEntry from "./IvEntry";
@@ -23,22 +28,22 @@ import RangeInput from "./RangeInput";
 import EggParentSettings, { type EggParentState } from "./EggParentSettings";
 import EggTable from "./EggTable";
 import {
-    getSwitchJapaneseFRLGButtonModeLabel,
-    getSwitchJapaneseFRLGExtraButtonLabel,
-    getSwitchJapaneseFRLGSeedButtonLabel,
-    getSwitchJapaneseFRLGSoundLabel,
-    isSwitchJapaneseFRLGGame,
-} from "./calibrationJapaneseLabels";
-import {
+    DEFAULT_FRLG_EGG_ADVANCE_RANGE,
+    DEFAULT_FRLG_EGG_COMPATIBILITY,
+    DEFAULT_FRLG_EGG_MAX_RESULTS,
     DEFAULT_FRLG_EGG_METHOD,
+    DEFAULT_FRLG_EGG_PARENT_IVS,
     FRLG_EGG_COMPATIBILITY_OPTIONS,
+    FRLG_EGG_IV_PRESETS,
     FRLG_EGG_METHODS,
-    buildSeedSettingKey,
+    applyEggIvPreset,
+    buildEggSeedSearchPhases,
+    calculateEggSearchProgress,
     filterFrlgEggGameOptions,
     isCompatibleEggParentPair,
 } from "./frlgEggHelpers";
 
-const DEFAULT_IVS = ["0", "0", "0", "0", "0", "0"];
+const DEFAULT_IVS = DEFAULT_FRLG_EGG_PARENT_IVS.map((value) => value.toString());
 const DEFAULT_IV_RANGES: [string, string][] = [
     ["0", "31"],
     ["0", "31"],
@@ -48,30 +53,26 @@ const DEFAULT_IV_RANGES: [string, string][] = [
     ["0", "31"],
 ];
 
-type SeedSettings = {
-    sound: string;
-    buttonMode: string;
-    seedButton: string;
-    extraButton: string;
-};
-
-const DEFAULT_SEED_SETTINGS: SeedSettings = {
-    sound: "mono",
-    buttonMode: "a",
-    seedButton: "a",
-    extraButton: "none",
-};
-
 const parseDecimal = (value: string) => parseInt(value, 10);
 const parseRange = (value: [string, string]) => value.map(parseDecimal);
 const parseIvs = (value: string[]) => value.map(parseDecimal);
+
+type EggSearchProgress = {
+    completedNatureFilters: number;
+    totalNatureFilters: number;
+    checkedSeedPairs: number;
+    totalSeedPairs: number;
+};
 
 function copyIvRanges() {
     return DEFAULT_IV_RANGES.map((range) => [...range] as [string, string]);
 }
 
-function copySeedSettings(): SeedSettings {
-    return { ...DEFAULT_SEED_SETTINGS };
+function copyDefaultAdvanceRange(): [string, string] {
+    return [
+        DEFAULT_FRLG_EGG_ADVANCE_RANGE[0].toString(),
+        DEFAULT_FRLG_EGG_ADVANCE_RANGE[1].toString(),
+    ];
 }
 
 export default function EggForm({
@@ -83,23 +84,23 @@ export default function EggForm({
 }) {
     const { t, resources } = useI18n();
     const [game, setGame] = useState("fr");
+    const [gameConsole, setGameConsole] = useState("GBA");
     const [trainerID, setTrainerID] = useState("0");
     const [secretID, setSecretID] = useState("0");
     const [method, setMethod] = useState(DEFAULT_FRLG_EGG_METHOD.toString());
-    const [compatibility, setCompatibility] = useState("70");
-    const [maxResults, setMaxResults] = useState("1000");
-    const [eggSpecies, setEggSpecies] = useState("1");
-    const [eggSpeciesValid, setEggSpeciesValid] = useState(true);
-    const [heldSettings, setHeldSettings] = useState(copySeedSettings);
-    const [pickupSettings, setPickupSettings] = useState(copySeedSettings);
-    const [heldAdvances, setHeldAdvances] = useState<[string, string]>([
-        "0",
-        "100",
-    ]);
-    const [pickupAdvances, setPickupAdvances] = useState<[string, string]>([
-        "0",
-        "100",
-    ]);
+    const [compatibility, setCompatibility] = useState(
+        DEFAULT_FRLG_EGG_COMPATIBILITY.toString()
+    );
+    const [maxResults, setMaxResults] = useState(
+        DEFAULT_FRLG_EGG_MAX_RESULTS.toString()
+    );
+    const [eggSpecies, setEggSpecies] = useState(1);
+    const [heldAdvances, setHeldAdvances] = useState<[string, string]>(
+        copyDefaultAdvanceRange
+    );
+    const [pickupAdvances, setPickupAdvances] = useState<[string, string]>(
+        copyDefaultAdvanceRange
+    );
     const [heldAdvancesValid, setHeldAdvancesValid] = useState(true);
     const [pickupAdvancesValid, setPickupAdvancesValid] = useState(true);
     const [heldOffset, setHeldOffset] = useState("0");
@@ -119,34 +120,87 @@ export default function EggForm({
     const [gender, setGender] = useState("255");
     const [ability, setAbility] = useState("255");
     const [hiddenPower, setHiddenPower] = useState("-1");
+    const [ivPreset, setIvPreset] = useState("");
     const [ivRanges, setIvRanges] = useState(copyIvRanges);
     const [ivRangesValid, setIvRangesValid] = useState(true);
     const [showInheritance, setShowInheritance] = useState(false);
     const [rows, setRows] = useState<ExtendedEggGeneratorState[]>([]);
     const [searching, setSearching] = useState(false);
+    const [searchProgress, setSearchProgress] = useState<EggSearchProgress | null>(
+        null
+    );
     const [message, setMessage] = useState("");
 
     const gameOptions = useMemo(
         () => filterFrlgEggGameOptions(getAllGameOptions(t)),
         [t]
     );
+    const eggSpeciesOptions = useMemo(
+        () =>
+            Array.from(
+                { length: Math.min(resources.species.length - 1, 386) },
+                (_value, index) => index + 1
+            ),
+        [resources.species]
+    );
     const parentPairIsCompatible = isCompatibleEggParentPair(
         parseDecimal(parentA.gender),
         parseDecimal(parentB.gender)
     );
+    const fixedGameConsole = fixGameConsole(game, gameConsole);
+    const isSwitch = game.endsWith("nx");
     const selectedNatureSet = useMemo(() => new Set(natures), [natures]);
     const inputsAreValid =
         parentAValid &&
         parentBValid &&
-        eggSpeciesValid &&
         heldAdvancesValid &&
         pickupAdvancesValid &&
         ivRangesValid;
     const submittedNatureFilters = natures.length === 0 ? [-1] : natures;
+    const calibrationContext = {
+        game,
+        gameConsole: fixedGameConsole,
+        trainerID,
+        secretID,
+        method,
+        compatibility,
+        eggSpecies: eggSpecies.toString(),
+        parentAIvs: parentA.ivs,
+        parentBIvs: parentB.ivs,
+        parentAGender: parentA.gender,
+        parentBGender: parentB.gender,
+        heldOffset,
+        pickupOffset,
+    };
+    const progressPercent = searchProgress
+        ? calculateEggSearchProgress(
+              searchProgress.completedNatureFilters,
+              searchProgress.totalNatureFilters,
+              searchProgress.checkedSeedPairs,
+              searchProgress.totalSeedPairs
+          )
+        : 0;
+    const progressText =
+        searchProgress === null
+            ? ""
+            : t("messages.eggSearchProgress", {
+                  percent: Math.floor(progressPercent).toString(),
+                  checked: Math.min(
+                      searchProgress.checkedSeedPairs,
+                      searchProgress.totalSeedPairs
+                  ).toLocaleString(),
+                  total: searchProgress.totalSeedPairs.toLocaleString(),
+                  current: Math.min(
+                      searchProgress.completedNatureFilters + 1,
+                      searchProgress.totalNatureFilters
+                  ).toString(),
+                  filters: searchProgress.totalNatureFilters.toString(),
+              });
 
     const runSearch = async () => {
         setMessage("");
         setRows([]);
+        setSearchProgress(null);
 
         if (!parentPairIsCompatible) {
             setMessage(t("messages.incompatibleEggParents"));
@@ -161,75 +215,88 @@ export default function EggForm({
         try {
             const tenLines = await fetchTenLines();
             const seedData = await fetchSeedData(game);
-            const heldKey = buildSeedSettingKey(
-                heldSettings.sound,
-                heldSettings.buttonMode,
-                heldSettings.seedButton
-            );
-            const pickupKey = buildSeedSettingKey(
-                pickupSettings.sound,
-                pickupSettings.buttonMode,
-                pickupSettings.seedButton
-            );
-            const heldSeeds = await tenLines.get_contiguous_seed_list(
+            const eggSeeds = await tenLines.get_all_contiguous_seed_list(
                 seedData,
-                heldKey,
-                game,
-                heldSettings.extraButton
-            );
-            const pickupSeeds = await tenLines.get_contiguous_seed_list(
-                seedData,
-                pickupKey,
-                game,
-                pickupSettings.extraButton
+                game
             );
 
-            if (heldSeeds.length === 0) {
-                setMessage(t("messages.noHeldEggSeeds"));
-                return;
-            }
-            if (pickupSeeds.length === 0) {
-                setMessage(t("messages.noPickupEggSeeds"));
+            if (eggSeeds.length === 0) {
+                setMessage(t("messages.noEggSeeds"));
                 return;
             }
 
+            const searchPhases = buildEggSeedSearchPhases(eggSeeds);
+            const totalSeedPairs = searchPhases.reduce(
+                (total, phase) => total + phase.pairCount,
+                0
+            );
             const resultLimit = parseDecimal(maxResults);
-            for (const natureFilter of submittedNatureFilters) {
-                const remainingResults = resultLimit - receivedResults;
-                if (remainingResults <= 0) {
+            for (
+                let natureIndex = 0;
+                natureIndex < submittedNatureFilters.length;
+                natureIndex++
+            ) {
+                const natureFilter = submittedNatureFilters[natureIndex];
+                for (const phase of searchPhases) {
+                    const remainingResults = resultLimit - receivedResults;
+                    if (remainingResults <= 0) {
+                        break;
+                    }
+
+                    await tenLines.check_seeds_frlg_egg(
+                        phase.heldSeeds,
+                        phase.pickupSeeds,
+                        parseRange(heldAdvances),
+                        parseRange(pickupAdvances),
+                        parseDecimal(heldOffset),
+                        parseDecimal(pickupOffset),
+                        SEED_IDENTIFIER_TO_GAME[game],
+                        parseDecimal(trainerID),
+                        parseDecimal(secretID),
+                        parseDecimal(method),
+                        parseDecimal(compatibility),
+                        [parseIvs(parentA.ivs), parseIvs(parentB.ivs)],
+                        [parseDecimal(parentA.gender), parseDecimal(parentB.gender)],
+                        eggSpecies,
+                        parseDecimal(shininess),
+                        natureFilter,
+                        parseDecimal(gender),
+                        parseDecimal(ability),
+                        parseDecimal(hiddenPower),
+                        ivRanges.map(parseRange),
+                        remainingResults,
+                        t("common.any"),
+                        t("common.any"),
+                        -1,
+                        proxy((batch: ExtendedEggGeneratorState[]) => {
+                            receivedResults += batch.length;
+                            setRows((currentRows) => [...currentRows, ...batch]);
+                        }),
+                        proxy((checkedSeedPairs: number) => {
+                            setSearchProgress({
+                                completedNatureFilters: natureIndex,
+                                totalNatureFilters: submittedNatureFilters.length,
+                                checkedSeedPairs:
+                                    phase.pairOffset + checkedSeedPairs,
+                                totalSeedPairs,
+                            });
+                        }),
+                        proxy((nextSearching: boolean) => {
+                            if (nextSearching) {
+                                setSearching(true);
+                            }
+                        })
+                    );
+                }
+                setSearchProgress({
+                    completedNatureFilters: natureIndex + 1,
+                    totalNatureFilters: submittedNatureFilters.length,
+                    checkedSeedPairs: totalSeedPairs,
+                    totalSeedPairs,
+                });
+                if (receivedResults >= resultLimit) {
                     break;
                 }
-
-                await tenLines.check_seeds_frlg_egg(
-                    heldSeeds,
-                    pickupSeeds,
-                    parseRange(heldAdvances),
-                    parseRange(pickupAdvances),
-                    parseDecimal(heldOffset),
-                    parseDecimal(pickupOffset),
-                    SEED_IDENTIFIER_TO_GAME[game],
-                    parseDecimal(trainerID),
-                    parseDecimal(secretID),
-                    parseDecimal(method),
-                    parseDecimal(compatibility),
-                    [parseIvs(parentA.ivs), parseIvs(parentB.ivs)],
-                    [parseDecimal(parentA.gender), parseDecimal(parentB.gender)],
-                    parseDecimal(eggSpecies),
-                    parseDecimal(shininess),
-                    natureFilter,
-                    parseDecimal(gender),
-                    parseDecimal(ability),
-                    parseDecimal(hiddenPower),
-                    ivRanges.map(parseRange),
-                    remainingResults,
-                    heldKey,
-                    pickupKey,
-                    proxy((batch: ExtendedEggGeneratorState[]) => {
-                        receivedResults += batch.length;
-                        setRows((currentRows) => [...currentRows, ...batch]);
-                    }),
-                    proxy((nextSearching: boolean) => setSearching(nextSearching))
-                );
             }
 
             if (receivedResults === 0) {
@@ -256,7 +323,7 @@ export default function EggForm({
             }}
         >
             <Typography variant="h5" sx={{ mt: 2 }}>
-                {t("tabs.egg")}
+                {t("tabs.eggSearch")}
             </Typography>
             <Box
                 sx={{
@@ -268,12 +335,34 @@ export default function EggForm({
                 <TextField
                     label={t("labels.game")}
                     value={game}
-                    onChange={(event) => setGame(event.target.value)}
+                    onChange={(event) => {
+                        const nextGame = event.target.value;
+                        setGame(nextGame);
+                        setGameConsole((currentConsole) =>
+                            fixGameConsole(nextGame, currentConsole)
+                        );
+                    }}
                     select
                     fullWidth
                     margin="normal"
                 >
                     {gameOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                        </MenuItem>
+                    ))}
+                </TextField>
+                <TextField
+                    label={t("labels.console")}
+                    value={fixedGameConsole}
+                    onChange={(event) =>
+                        setGameConsole(fixGameConsole(game, event.target.value))
+                    }
+                    select
+                    fullWidth
+                    margin="normal"
+                >
+                    {getConsoleOptions(t, isSwitch).map((option) => (
                         <MenuItem key={option.value} value={option.value}>
                             {option.label}
                         </MenuItem>
@@ -288,6 +377,23 @@ export default function EggForm({
                     margin="normal"
                 >
                     {FRLG_EGG_METHODS.map((option) => (
+                        <MenuItem
+                            key={option.value}
+                            value={option.value.toString()}
+                        >
+                            {t(option.labelKey)}
+                        </MenuItem>
+                    ))}
+                </TextField>
+                <TextField
+                    label={t("labels.compatibility")}
+                    value={compatibility}
+                    onChange={(event) => setCompatibility(event.target.value)}
+                    select
+                    fullWidth
+                    margin="normal"
+                >
+                    {FRLG_EGG_COMPATIBILITY_OPTIONS.map((option) => (
                         <MenuItem
                             key={option.value}
                             value={option.value.toString()}
@@ -312,23 +418,6 @@ export default function EggForm({
                     maximumValue={65535}
                     onChange={(_, next) => setSecretID(next.value)}
                 />
-                <TextField
-                    label={t("labels.compatibility")}
-                    value={compatibility}
-                    onChange={(event) => setCompatibility(event.target.value)}
-                    select
-                    fullWidth
-                    margin="normal"
-                >
-                    {FRLG_EGG_COMPATIBILITY_OPTIONS.map((option) => (
-                        <MenuItem
-                            key={option.value}
-                            value={option.value.toString()}
-                        >
-                            {t(option.labelKey)}
-                        </MenuItem>
-                    ))}
-                </TextField>
                 <NumericalInput
                     label={t("labels.maxResults")}
                     name="eggMaxResults"
@@ -340,74 +429,91 @@ export default function EggForm({
             </Box>
 
             <Typography variant="h6" sx={{ mt: 2 }}>
-                {t("labels.heldSeedSettings")}
+                {t("labels.eggGeneration")}
             </Typography>
-            <SeedSettingsFields
-                game={game}
-                value={heldSettings}
-                onChange={setHeldSettings}
-            />
-            <RangeInput
-                label={t("labels.heldAdvances")}
-                name="heldAdvances"
-                value={heldAdvances}
-                minimumValue={0}
-                maximumValue={4294967295}
-                onChange={(_, next) => {
-                    setHeldAdvances(next.value);
-                    setHeldAdvancesValid(next.isValid);
+            <Box
+                sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
+                    gap: 2,
                 }}
-            />
-            <NumericalInput
-                label={t("labels.heldOffset")}
-                name="heldOffset"
-                value={heldOffset}
-                minimumValue={0}
-                maximumValue={4294967295}
-                onChange={(_, next) => setHeldOffset(next.value)}
-            />
+            >
+                <RangeInput
+                    label={t("labels.heldAdvances")}
+                    name="heldAdvances"
+                    value={heldAdvances}
+                    minimumValue={0}
+                    maximumValue={4294967295}
+                    onChange={(_, next) => {
+                        setHeldAdvances(next.value);
+                        setHeldAdvancesValid(next.isValid);
+                    }}
+                />
+                <NumericalInput
+                    label={t("labels.heldOffset")}
+                    name="heldOffset"
+                    value={heldOffset}
+                    minimumValue={0}
+                    maximumValue={4294967295}
+                    onChange={(_, next) => setHeldOffset(next.value)}
+                />
+            </Box>
 
             <Typography variant="h6" sx={{ mt: 2 }}>
-                {t("labels.pickupSeedSettings")}
+                {t("labels.eggPickup")}
             </Typography>
-            <SeedSettingsFields
-                game={game}
-                value={pickupSettings}
-                onChange={setPickupSettings}
-            />
-            <RangeInput
-                label={t("labels.pickupAdvances")}
-                name="pickupAdvances"
-                value={pickupAdvances}
-                minimumValue={0}
-                maximumValue={4294967295}
-                onChange={(_, next) => {
-                    setPickupAdvances(next.value);
-                    setPickupAdvancesValid(next.isValid);
+            <Box
+                sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
+                    gap: 2,
                 }}
-            />
-            <NumericalInput
-                label={t("labels.pickupOffset")}
-                name="pickupOffset"
-                value={pickupOffset}
-                minimumValue={0}
-                maximumValue={4294967295}
-                onChange={(_, next) => setPickupOffset(next.value)}
-            />
+            >
+                <RangeInput
+                    label={t("labels.pickupAdvances")}
+                    name="pickupAdvances"
+                    value={pickupAdvances}
+                    minimumValue={0}
+                    maximumValue={4294967295}
+                    onChange={(_, next) => {
+                        setPickupAdvances(next.value);
+                        setPickupAdvancesValid(next.isValid);
+                    }}
+                />
+                <NumericalInput
+                    label={t("labels.pickupOffset")}
+                    name="pickupOffset"
+                    value={pickupOffset}
+                    minimumValue={0}
+                    maximumValue={4294967295}
+                    onChange={(_, next) => setPickupOffset(next.value)}
+                />
+            </Box>
 
             <Typography variant="h6" sx={{ mt: 2 }}>
                 {t("labels.eggSettings")}
             </Typography>
-            <NumericalInput
-                label={t("labels.eggSpecies")}
-                name="eggSpecies"
+            <Autocomplete
+                options={eggSpeciesOptions}
                 value={eggSpecies}
-                minimumValue={1}
-                maximumValue={386}
-                onChange={(_, next) => {
-                    setEggSpecies(next.value);
-                    setEggSpeciesValid(next.isValid);
+                onChange={(_event, newValue) => {
+                    if (newValue !== null) {
+                        setEggSpecies(newValue);
+                    }
                 }}
+                getOptionLabel={(option) => getName(resources, option)}
+                isOptionEqualToValue={(option, value) => option === value}
+                renderInput={(params) => (
+                    <TextField
+                        {...params}
+                        label={t("labels.eggSpecies")}
+                        margin="normal"
+                    />
+                )}
+                disablePortal
+                disableClearable
+                selectOnFocus
+                fullWidth
             />
             <Box
                 sx={{
@@ -546,9 +652,35 @@ export default function EggForm({
                     ))}
                 </TextField>
             </Box>
+            <TextField
+                label={t("labels.ivPreset")}
+                value={ivPreset}
+                onChange={(event) => {
+                    const nextPreset = event.target.value;
+                    setIvPreset(nextPreset);
+                    const presetOption = FRLG_EGG_IV_PRESETS.find(
+                        (option) => option.value === nextPreset
+                    );
+                    if (presetOption) {
+                        setIvRanges(applyEggIvPreset(presetOption.value));
+                        setIvRangesValid(true);
+                    }
+                }}
+                select
+                fullWidth
+                margin="normal"
+            >
+                <MenuItem value="">{t("common.none")}</MenuItem>
+                {FRLG_EGG_IV_PRESETS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {t(option.labelKey)}
+                    </MenuItem>
+                ))}
+            </TextField>
             <IvEntry
                 value={ivRanges}
                 onChange={(_, next) => {
+                    setIvPreset("");
                     setIvRanges(next.value);
                     setIvRangesValid(next.isValid);
                 }}
@@ -570,6 +702,17 @@ export default function EggForm({
                     {message}
                 </Typography>
             )}
+            {searching && searchProgress !== null && (
+                <Box sx={{ my: 1 }}>
+                    <LinearProgress
+                        variant="determinate"
+                        value={progressPercent}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {progressText}
+                    </Typography>
+                </Box>
+            )}
             <Button
                 type="submit"
                 variant="contained"
@@ -580,156 +723,13 @@ export default function EggForm({
                 {searching ? t("common.searching") : t("common.submit")}
             </Button>
             {rows.length > 0 && (
-                <EggTable rows={rows} showInheritance={showInheritance} />
+                <EggTable
+                    rows={rows}
+                    showInheritance={showInheritance}
+                    calibrationContext={calibrationContext}
+                    gameConsole={fixedGameConsole}
+                />
             )}
-        </Box>
-    );
-}
-
-function SeedSettingsFields({
-    game,
-    value,
-    onChange,
-}: {
-    game: string;
-    value: SeedSettings;
-    onChange: (value: SeedSettings) => void;
-}) {
-    const { t } = useI18n();
-    const usesSwitchJapaneseFRLGLabels = isSwitchJapaneseFRLGGame(game);
-    const soundOptionLabels = {
-        mono: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGSoundLabel("mono")
-            : t("common.mono"),
-        stereo: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGSoundLabel("stereo")
-            : t("common.stereo"),
-    };
-    const buttonModeOptionLabels = {
-        a: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGButtonModeLabel("a")
-            : "L=A",
-        h: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGButtonModeLabel("h")
-            : t("options.help"),
-        r: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGButtonModeLabel("r")
-            : "LR",
-    };
-    const seedButtonOptionLabels = {
-        a: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGSeedButtonLabel("a")
-            : "A",
-        start: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGSeedButtonLabel("start")
-            : t("options.start"),
-        l: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGSeedButtonLabel("l")
-            : "L (L=A)",
-    };
-    const extraButtonOptionLabels = {
-        none: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGExtraButtonLabel("none")
-            : t("common.none"),
-        startup_select: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGExtraButtonLabel("startup_select")
-            : t("options.startupSelect"),
-        startup_a: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGExtraButtonLabel("startup_a")
-            : t("options.startupA"),
-        blackout_r: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_r")
-            : t("options.blackoutR"),
-        blackout_a: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_a")
-            : t("options.blackoutA"),
-        blackout_l: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_l")
-            : t("options.blackoutL"),
-        blackout_al: usesSwitchJapaneseFRLGLabels
-            ? getSwitchJapaneseFRLGExtraButtonLabel("blackout_al")
-            : t("options.blackoutAL"),
-    };
-
-    return (
-        <Box
-            sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "repeat(4, 1fr)" },
-                gap: 2,
-            }}
-        >
-            <TextField
-                label={t("labels.sound")}
-                value={value.sound}
-                onChange={(event) =>
-                    onChange({ ...value, sound: event.target.value })
-                }
-                select
-                fullWidth
-                margin="normal"
-            >
-                <MenuItem value="mono">{soundOptionLabels.mono}</MenuItem>
-                <MenuItem value="stereo">{soundOptionLabels.stereo}</MenuItem>
-            </TextField>
-            <TextField
-                label={t("labels.buttonMode")}
-                value={value.buttonMode}
-                onChange={(event) =>
-                    onChange({ ...value, buttonMode: event.target.value })
-                }
-                select
-                fullWidth
-                margin="normal"
-            >
-                <MenuItem value="a">{buttonModeOptionLabels.a}</MenuItem>
-                <MenuItem value="h">{buttonModeOptionLabels.h}</MenuItem>
-                <MenuItem value="r">{buttonModeOptionLabels.r}</MenuItem>
-            </TextField>
-            <TextField
-                label={t("labels.seedButton")}
-                value={value.seedButton}
-                onChange={(event) =>
-                    onChange({ ...value, seedButton: event.target.value })
-                }
-                select
-                fullWidth
-                margin="normal"
-            >
-                <MenuItem value="a">{seedButtonOptionLabels.a}</MenuItem>
-                <MenuItem value="start">{seedButtonOptionLabels.start}</MenuItem>
-                <MenuItem value="l">{seedButtonOptionLabels.l}</MenuItem>
-            </TextField>
-            <TextField
-                label={t("labels.extraButton")}
-                value={value.extraButton}
-                onChange={(event) =>
-                    onChange({ ...value, extraButton: event.target.value })
-                }
-                select
-                fullWidth
-                margin="normal"
-            >
-                <MenuItem value="none">{extraButtonOptionLabels.none}</MenuItem>
-                <MenuItem value="startup_select">
-                    {extraButtonOptionLabels.startup_select}
-                </MenuItem>
-                <MenuItem value="startup_a">
-                    {extraButtonOptionLabels.startup_a}
-                </MenuItem>
-                <MenuItem value="blackout_r">
-                    {extraButtonOptionLabels.blackout_r}
-                </MenuItem>
-                <MenuItem value="blackout_a">
-                    {extraButtonOptionLabels.blackout_a}
-                </MenuItem>
-                <MenuItem value="blackout_l">
-                    {extraButtonOptionLabels.blackout_l}
-                </MenuItem>
-                <MenuItem value="blackout_al">
-                    {extraButtonOptionLabels.blackout_al}
-                </MenuItem>
-            </TextField>
         </Box>
     );
 }

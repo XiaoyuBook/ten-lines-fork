@@ -124,17 +124,60 @@ emscripten::typed_array<FRLGContiguousSeedEntry> get_contiguous_seed_list(
     }
     std::vector<FRLGSeedEntry>& contiguous_seeds = seeds_iter->second;
 
-    const auto& offsets = HELD_BUTTON_OFFSETS.at(game_version);
-    const char button_mode = *(strchr(setting_key.c_str(), '_') + 1);
-    auto held_button_offset = std::find_if(offsets.begin(), offsets.end(), [&](const HeldButtonOffset& held_button_offset) { return held_button_offset.held_button == held_button && held_button_offset.button_mode == button_mode; });
-    if (held_button_offset == offsets.end()) {
+    const char* button_mode_start = strchr(setting_key.c_str(), '_');
+    if (button_mode_start == nullptr || *(button_mode_start + 1) == '\0') {
         return entries;
     }
-    for (auto& seed : contiguous_seeds) {
-        entries.push_back(FRLGContiguousSeedEntry {
-            .seedTime = seed.seedTime,
-            .initialSeed = static_cast<u16>(seed.initialSeed + held_button_offset->offset),
-        });
+
+    const auto& offsets = HELD_BUTTON_OFFSETS.at(game_version);
+    const char button_mode = *(button_mode_start + 1);
+    for (const auto& held_button_offset : offsets) {
+        if (held_button_offset.button_mode != button_mode || held_button_offset.held_button != held_button) {
+            continue;
+        }
+        const std::string settings = setting_key + "_" + held_button_offset.held_button;
+        for (auto& seed : contiguous_seeds) {
+            entries.push_back(FRLGContiguousSeedEntry {
+                .seedTime = seed.seedTime,
+                .initialSeed = static_cast<u16>(seed.initialSeed + held_button_offset.offset),
+                .settings = settings,
+            });
+        }
+        break;
+    }
+    return entries;
+}
+
+emscripten::typed_array<FRLGContiguousSeedEntry> get_all_contiguous_seed_list(
+    emscripten::val seed_data,
+    std::string game_version)
+{
+    emscripten::typed_array<FRLGContiguousSeedEntry> entries;
+
+    std::vector<u8> seed_data_vector = emscripten::convertJSArrayToNumberVector<u8>(seed_data);
+    FRLGSeedDataStore seed_data_store(seed_data_vector, game_version.ends_with("nx"));
+    const auto& offsets = HELD_BUTTON_OFFSETS.at(game_version);
+
+    for (const auto& [setting_key, contiguous_seeds] : seed_data_store.contiguous_seeds) {
+        const char* button_mode_start = strchr(setting_key.c_str(), '_');
+        if (button_mode_start == nullptr || *(button_mode_start + 1) == '\0') {
+            continue;
+        }
+
+        const char button_mode = *(button_mode_start + 1);
+        for (const auto& held_button_offset : offsets) {
+            if (held_button_offset.button_mode != button_mode) {
+                continue;
+            }
+            const std::string settings = setting_key + "_" + held_button_offset.held_button;
+            for (auto& seed : contiguous_seeds) {
+                entries.push_back(FRLGContiguousSeedEntry {
+                    .seedTime = seed.seedTime,
+                    .initialSeed = static_cast<u16>(seed.initialSeed + held_button_offset.offset),
+                    .settings = settings,
+                });
+            }
+        }
     }
     return entries;
 }
@@ -269,12 +312,14 @@ EMSCRIPTEN_BINDINGS(initial_seed)
     emscripten::smart_function("ten_lines_painting", &painting_seeds);
     emscripten::smart_function("ten_lines_frlg", &frlg_seeds);
     emscripten::smart_function("get_contiguous_seed_list", &get_contiguous_seed_list);
+    emscripten::smart_function("get_all_contiguous_seed_list", &get_all_contiguous_seed_list);
     emscripten::smart_function("filter_reachable_target_seeds", &filter_reachable_target_seeds);
     emscripten::smart_function("filter_reachable_target_seeds_with_sound", &filter_reachable_target_seeds_with_sound);
 
     emscripten::value_object<FRLGContiguousSeedEntry>("FRLGContiguousSeedEntry")
         .field("seedTime", &FRLGContiguousSeedEntry::seedTime)
-        .field("initialSeed", &FRLGContiguousSeedEntry::initialSeed);
+        .field("initialSeed", &FRLGContiguousSeedEntry::initialSeed)
+        .field("settings", &FRLGContiguousSeedEntry::settings);
 
     emscripten::value_object<InitialSeedResult>("InitialSeedResult")
         .field("advances", &InitialSeedResult::advances)

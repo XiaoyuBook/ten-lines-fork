@@ -15,6 +15,7 @@
 namespace
 {
 constexpr u32 RESULT_BATCH_SIZE = 100;
+constexpr u32 PROGRESS_UPDATE_INTERVAL = 1024;
 
 class SearchingStatus {
 public:
@@ -144,7 +145,9 @@ void check_seeds_frlg_egg(
     u32 max_results,
     std::string held_settings,
     std::string pickup_settings,
+    int target_pid,
     emscripten::callback<void(emscripten::typed_array<ExtendedEggGeneratorState>)> result_callback,
+    emscripten::callback<void(u32, u32)> progress_callback,
     emscripten::callback<void(bool)> searching_callback)
 {
     SearchingStatus searching(searching_callback);
@@ -169,13 +172,24 @@ void check_seeds_frlg_egg(
     u32 pickup_max_advances = pickup_advances_range.max() - pickup_initial_advances;
 
     u32 result_count = 0;
+    u32 checked_seed_pairs = 0;
+    const u32 total_seed_pairs = static_cast<u32>(held_seeds.size()) * static_cast<u32>(pickup_seeds.size());
     emscripten::typed_array<ExtendedEggGeneratorState> batch;
+    progress_callback(checked_seed_pairs, total_seed_pairs);
+
+    auto report_progress = [&](bool force = false) {
+        if (force || checked_seed_pairs % PROGRESS_UPDATE_INTERVAL == 0 || checked_seed_pairs == total_seed_pairs) {
+            progress_callback(checked_seed_pairs, total_seed_pairs);
+        }
+    };
 
     for (int held_index = 0; held_index < held_seeds.size(); held_index++) {
         FRLGContiguousSeedEntry held_entry = held_seeds[held_index];
 
         for (int pickup_index = 0; pickup_index < pickup_seeds.size(); pickup_index++) {
             FRLGContiguousSeedEntry pickup_entry = pickup_seeds[pickup_index];
+            const std::string resolved_held_settings = held_entry.settings.empty() ? held_settings : held_entry.settings;
+            const std::string resolved_pickup_settings = pickup_entry.settings.empty() ? pickup_settings : pickup_entry.settings;
 
             EggGenerator3 generator(
                 held_initial_advances,
@@ -195,13 +209,16 @@ void check_seeds_frlg_egg(
 
             auto states = generator.generate(held_entry.initialSeed, pickup_entry.initialSeed);
             for (const auto& state : states) {
+                if (target_pid != -1 && state.getPID() != static_cast<u32>(target_pid)) {
+                    continue;
+                }
                 batch.push_back(ExtendedEggGeneratorState(
                     held_entry.initialSeed,
                     held_entry.seedTime,
-                    held_settings,
+                    resolved_held_settings,
                     pickup_entry.initialSeed,
                     pickup_entry.seedTime,
-                    pickup_settings,
+                    resolved_pickup_settings,
                     state));
                 result_count++;
 
@@ -210,13 +227,18 @@ void check_seeds_frlg_egg(
                 }
 
                 if (max_results > 0 && result_count >= max_results) {
+                    checked_seed_pairs++;
+                    report_progress(true);
                     flush_batch(batch, result_callback);
                     return;
                 }
             }
+            checked_seed_pairs++;
+            report_progress();
         }
     }
 
+    report_progress(true);
     flush_batch(batch, result_callback);
 }
 

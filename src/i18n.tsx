@@ -176,6 +176,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             calibration: "Calibration",
             bingo: "Bingo",
             egg: "Egg",
+            eggSearch: "Egg Searcher",
+            eggCalibration: "Egg Calibration",
         },
         language: {
             chinese: "中文",
@@ -245,13 +247,20 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             heldOffset: "Egg Generation Offset",
             pickupOffset: "Egg Pickup Offset",
             eggSettings: "Egg Settings",
+            eggGeneration: "Egg Generation",
+            eggPickup: "Egg Pickup",
             eggMethod: "Egg Method",
             eggSpecies: "Egg Species",
+            childInfo: "Child Info",
+            seedPairCount: "Seed Pair Count",
+            usePidFilter: "Filter by PID",
             parentA: "Parent A",
             parentB: "Parent B",
             compatibility: "Compatibility",
             parentIvs: "Parent IVs",
             parentGender: "Parent Gender",
+            ivPreset: "IV Preset",
+            bingoTvFluctuationMode: "TV Fluctuation Mode",
             showInheritance: "Show Inheritance",
         },
         options: {
@@ -315,6 +324,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             perfect4v: "4V",
             perfect5v: "5V",
             perfect6v: "6V",
+            ivPreset6v: "6V",
+            ivPreset0a: "0A",
+            ivPreset0s: "0S",
+            ivPreset0a0s: "0A0S",
             shinyLocked: "Shiny Locked",
             lockBreak: "Lock Break",
             start: "Start",
@@ -362,6 +375,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             minReachableAdvances: "Min Reachable Advances",
             openInInitialSeed: "Open In Initial Seed",
             openInCalibration: "Open In Calibration",
+            openInEggCalibration: "Open In Egg Calibration",
             matchingTargets: "Matching Targets",
             exampleSeed: "Example Seed",
             examplePid: "Example PID",
@@ -489,6 +503,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             noKnownSeeds: "No known seeds for this game & settings",
             incompatibleEggParents:
                 "Gender of selected parents are not compatible for breeding.",
+            noEggSeeds: "No egg seeds found for the selected game.",
             noHeldEggSeeds:
                 "No egg generation seeds found for the selected game and settings.",
             noPickupEggSeeds:
@@ -496,6 +511,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             eggResultsCapHit:
                 "Result cap reached. Narrow the filters or raise max results.",
             noEggResults: "No egg results found for the selected filters.",
+            eggSearchProgress:
+                "Progress: {percent}% ({checked}/{total} seed pairs, filter {current}/{filters})",
             requiredForIvCalculation: "Required for IV calculation",
             ivCalculationDisabled:
                 "IV calculation disabled. Searching all Natures.",
@@ -615,6 +632,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             calibration: "\u6821\u51c6",
             bingo: "\u5bbe\u679c",
             egg: "\u5b75\u5316",
+            eggSearch: "\u5b75\u86cb\u641c\u7d22\u5668",
+            eggCalibration: "\u5b75\u86cb\u6821\u51c6",
         },
         language: {
             chinese: "\u4e2d\u6587",
@@ -684,13 +703,20 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             heldOffset: "\u86cb\u751f\u6210\u504f\u79fb",
             pickupOffset: "\u86cb\u9886\u53d6\u504f\u79fb",
             eggSettings: "\u86cb\u8bbe\u7f6e",
+            eggGeneration: "\u86cb\u751f\u6210",
+            eggPickup: "\u86cb\u9886\u53d6",
             eggMethod: "\u86cb\u751f\u6210\u65b9\u6cd5",
             eggSpecies: "\u86cb\u79cd\u7c7b",
+            childInfo: "\u5b50\u4ee3\u4fe1\u606f",
+            seedPairCount: "Seed \u7ec4\u5408\u6570",
+            usePidFilter: "\u6309 PID \u7b5b\u9009",
             parentA: "\u4eb2\u4ee3 A",
             parentB: "\u4eb2\u4ee3 B",
             compatibility: "\u76f8\u6027",
             parentIvs: "\u4eb2\u4ee3 IV",
             parentGender: "\u4eb2\u4ee3\u6027\u522b",
+            ivPreset: "\u4e2a\u4f53\u9884\u8bbe",
+            bingoTvFluctuationMode: "TV\u6ce2\u52a8\u6a21\u5f0f",
             showInheritance: "\u663e\u793a\u9057\u4f20",
         },
         options: {
@@ -759,6 +785,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             perfect4v: "4V",
             perfect5v: "5V",
             perfect6v: "6V",
+            ivPreset6v: "6V",
+            ivPreset0a: "0A",
+            ivPreset0s: "0S",
+            ivPreset0a0s: "0A0S",
             shinyLocked: "\u5f02\u8272\u9501\u5b9a",
             lockBreak: "\u7834\u9501",
             start: "\u5f00\u59cb",
@@ -807,6 +837,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             minReachableAdvances: "\u6700\u5c0f\u53ef\u8fbe\u6d88\u8017\u5e27",
             openInInitialSeed: "\u5728\u521d\u59cb Seed \u4e2d\u6253\u5f00",
             openInCalibration: "\u5728\u6821\u51c6\u4e2d\u6253\u5f00",
+            openInEggCalibration: "\u5728\u5b75\u86cb\u6821\u51c6\u4e2d\u6253\u5f00",
             matchingTargets: "\u5339\u914d\u76ee\u6807\u6570",
             exampleSeed: "\u793a\u4f8b Seed",
             examplePid: "\u793a\u4f8b PID",
@@ -938,6 +969,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5f53\u524d\u6e38\u620f\u548c\u8bbe\u7f6e\u4e0b\u6ca1\u6709\u5df2\u77e5 Seed",
             incompatibleEggParents:
                 "\u6240\u9009\u4eb2\u4ee3\u6027\u522b\u7ec4\u5408\u4e0d\u80fd\u751f\u86cb\u3002",
+            noEggSeeds:
+                "\u5f53\u524d\u6e38\u620f\u4e0b\u6ca1\u6709\u86cb Seed\u3002",
             noHeldEggSeeds:
                 "\u5f53\u524d\u6e38\u620f\u548c\u8bbe\u7f6e\u4e0b\u6ca1\u6709\u86cb\u751f\u6210 Seed\u3002",
             noPickupEggSeeds:
@@ -946,6 +979,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5df2\u8fbe\u5230\u7ed3\u679c\u4e0a\u9650\uff0c\u8bf7\u6536\u7a84\u7b5b\u9009\u6216\u63d0\u9ad8\u6700\u5927\u7ed3\u679c\u6570\u3002",
             noEggResults:
                 "\u6240\u9009\u7b5b\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5b75\u5316\u7ed3\u679c\u3002",
+            eggSearchProgress:
+                "\u8fdb\u5ea6\uff1a{percent}%\uff08Seed \u7ec4\u5408 {checked}/{total}\uff0c\u7b5b\u9009 {current}/{filters}\uff09",
             requiredForIvCalculation:
                 "\u8fdb\u884c IV \u8ba1\u7b97\u65f6\u5fc5\u586b",
             ivCalculationDisabled:
