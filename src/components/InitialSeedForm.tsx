@@ -245,7 +245,7 @@ export default function TenLinesForm({
                     </MenuItem>
                 ))}
             </TextField>
-            {isFRLG && (
+            {isFRLG && !isSwitch && (
                 <TeachyTVEntry
                     isTeachyTVMode={isTeachyTVMode}
                     teachyTVRegularOut={teachyTVRegularOut}
