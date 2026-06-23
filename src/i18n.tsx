@@ -19,6 +19,11 @@ import rs_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/rs_zh
 import species_zh_txt from "./wasm/lib/PokeFinder/Source/Core/Resources/i18n/zh/species_zh.txt?raw";
 import useLocalStorage from "./hooks/useLocalStorage";
 import {
+    POKE_FINDER_ZH_ABILITY_OVERRIDES_BY_ID,
+    POKE_FINDER_ZH_FRLG_LOCATION_OVERRIDES,
+    POKE_FINDER_ZH_SPECIES_OVERRIDES,
+} from "./pokeFinderZhOverrides";
+import {
     COMBINED_WILD_METHOD,
     Game,
     STATIC_1,
@@ -70,6 +75,36 @@ const parseMap = (text: string) =>
         })
     );
 
+const applyListOverrides = (
+    values: string[],
+    overrides: Record<number, string>
+) => {
+    const result = [...values];
+    for (const [index, value] of Object.entries(overrides)) {
+        result[Number(index)] = value;
+    }
+    return result;
+};
+
+const applyOneBasedListOverrides = (
+    values: string[],
+    overrides: Record<number, string>
+) => {
+    const result = [...values];
+    for (const [id, value] of Object.entries(overrides)) {
+        result[Number(id) - 1] = value;
+    }
+    return result;
+};
+
+const applyMapOverrides = (
+    values: Record<string, string>,
+    overrides: Record<number, string>
+) => ({
+    ...values,
+    ...overrides,
+});
+
 export const EN_NATURES = parseList(natures_en_txt);
 export const JA_NATURES = parseList(natures_ja_txt);
 export const ZH_NATURES_RAW = parseList(natures_zh_txt);
@@ -77,6 +112,18 @@ export const ZH_NATURES = ZH_NATURES_RAW.map((nature, index) => {
     const english = EN_NATURES[index];
     return english ? `${nature} (${english})` : nature;
 });
+const ZH_ABILITIES = applyOneBasedListOverrides(
+    parseList(abilities_zh_txt),
+    POKE_FINDER_ZH_ABILITY_OVERRIDES_BY_ID
+);
+const ZH_SPECIES = applyListOverrides(
+    ["\u86cb", ...parseList(species_zh_txt)],
+    POKE_FINDER_ZH_SPECIES_OVERRIDES
+);
+const ZH_FRLG_LOCATIONS = applyMapOverrides(
+    parseMap(frlg_zh_txt),
+    POKE_FINDER_ZH_FRLG_LOCATION_OVERRIDES
+);
 
 const RESOURCES: Record<Locale, ResourceBundle> = {
     en: {
@@ -133,8 +180,8 @@ const RESOURCES: Record<Locale, ResourceBundle> = {
         genders: ["\u2642", "\u2640", "-"],
         shininess: ["\u5426", "\u661f\u95ea", "\u65b9\u95ea"],
         natures: ZH_NATURES,
-        abilities: parseList(abilities_zh_txt),
-        species: ["\u86cb", ...parseList(species_zh_txt)],
+        abilities: ZH_ABILITIES,
+        species: ZH_SPECIES,
         forms: Object.fromEntries(
             parseList(forms_zh_txt).map((line) => {
                 const [species, form, name] = line.split(",");
@@ -142,7 +189,7 @@ const RESOURCES: Record<Locale, ResourceBundle> = {
             })
         ),
         types: parseList(powers_zh_txt),
-        frlgLocations: parseMap(frlg_zh_txt),
+        frlgLocations: ZH_FRLG_LOCATIONS,
         rsLocations: parseMap(rs_zh_txt),
         eLocations: parseMap(e_zh_txt),
         games: {
