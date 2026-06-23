@@ -10,18 +10,11 @@ import {
 } from "@mui/material";
 import { getLocation, getName, useI18n } from "../i18n";
 import fetchTenLines, { Game } from "../tenLines";
-
-function normalizeWildLocation(locations: number[], location: number) {
-    if (locations.includes(location)) {
-        return location;
-    }
-
-    return location >= 0 && location < locations.length
-        ? locations[location]
-        : locations.length > 0
-          ? locations[0]
-          : 0;
-}
+import {
+    getWildLocationId,
+    getWildLocationOptions,
+    normalizeWildLocationIndex,
+} from "./wildEncounterLocation";
 
 function WildEncounterSelector({
     wildCategory,
@@ -61,7 +54,7 @@ function WildEncounterSelector({
             setWildLocations(locations);
             onChange(
                 wildCategory,
-                normalizeWildLocation(locations, wildLocation),
+                normalizeWildLocationIndex(locations, wildLocation),
                 wildPokemon,
                 wildLead,
                 shouldFilterPokemon
@@ -77,7 +70,7 @@ function WildEncounterSelector({
                 return;
             }
 
-            const normalizedLocation = normalizeWildLocation(
+            const normalizedLocation = normalizeWildLocationIndex(
                 wildLocations,
                 wildLocation
             );
@@ -147,7 +140,7 @@ function WildEncounterSelector({
                 <MenuItem value="8">{t("options.superRod")}</MenuItem>
             </TextField>
             <Autocomplete
-                options={wildLocations}
+                options={getWildLocationOptions(wildLocations)}
                 onChange={(_event, newValue) => {
                     onChange(
                         wildCategory,
@@ -158,12 +151,20 @@ function WildEncounterSelector({
                     );
                 }}
                 getOptionLabel={(option) =>
-                    getLocation(resources, game, option) || ""
+                    getLocation(
+                        resources,
+                        game,
+                        getWildLocationId(wildLocations, option)
+                    ) || ""
                 }
                 renderInput={(params) => (
                     <TextField {...params} label={t("labels.location")} margin="normal" />
                 )}
-                value={wildLocations.includes(wildLocation) ? wildLocation : undefined}
+                value={
+                    wildLocations.length > 0
+                        ? normalizeWildLocationIndex(wildLocations, wildLocation)
+                        : undefined
+                }
                 isOptionEqualToValue={(option, value) => option === value}
                 disablePortal
                 disableClearable

@@ -23,6 +23,10 @@ inline EncounterArea3 get_encounter_area(
 {
     EncounterSettings3 settings;
     auto encounter_areas = Encounters3::getEncounters(encounter_category, settings, game);
+    if (location < encounter_areas.size()) {
+        return encounter_areas[location];
+    }
+
     auto area = std::find_if(
         encounter_areas.begin(),
         encounter_areas.end(),
@@ -33,10 +37,6 @@ inline EncounterArea3 get_encounter_area(
 
     if (area != encounter_areas.end()) {
         return *area;
-    }
-
-    if (location < encounter_areas.size()) {
-        return encounter_areas[location];
     }
 
     return encounter_areas.front();
