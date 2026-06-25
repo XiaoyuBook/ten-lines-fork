@@ -722,15 +722,15 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             teachyTvAdvances: "\u6559\u5b66\u7535\u89c6\u6d88\u8017\u5e27",
             requiredOverworldFrames: "\u6240\u9700\u5927\u5730\u56fe\u5e27\u6570",
             teachyTvMode: "\u6559\u5b66\u7535\u89c6\u6a21\u5f0f",
-            trainerId: "Trainer ID",
-            secretId: "Secret ID",
+            trainerId: "\u8bad\u7ec3\u5bb6ID No.",
+            secretId: "\u91ccID No.",
             method: "\u65b9\u6cd5",
             shininess: "\u5f02\u8272",
             nature: "\u6027\u683c",
             gender: "\u6027\u522b",
             hiddenPower: "\u89c9\u9192\u529b\u91cf",
             ability: "\u7279\u6027",
-            perfectIvCount: "\u6ee1\u80fd\u529b\u6570\u91cf",
+            perfectIvCount: "\u6ee1\u4e2a\u4f53\u503c\u6570\u91cf",
             category: "\u5206\u7c7b",
             pokemon: "\u5b9d\u53ef\u68a6",
             location: "\u5730\u70b9",
@@ -740,7 +740,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             maxResults: "\u6700\u5927\u7ed3\u679c\u6570",
             tidFilter: "TID \u7b5b\u9009",
             sidFilter: "SID \u7b5b\u9009",
-            ivCalculator: "IV \u8ba1\u7b97\u5668",
+            ivCalculator: "\u4e2a\u4f53\u503c\u8ba1\u7b97\u5668",
             minimumAdvancesOutsideTeachyTv:
                 "\u6559\u5b66\u7535\u89c6\u5916\u7684\u6700\u5c11\u6d88\u8017\u5e27",
             heldSeedSettings: "\u86cb\u751f\u6210 Seed \u8bbe\u7f6e",
@@ -760,7 +760,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             parentA: "\u4eb2\u4ee3 A",
             parentB: "\u4eb2\u4ee3 B",
             compatibility: "\u76f8\u6027",
-            parentIvs: "\u4eb2\u4ee3 IV",
+            parentIvs: "\u4eb2\u4ee3\u4e2a\u4f53\u503c",
             parentGender: "\u4eb2\u4ee3\u6027\u522b",
             ivPreset: "\u4e2a\u4f53\u9884\u8bbe",
             bingoTvFluctuationMode: "TV\u6ce2\u52a8\u6a21\u5f0f",
@@ -801,26 +801,26 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             gbp: "Game Boy Player",
             nds: "Nintendo DS",
             firm3ds: "Nintendo 3DS\uff08open_agb_firm\uff09",
-            star: "\u661f\u95ea",
-            square: "\u65b9\u95ea",
-            starSquare: "\u661f\u95ea/\u65b9\u95ea",
-            starters: "\u5fa1\u4e09\u5bb6",
-            fossils: "\u5316\u77f3",
-            gifts: "\u8d60\u9001",
-            gameCorner: "\u6e38\u620f\u89d2",
+            star: "\u661f\u661f\u7279\u6548",
+            square: "\u65b9\u5757\u7279\u6548",
+            starSquare: "\u661f\u661f\uff0f\u65b9\u5757\u7279\u6548",
+            starters: "\u6700\u521d\u7684\u4f19\u4f34",
+            fossils: "\u5316\u77f3\u590d\u539f\u5b9d\u53ef\u68a6",
+            gifts: "\u793c\u7269\u5b9d\u53ef\u68a6",
+            gameCorner: "\u6e38\u620f\u57ce",
             stationary: "\u5b9a\u70b9",
-            legends: "\u4f20\u8bf4",
-            events: "\u6d3b\u52a8",
-            roamers: "\u6e38\u8d70",
-            blisyEvents: "Blisy \u7535\u5b50\u5361\u6d3b\u52a8",
+            legends: "\u4f20\u8bf4\u7684\u5b9d\u53ef\u68a6",
+            events: "\u6d3b\u52a8\u8d60\u9001",
+            roamers: "\u6e38\u8d70\u5b9d\u53ef\u68a6",
+            blisyEvents: "Blisy e-Reader \u6d3b\u52a8\u8d60\u9001",
             grass: "\u8349\u4e1b",
             rockSmash: "\u788e\u5ca9",
             surfing: "\u51b2\u6d6a",
             oldRod: "\u7834\u65e7\u9493\u7aff",
             goodRod: "\u597d\u9493\u7aff",
-            superRod: "\u8d85\u7ea7\u9493\u7aff",
-            femaleCuteCharm: "\u8ff7\u4eba\u4e4b\u8eaf\uff08\u6bcd\uff09",
-            maleCuteCharm: "\u8ff7\u4eba\u4e4b\u8eaf\uff08\u516c\uff09",
+            superRod: "\u5389\u5bb3\u9493\u7aff",
+            femaleCuteCharm: "\u8ff7\u4eba\u4e4b\u8eaf\uff08\u96cc\u6027\uff09",
+            maleCuteCharm: "\u8ff7\u4eba\u4e4b\u8eaf\uff08\u96c4\u6027\uff09",
             magnetPull: "\u78c1\u529b",
             static: "\u9759\u7535",
             hustlePressureVitalSpirit:
@@ -856,8 +856,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             rsfrlgBredSplit: "RS/FRLG \u5b75\u5316 Split",
             rsfrlgBredAlternate: "RS/FRLG \u5b75\u5316 Alternate",
             rsfrlgBredMixed: "RS/FRLG \u5b75\u5316 Mixed",
-            male: "\u516c",
-            female: "\u6bcd",
+            male: "\u96c4\u6027",
+            female: "\u96cc\u6027",
             genderless: "\u65e0\u6027\u522b",
             ditto: "\u767e\u53d8\u602a",
         },
@@ -876,8 +876,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             nature: "\u6027\u683c",
             stats: "\u80fd\u529b\u503c",
             ability: "\u7279\u6027",
-            ivs: "IV",
-            hidden: "\u89c9\u9192\u5c5e\u6027",
+            ivs: "\u4e2a\u4f53\u503c",
+            hidden: "\u89c9\u9192\u529b\u91cf\u5c5e\u6027",
             power: "\u5a01\u529b",
             gender: "\u6027\u522b",
             rowsPerPage: "\u6bcf\u9875\u884c\u6570",
@@ -944,7 +944,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             resultsTitle: "\u6821\u51c6\u7ed3\u679c",
             calculator: "\u8ba1\u7b97\u5668",
             wildLevelFilter:
-                "\u6309 IV \u7b2c\u4e00\u884c\u7684\u7b49\u7ea7\u7b5b\u9009\u91ce\u751f\u7ed3\u679c",
+                "\u6309\u4e2a\u4f53\u503c\u7b2c\u4e00\u884c\u7684\u7b49\u7ea7\u7b5b\u9009\u91ce\u751f\u7ed3\u679c",
             historyWildDetails: "\u5b9d\u53ef\u68a6 / \u7b49\u7ea7",
             historyWildDetailsToggle:
                 "\u5728\u5386\u53f2\u8868\u4e2d\u663e\u793a\u5b9d\u53ef\u68a6\u79cd\u7c7b\u548c\u7b49\u7ea7",
@@ -953,7 +953,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             wildLevelFilterStaticHint:
                 "\u8be5\u7b5b\u9009\u53ea\u6709\u5728\u6821\u51c6\u65b9\u6cd5\u4e3a\u91ce\u751f\u65f6\u624d\u53ef\u7528\u3002",
             wildLevelFilterHint:
-                "\u5f00\u542f\u540e\uff0c\u53ea\u663e\u793a\u7b49\u4e8e IV \u8f93\u5165\u7b2c\u4e00\u884c\u7b49\u7ea7\u7684\u91ce\u751f\u7ed3\u679c\u3002\u5f53\u524d\u7b2c\u4e00\u884c\u7b49\u7ea7\uff1a{level}",
+                "\u5f00\u542f\u540e\uff0c\u53ea\u663e\u793a\u7b49\u4e8e\u4e2a\u4f53\u503c\u8f93\u5165\u7b2c\u4e00\u884c\u7b49\u7ea7\u7684\u91ce\u751f\u7ed3\u679c\u3002\u5f53\u524d\u7b2c\u4e00\u884c\u7b49\u7ea7\uff1a{level}",
         },
         dynamicTool: {
             title: "\u706b\u7ea2\u53f6\u7eff\u52a8\u6001\u4fee\u6b63\u5de5\u5177",
@@ -1029,13 +1029,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             eggSearchProgress:
                 "\u8fdb\u5ea6\uff1a{percent}%\uff08Seed \u7ec4\u5408 {checked}/{total}\uff0c\u7b5b\u9009 {current}/{filters}\uff09",
             requiredForIvCalculation:
-                "\u8fdb\u884c IV \u8ba1\u7b97\u65f6\u5fc5\u586b",
+                "\u8fdb\u884c\u4e2a\u4f53\u503c\u8ba1\u7b97\u65f6\u5fc5\u586b",
             ivCalculationDisabled:
-                "IV \u8ba1\u7b97\u5df2\u5173\u95ed\uff0c\u6b63\u5728\u641c\u7d22\u5168\u90e8\u6027\u683c\u3002",
+                "\u4e2a\u4f53\u503c\u8ba1\u7b97\u5df2\u5173\u95ed\uff0c\u6b63\u5728\u641c\u7d22\u5168\u90e8\u6027\u683c\u3002",
             filterByReachableAdvances:
                 "\u6309\u53ef\u8fbe\u6d88\u8017\u5e27\u7b5b\u9009",
             usePerfectIvFilter:
-                "\u6ee1\u80fd\u529b\u7b5b\u9009",
+                "\u6ee1\u4e2a\u4f53\u503c\u7b5b\u9009",
             idComboIntro:
                 "\u641c\u7d22\u80fd\u8ba9\u5339\u914d\u9759\u6001\u76ee\u6807\u53d8\u95ea\u7684 TID/SID \u7ec4\u5408\u3002",
             noMatchingStaticTargets:
@@ -1077,7 +1077,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         imageImport: {
             title: "\u4ece\u622a\u56fe\u5bfc\u5165",
             description:
-                "\u7c98\u8d34\u6216\u4e0a\u4f20 Pokemon Skills \u754c\u9762\u622a\u56fe\u3002\u5de5\u5177\u4f1a\u8bfb\u53d6\u53f3\u4e0a\u89d2\u7684 6 \u4e2a\u80fd\u529b\u503c\uff0c\u5e76\u53ef\u4ee5\u5c06\u5b83\u4eec\u8ffd\u52a0\u5230 IV \u8f93\u5165\u7684\u65b0\u4e00\u884c\u3002",
+                "\u7c98\u8d34\u6216\u4e0a\u4f20 Pokemon Skills \u754c\u9762\u622a\u56fe\u3002\u5de5\u5177\u4f1a\u8bfb\u53d6\u53f3\u4e0a\u89d2\u7684 6 \u4e2a\u80fd\u529b\u503c\uff0c\u5e76\u53ef\u4ee5\u5c06\u5b83\u4eec\u8ffd\u52a0\u5230\u4e2a\u4f53\u503c\u8f93\u5165\u7684\u65b0\u4e00\u884c\u3002",
             queueHint:
                 "\u5f53\u524d\u5df2\u6709 {count} \u884c\uff0c\u5bfc\u5165\u540e\u4f1a\u8ffd\u52a0\u4e3a\u7b2c {nextCount} \u884c\u3002",
             imageLoaded:
@@ -1105,7 +1105,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u8ffd\u52a0\u4e4b\u524d\uff0c\u8bf7\u786e\u8ba4 6 \u4e2a\u80fd\u529b\u503c\u90fd\u5df2\u586b\u5199\u3002",
             appendAction: "\u8ffd\u52a0\u4e3a\u65b0\u4e00\u884c",
             appended:
-                "\u5df2\u8ffd\u52a0\u65b0\u7684 IV \u8f93\u5165\u884c\uff0c\u5f53\u524d\u603b\u884c\u6570\uff1a{nextCount}\u3002",
+                "\u5df2\u8ffd\u52a0\u65b0\u7684\u4e2a\u4f53\u503c\u8f93\u5165\u884c\uff0c\u5f53\u524d\u603b\u884c\u6570\uff1a{nextCount}\u3002",
             appendFailed:
                 "\u65e0\u6cd5\u8ffd\u52a0\u8fd9\u6761\u622a\u56fe\u6570\u636e\uff0c\u8bf7\u68c0\u67e5\u6570\u503c\u540e\u91cd\u8bd5\u3002",
             clear: "\u6e05\u7a7a",
@@ -1140,7 +1140,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u503c\u5fc5\u987b\u5728 {min} \u5230 {max} \u4e4b\u95f4",
             lineMissing: "\u7b2c {line} \u884c\u7f3a\u5c11 {field}",
             lineInvalid: "\u7b2c {line} \u884c\u7684 {field} \u65e0\u6548",
-            noPossibleIv: "{stat} \u4e0d\u5b58\u5728\u53ef\u884c IV",
+            noPossibleIv: "{stat} \u4e0d\u5b58\u5728\u53ef\u884c\u4e2a\u4f53\u503c",
         },
         stats: {
             hp: "HP",

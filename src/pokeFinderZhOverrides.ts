@@ -15,10 +15,6 @@ export const POKE_FINDER_ZH_ABILITY_OVERRIDES_BY_ID: Record<number, string> = {
     130: "咒术之躯",
 };
 
-export const POKE_FINDER_ZH_ITEM_OVERRIDES_BY_ID: Record<number, string> = {
-    649: "雪丸",
-};
-
 export const POKE_FINDER_ZH_FRLG_LOCATION_OVERRIDES: Record<number, string> = {
     74: "第３岛码头",
     77: "第５岛空地",
