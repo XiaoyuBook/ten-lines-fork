@@ -96,6 +96,16 @@ try {
     assert.equal(translate("options.male"), "雄性");
     assert.equal(translate("options.female"), "雌性");
     assert.equal(translate("options.genderless"), "无性别");
+
+    assert.equal(
+        translate("common.loadingResources"),
+        "资源加载中，首次加载可能需要一些时间…"
+    );
+    assert.equal(
+        translate("common.resourceLoadFailed"),
+        "资源加载失败，请刷新页面重试"
+    );
+    assert.equal(translate("common.noOptions"), "暂无可用选项");
 } finally {
     await server.close();
 }

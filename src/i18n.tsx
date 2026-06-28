@@ -233,6 +233,11 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         common: {
             submit: "Submit",
             searching: "Searching...",
+            loadingResources:
+                "Loading resources. The first load may take a moment...",
+            resourceLoadFailed:
+                "Failed to load resources. Refresh the page to retry.",
+            noOptions: "No options available",
             any: "Any",
             none: "None",
             filter: "Filter",
@@ -689,6 +694,11 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         common: {
             submit: "\u63d0\u4ea4",
             searching: "\u641c\u7d22\u4e2d...",
+            loadingResources:
+                "\u8d44\u6e90\u52a0\u8f7d\u4e2d\uff0c\u9996\u6b21\u52a0\u8f7d\u53ef\u80fd\u9700\u8981\u4e00\u4e9b\u65f6\u95f4\u2026",
+            resourceLoadFailed:
+                "\u8d44\u6e90\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u5237\u65b0\u9875\u9762\u91cd\u8bd5",
+            noOptions: "\u6682\u65e0\u53ef\u7528\u9009\u9879",
             any: "\u4efb\u610f",
             none: "\u65e0",
             filter: "\u7b5b\u9009",

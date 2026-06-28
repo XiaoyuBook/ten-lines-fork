@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import React from "react";
 import { MenuItem, TextField } from "@mui/material";
 import { useI18n, getName } from "../i18n";
@@ -20,29 +20,53 @@ function StaticEncounterSelector({
     const [staticTemplates, setStaticTemplates] = useState<
         EnumeratedStaticTemplate3[]
     >([]);
+    const [resourceStatus, setResourceStatus] = useState<
+        "loading" | "ready" | "error"
+    >("loading");
+    const onChangeRef = useRef(onChange);
+    const staticPokemonRef = useRef(staticPokemon);
+    onChangeRef.current = onChange;
+    staticPokemonRef.current = staticPokemon;
 
     useEffect(() => {
+        let cancelled = false;
         const fetchStaticTemplates = async () => {
-            const tenLines = await fetchTenLines();
-            const templates = (
-                await tenLines.get_static_template_info(staticCategory)
-            ).filter(
-                (template: EnumeratedStaticTemplate3) => template.version & game
-            );
-            setStaticTemplates(templates);
-            onChange(
-                staticCategory,
-                templates.some(
+            setResourceStatus("loading");
+            try {
+                const tenLines = await fetchTenLines();
+                const templates = (
+                    await tenLines.get_static_template_info(staticCategory)
+                ).filter(
                     (template: EnumeratedStaticTemplate3) =>
-                        template.index == staticPokemon
-                )
-                    ? staticPokemon
-                    : templates.length > 0
-                      ? templates[0].index
-                      : 0
-            );
+                        template.version & game
+                );
+                if (cancelled) return;
+
+                setStaticTemplates(templates);
+                setResourceStatus("ready");
+                const currentStaticPokemon = staticPokemonRef.current;
+                onChangeRef.current(
+                    staticCategory,
+                    templates.some(
+                        (template: EnumeratedStaticTemplate3) =>
+                            template.index == currentStaticPokemon
+                    )
+                        ? currentStaticPokemon
+                        : templates.length > 0
+                          ? templates[0].index
+                          : 0
+                );
+            } catch (error) {
+                if (cancelled) return;
+                console.error("Failed to load static encounter resources", error);
+                setStaticTemplates([]);
+                setResourceStatus("error");
+            }
         };
-        fetchStaticTemplates();
+        void fetchStaticTemplates();
+        return () => {
+            cancelled = true;
+        };
     }, [staticCategory, game]);
 
     const isFRLG = game & Game.FRLG;
@@ -83,7 +107,26 @@ function StaticEncounterSelector({
                 value={staticPokemon}
                 select
                 fullWidth
+                disabled={resourceStatus === "loading"}
+                helperText={
+                    resourceStatus === "loading"
+                        ? t("common.loadingResources")
+                        : resourceStatus === "error"
+                          ? t("common.resourceLoadFailed")
+                          : staticTemplates.length === 0
+                            ? t("common.noOptions")
+                            : undefined
+                }
             >
+                {staticTemplates.length === 0 && (
+                    <MenuItem value={staticPokemon} disabled>
+                        {resourceStatus === "loading"
+                            ? t("common.loadingResources")
+                            : resourceStatus === "error"
+                              ? t("common.resourceLoadFailed")
+                              : t("common.noOptions")}
+                    </MenuItem>
+                )}
                 {staticTemplates.map((template) => (
                     <MenuItem key={template.index} value={template.index}>
                         {`${getName(resources, template.species, template.form)}${

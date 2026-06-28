@@ -24,21 +24,42 @@ export const WILD_4 = STATIC_4 + 4;
 export const COMBINED_WILD_METHOD = (1 | 2 | 4) + 4;
 
 let TenLines: Remote<MainModule> | null = null;
+let TenLinesPromise: Promise<Remote<MainModule>> | null = null;
 
-const fetchTenLines: () => Promise<Remote<MainModule>> = async () => {
-    return await new Promise((resolve) => {
-        if (TenLines) {
-            resolve(TenLines);
-            return;
-        }
+const fetchTenLines: () => Promise<Remote<MainModule>> = () => {
+    if (TenLines) {
+        return Promise.resolve(TenLines);
+    }
+    if (TenLinesPromise) {
+        return TenLinesPromise;
+    }
+
+    const initialization = new Promise<Remote<MainModule>>((resolve, reject) => {
         const worker = new Worker();
         worker.addEventListener("message", (message) => {
             if (message?.data?.ready == true) {
                 TenLines = wrap(worker);
+                TenLinesPromise = null;
                 resolve(TenLines);
+            } else if (message?.data?.error) {
+                reject(new Error(message.data.error));
             }
         });
+        worker.addEventListener("error", (event) => {
+            reject(
+                event.error ??
+                    new Error(
+                        event.message || "Failed to initialize Ten Lines worker"
+                    )
+            );
+        });
+    }).catch((error) => {
+        TenLinesPromise = null;
+        throw error;
     });
+
+    TenLinesPromise = initialization;
+    return initialization;
 };
 
 export const SEED_IDENTIFIER_TO_GAME: Record<string, number> = {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import React from "react";
 import {
     Autocomplete,
@@ -46,70 +46,135 @@ function WildEncounterSelector({
     const { t, resources } = useI18n();
     const [wildLocations, setWildLocations] = useState<number[]>([]);
     const [areaSpecies, setAreaSpecies] = useState<number[]>([]);
+    const [locationStatus, setLocationStatus] = useState<
+        "loading" | "ready" | "error"
+    >("loading");
+    const [speciesStatus, setSpeciesStatus] = useState<
+        "loading" | "ready" | "error"
+    >("loading");
+    const onChangeRef = useRef(onChange);
+    const selectionRef = useRef({
+        wildLocation,
+        wildPokemon,
+        wildLead,
+        shouldFilterPokemon,
+    });
+    onChangeRef.current = onChange;
+    selectionRef.current = {
+        wildLocation,
+        wildPokemon,
+        wildLead,
+        shouldFilterPokemon,
+    };
 
     useEffect(() => {
+        let cancelled = false;
         const fetchWildLocations = async () => {
-            const tenLines = await fetchTenLines();
-            const locations = await tenLines.get_wild_locations(game, wildCategory);
-            setWildLocations(locations);
-            onChange(
-                wildCategory,
-                normalizeWildLocationIndex(locations, wildLocation),
-                wildPokemon,
-                wildLead,
-                shouldFilterPokemon
-            );
+            setLocationStatus("loading");
+            setSpeciesStatus("loading");
+            try {
+                const tenLines = await fetchTenLines();
+                const locations = await tenLines.get_wild_locations(
+                    game,
+                    wildCategory
+                );
+                if (cancelled) return;
+
+                setWildLocations(locations);
+                setLocationStatus("ready");
+                if (locations.length === 0) {
+                    setAreaSpecies([]);
+                    setSpeciesStatus("ready");
+                }
+                const current = selectionRef.current;
+                onChangeRef.current(
+                    wildCategory,
+                    normalizeWildLocationIndex(
+                        locations,
+                        current.wildLocation
+                    ),
+                    current.wildPokemon,
+                    current.wildLead,
+                    current.shouldFilterPokemon
+                );
+            } catch (error) {
+                if (cancelled) return;
+                console.error("Failed to load wild encounter resources", error);
+                setWildLocations([]);
+                setAreaSpecies([]);
+                setLocationStatus("error");
+                setSpeciesStatus("error");
+            }
         };
-        fetchWildLocations();
-    }, [game, wildCategory, wildLead, wildLocation, wildPokemon, shouldFilterPokemon, onChange]);
+        void fetchWildLocations();
+        return () => {
+            cancelled = true;
+        };
+    }, [game, wildCategory]);
 
     useEffect(() => {
+        let cancelled = false;
         const fetchAreaSpecies = async () => {
             if (wildLocations.length === 0) {
-                setAreaSpecies([]);
                 return;
             }
 
+            const current = selectionRef.current;
             const normalizedLocation = normalizeWildLocationIndex(
                 wildLocations,
-                wildLocation
+                current.wildLocation
             );
-            if (normalizedLocation !== wildLocation) {
-                onChange(
+            if (normalizedLocation !== current.wildLocation) {
+                onChangeRef.current(
                     wildCategory,
                     normalizedLocation,
-                    wildPokemon,
-                    wildLead,
-                    shouldFilterPokemon
+                    current.wildPokemon,
+                    current.wildLead,
+                    current.shouldFilterPokemon
                 );
                 return;
             }
 
-            const tenLines = await fetchTenLines();
-            const species = await tenLines.get_area_species(
-                game,
-                wildCategory,
-                normalizedLocation
-            );
-            setAreaSpecies(species);
-            onChange(
-                wildCategory,
-                normalizedLocation,
-                allowAnyPokemon
-                    ? wildPokemon === -1 || species.includes(wildPokemon)
-                        ? wildPokemon
-                        : -1
-                    : species.includes(wildPokemon)
-                      ? wildPokemon
-                      : species.length > 0
-                        ? species[0]
-                        : 0,
-                wildLead,
-                shouldFilterPokemon
-            );
+            setSpeciesStatus("loading");
+            try {
+                const tenLines = await fetchTenLines();
+                const species = await tenLines.get_area_species(
+                    game,
+                    wildCategory,
+                    normalizedLocation
+                );
+                if (cancelled) return;
+
+                setAreaSpecies(species);
+                setSpeciesStatus("ready");
+                onChangeRef.current(
+                    wildCategory,
+                    normalizedLocation,
+                    allowAnyPokemon
+                        ? current.wildPokemon === -1 ||
+                          species.includes(current.wildPokemon)
+                            ? current.wildPokemon
+                            : -1
+                        : species.includes(current.wildPokemon)
+                          ? current.wildPokemon
+                          : species.length > 0
+                            ? species[0]
+                            : 0,
+                    current.wildLead,
+                    current.shouldFilterPokemon
+                );
+            } catch (error) {
+                if (cancelled) return;
+                console.error("Failed to load wild area species", error);
+                setAreaSpecies([]);
+                setSpeciesStatus("error");
+            }
         };
-        fetchAreaSpecies();
-    }, [allowAnyPokemon, game, wildCategory, wildLead, wildLocation, wildPokemon, shouldFilterPokemon, onChange, wildLocations]);
+        void fetchAreaSpecies();
+        return () => {
+            cancelled = true;
+        };
+    }, [allowAnyPokemon, game, wildCategory, wildLocation, wildLocations]);
 
     const isEmerald = (game & Game.Emerald) == Game.Emerald;
 
@@ -158,7 +223,20 @@ function WildEncounterSelector({
                     ) || ""
                 }
                 renderInput={(params) => (
-                    <TextField {...params} label={t("labels.location")} margin="normal" />
+                    <TextField
+                        {...params}
+                        label={t("labels.location")}
+                        margin="normal"
+                        helperText={
+                            locationStatus === "loading"
+                                ? t("common.loadingResources")
+                                : locationStatus === "error"
+                                  ? t("common.resourceLoadFailed")
+                                  : wildLocations.length === 0
+                                    ? t("common.noOptions")
+                                    : undefined
+                        }
+                    />
                 )}
                 value={
                     wildLocations.length > 0
@@ -170,6 +248,13 @@ function WildEncounterSelector({
                 disableClearable
                 selectOnFocus
                 fullWidth
+                loading={locationStatus === "loading"}
+                loadingText={t("common.loadingResources")}
+                noOptionsText={
+                    locationStatus === "error"
+                        ? t("common.resourceLoadFailed")
+                        : t("common.noOptions")
+                }
             />
             <Box sx={{ display: "flex", alignItems: "center" }}>
                 <TextField
@@ -188,7 +273,26 @@ function WildEncounterSelector({
                     value={wildPokemon}
                     select
                     fullWidth
+                    disabled={speciesStatus === "loading"}
+                    helperText={
+                        speciesStatus === "loading"
+                            ? t("common.loadingResources")
+                            : speciesStatus === "error"
+                              ? t("common.resourceLoadFailed")
+                              : areaSpecies.length === 0
+                                ? t("common.noOptions")
+                                : undefined
+                    }
                 >
+                    {areaSpecies.length === 0 && !allowAnyPokemon && (
+                        <MenuItem value={wildPokemon} disabled>
+                            {speciesStatus === "loading"
+                                ? t("common.loadingResources")
+                                : speciesStatus === "error"
+                                  ? t("common.resourceLoadFailed")
+                                  : t("common.noOptions")}
+                        </MenuItem>
+                    )}
                     {allowAnyPokemon && (
                         <MenuItem value="-1">{t("common.any")}</MenuItem>
                     )}
