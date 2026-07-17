@@ -448,6 +448,29 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             pickupSettings: "Egg Pickup Settings",
             pickupAdvances: "Egg Pickup Advances",
             inheritance: "Inheritance",
+            heldItem: "Held Item (Experimental)",
+            heldRng: "Held-item RNG",
+        },
+        heldItems: {
+            enableSweetScentProfile:
+                "Use FireRed English Sweet Scent held-item profile (experimental)",
+            sourceData: "FRLG source item rates:",
+            profileAvailable:
+                "FireRed field-tested profile: {profiles}.",
+            profileUnavailable:
+                "No field-tested FireRed offset exists for this location and Method. Exact prediction and filtering stay disabled.",
+            interferenceWarning:
+                "NPC or asynchronous RNG can move the held-item call to the +1 candidate. The result table shows both paths.",
+            samples: "{count} samples",
+            baseline: "Baseline",
+            alternate: "Possible +1",
+            verifiedProfile: "Field-tested baseline",
+            variableProfile: "Observed dual-path profile",
+            filter: "Held-item filter (experimental)",
+            filterAny: "Any result",
+            filterAnyItem: "Any held item",
+            filterUnavailable:
+                "Exact filtering requires a stable field-tested baseline; variable dual-path profiles stay display-only.",
         },
         compare: {
             title: "Calibration Compare",
@@ -915,6 +938,28 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             pickupSettings: "\u86cb\u9886\u53d6\u8bbe\u7f6e",
             pickupAdvances: "\u86cb\u9886\u53d6\u6d88\u8017\u5e27",
             inheritance: "\u9057\u4f20",
+            heldItem: "携带道具（实验）",
+            heldRng: "携带物 RNG",
+        },
+        heldItems: {
+            enableSweetScentProfile:
+                "使用火红英文版甜甜香气携带物档案（实验）",
+            sourceData: "FRLG 源码携带率：",
+            profileAvailable: "火红实机验证档案：{profiles}。",
+            profileUnavailable:
+                "该地点与生成方式尚无火红实机 Offset；精确预测和筛选保持禁用。",
+            interferenceWarning:
+                "NPC 或异步 RNG 可能让携带物判定移动到 +1 候选；结果表会同时显示两条轨迹。",
+            samples: "{count} 个样本",
+            baseline: "基准轨迹",
+            alternate: "可能的 +1",
+            verifiedProfile: "实机验证基准",
+            variableProfile: "已观察到双轨迹",
+            filter: "携带物筛选（实验）",
+            filterAny: "全部结果",
+            filterAnyItem: "任意携带物",
+            filterUnavailable:
+                "只有稳定的实机基准 Offset 才启用精确筛选；双轨迹地点仅显示结果。",
         },
         compare: {
             title: "\u6821\u51c6\u5bf9\u7167",

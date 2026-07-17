@@ -12,6 +12,7 @@ dist
 dev-dist
 dist-ssr
 build
+src/wasm/build*/
 generated
 !src/wasm/src/generated/
 !src/wasm/src/generated/**

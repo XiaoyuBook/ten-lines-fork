@@ -53,6 +53,7 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - Dynamic correction tool for use alongside [Xuan Yelin](https://space.bilibili.com/29039016?spm_id_from=333.1387.fans.user_card.click)'s script, with TV / non-TV support, preserved previous-round values, and split history tables
 - Reachable-advance prefiltering in Searcher
 - Searcher perfect-IV-count filtering for `1V` to `6V`
+- Experimental FRLG wild held-item predictions in Searcher / Calibration using the field-tested English FireRed Sweet Scent profile
 - FRLG reachable-search sound filtering with an `Any` option
 - English / Chinese UI toggle
 - Chinese naming resources for Gen 3 data shown in the interface
@@ -91,6 +92,8 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 ## Searcher Notes
 
 - The Searcher nature filter supports multi-select input, with an empty selection meaning `Any`
+- Wild searches can explicitly opt into the experimental **English FireRed Sweet Scent held-item profile**. Results show source item rates, the field-tested baseline offset and roll, plus the possible asynchronous `+1` path
+- Exact held-item filtering is enabled only for locations with a stable field-tested baseline. Known dual-path locations such as Pokémon Tower 7F remain display-only
 - The perfect-IV-count filter is separate from manual IV ranges: once enabled, it enumerates every possible combination of exactly `N` perfect stats and searches across those combinations automatically
 - For FRLG reachable filtering, choosing Sound = `Any` checks both `Mono` and `Stereo` routes internally and keeps the lower reachable advance result for the same seed
 - Searcher rows can pass a selected target forward into Initial Seed / Calibration so later steps can reuse the intended species and spread context

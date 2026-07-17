@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
     Autocomplete,
@@ -36,6 +36,19 @@ import { useSearchParams } from "react-router-dom";
 import WildEncounterSelector from "./WildEncounterSelector";
 import SearcherTable from "./SearcherTable";
 import { filterNatureOptions } from "../utils/natureSearch";
+import { FrlgHeldItemNotice } from "./FrlgHeldItemDisplay";
+import {
+    FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
+    HELD_ITEM_FILTER_ANY,
+    HELD_ITEM_FILTER_ANY_ITEM,
+    getFrlgHeldItemName,
+    getFrlgHeldItemProbabilities,
+    getFrlgHeldItemSlots,
+    getFrlgHeldOffsetProfiles,
+    matchesHeldItemFilter,
+    predictFrlgHeldItem,
+    type FrlgHeldPredictionContext,
+} from "../utils/frlgHeldItems";
 
 export interface SearcherFormState {
     shininess: number;
@@ -51,6 +64,7 @@ export interface SearcherFormState {
     wildLocation: number;
     wildPokemon: number;
     wildLead: number;
+    heldItemFilter: number;
     method: number;
 }
 
@@ -172,7 +186,7 @@ export default function CalibrationForm({
     sx?: SxProps<Theme>;
     hidden?: boolean;
 }) {
-    const { t, resources } = useI18n();
+    const { locale, t, resources } = useI18n();
     const [searcherFormState, setSearcherFormState] =
         useState<SearcherFormState>({
             shininess: 255,
@@ -188,6 +202,7 @@ export default function CalibrationForm({
             wildLocation: 0,
             wildPokemon: 0,
             wildLead: 255,
+            heldItemFilter: HELD_ITEM_FILTER_ANY,
             method: 1,
         });
     const {
@@ -204,6 +219,11 @@ export default function CalibrationForm({
 
     const [rows, setRows] = useState<SearcherRowWithAdvances[]>([]);
     const [searching, setSearching] = useState(false);
+    const searchRequestIdRef = useRef(0);
+    const [useFrlgHeldProfile, setUseFrlgHeldProfile] = useState(false);
+    const [resolvedWildLocationId, setResolvedWildLocationId] = useState<
+        number | undefined
+    >();
     const [selectedStaticTargetName, setSelectedStaticTargetName] =
         useState<string>();
 
@@ -242,6 +262,62 @@ export default function CalibrationForm({
     const isStatic = searcherFormState.method <= STATIC_4;
     const isFRLG = game.startsWith("fr") || game.startsWith("lg");
     const isFRLGE = isFRLG || game.startsWith("e_");
+    const supportsFrlgHeldProfile = ["fr", "fr_eu", "fr_nx", "fr_mgba"].includes(
+        game
+    );
+    const selectedGame = SEED_IDENTIFIER_TO_GAME[game];
+    const heldPredictionContext: FrlgHeldPredictionContext | undefined =
+        useMemo(
+            () =>
+                !isStatic &&
+                useFrlgHeldProfile &&
+                supportsFrlgHeldProfile &&
+                resolvedWildLocationId !== undefined
+                    ? {
+                          profileSet:
+                              FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
+                          game: selectedGame,
+                          encounterCategory: searcherFormState.wildCategory,
+                          location: resolvedWildLocationId,
+                      }
+                    : undefined,
+            [
+                isStatic,
+                resolvedWildLocationId,
+                searcherFormState.wildCategory,
+                selectedGame,
+                supportsFrlgHeldProfile,
+                useFrlgHeldProfile,
+            ]
+        );
+    const heldProfiles = heldPredictionContext
+        ? getFrlgHeldOffsetProfiles(
+              heldPredictionContext.profileSet,
+              heldPredictionContext.game,
+              heldPredictionContext.encounterCategory,
+              heldPredictionContext.location,
+              searcherFormState.method
+          )
+        : [];
+    const canFilterHeldItems =
+        heldProfiles.length ===
+            (searcherFormState.method === COMBINED_WILD_METHOD ? 3 : 1) &&
+        heldProfiles.every((profile) => profile.status === "verified");
+    const selectedHeldSlots =
+        !isStatic && searcherFormState.wildPokemon >= 0
+            ? getFrlgHeldItemSlots(searcherFormState.wildPokemon & 0x7ff)
+            : undefined;
+    const canShowHeldItemFilter =
+        searcherFormState.wildPokemon === -1 || selectedHeldSlots !== undefined;
+    const heldFilterItemIds = useMemo(
+        () =>
+            selectedHeldSlots
+                ? getFrlgHeldItemProbabilities(selectedHeldSlots).map(
+                      ({ itemId }) => itemId
+                  )
+                : [],
+        [selectedHeldSlots]
+    );
 
     const selectedNatureSet = useMemo(
         () => new Set(searcherFormState.natures),
@@ -262,17 +338,73 @@ export default function CalibrationForm({
         searcherFormState.wildPokemon,
         selectedStaticTargetName,
     ]);
-    const visibleRows = useMemo(
-        () =>
-            searcherFormState.natures.length === 0
-                ? rows
-                : rows.filter((row) => selectedNatureSet.has(row.nature)),
-        [rows, searcherFormState.natures, selectedNatureSet]
-    );
+    const visibleRows = useMemo(() => {
+        return rows.filter((row) => {
+            if (
+                searcherFormState.natures.length > 0 &&
+                !selectedNatureSet.has(row.nature)
+            ) {
+                return false;
+            }
+            if (
+                searcherFormState.heldItemFilter === HELD_ITEM_FILTER_ANY ||
+                !("species" in row) ||
+                !heldPredictionContext
+            ) {
+                return true;
+            }
+            return matchesHeldItemFilter(
+                predictFrlgHeldItem({
+                    ...heldPredictionContext,
+                    method: row.method,
+                    species: row.species,
+                    iv2EndSeed: row.iv2EndSeed,
+                }),
+                searcherFormState.heldItemFilter
+            );
+        });
+    }, [
+        heldPredictionContext,
+        rows,
+        searcherFormState.heldItemFilter,
+        searcherFormState.natures.length,
+        selectedNatureSet,
+    ]);
     const submittedNatureFilters =
         searcherFormState.natures.length === 0
             ? [-1]
             : searcherFormState.natures;
+
+    useEffect(() => {
+        searchRequestIdRef.current += 1;
+        setRows([]);
+    }, [
+        game,
+        isStatic,
+        searcherFormState.method,
+        searcherFormState.wildCategory,
+        searcherFormState.wildLocation,
+        searcherFormState.wildPokemon,
+    ]);
+
+    useEffect(() => {
+        const filter = searcherFormState.heldItemFilter;
+        if (
+            ((!canFilterHeldItems || !canShowHeldItemFilter) &&
+                filter !== HELD_ITEM_FILTER_ANY) ||
+            (filter >= 0 && !heldFilterItemIds.includes(filter))
+        ) {
+            setSearcherFormState((current) => ({
+                ...current,
+                heldItemFilter: HELD_ITEM_FILTER_ANY,
+            }));
+        }
+    }, [
+        canFilterHeldItems,
+        canShowHeldItemFilter,
+        heldFilterItemIds,
+        searcherFormState.heldItemFilter,
+    ]);
 
     useEffect(() => {
         if (!isStatic) {
@@ -338,8 +470,12 @@ export default function CalibrationForm({
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (isNotSubmittable) return;
+        const requestId = ++searchRequestIdRef.current;
         const submit = async () => {
             const tenLines = await fetchTenLines();
+            if (requestId !== searchRequestIdRef.current) {
+                return;
+            }
             setRows([]);
             setSearching(true);
             try {
@@ -414,6 +550,9 @@ export default function CalibrationForm({
                     );
                 };
                 const appendResults = (results: SearcherRowWithAdvances[]) => {
+                    if (requestId !== searchRequestIdRef.current) {
+                        return;
+                    }
                     setRows((rows) => {
                         if (rows.length > 1000 || results.length === 0) {
                             return rows;
@@ -647,8 +786,65 @@ export default function CalibrationForm({
                     shouldFilterPokemon={true}
                     allowAnyPokemon
                     isSearcher
+                    onResolvedLocationChange={setResolvedWildLocationId}
                 />
             )}
+            {!isStatic && supportsFrlgHeldProfile && (
+                <FormControlLabel
+                    control={
+                        <Checkbox
+                            checked={useFrlgHeldProfile}
+                            onChange={(event) =>
+                                setUseFrlgHeldProfile(event.target.checked)
+                            }
+                        />
+                    }
+                    label={t("heldItems.enableSweetScentProfile")}
+                />
+            )}
+            {!isStatic && heldPredictionContext && (
+                <FrlgHeldItemNotice
+                    {...heldPredictionContext}
+                    method={searcherFormState.method}
+                    species={searcherFormState.wildPokemon}
+                />
+            )}
+            {!isStatic &&
+                isFRLG &&
+                heldPredictionContext &&
+                canShowHeldItemFilter && (
+                    <TextField
+                        label={t("heldItems.filter")}
+                        margin="normal"
+                        value={searcherFormState.heldItemFilter}
+                        onChange={(event) => {
+                            setSearcherFormState((current) => ({
+                                ...current,
+                                heldItemFilter: parseInt(event.target.value, 10),
+                            }));
+                        }}
+                        select
+                        fullWidth
+                        disabled={!canFilterHeldItems}
+                        helperText={
+                            canFilterHeldItems
+                                ? undefined
+                                : t("heldItems.filterUnavailable")
+                        }
+                    >
+                        <MenuItem value={HELD_ITEM_FILTER_ANY}>
+                            {t("heldItems.filterAny")}
+                        </MenuItem>
+                        <MenuItem value={HELD_ITEM_FILTER_ANY_ITEM}>
+                            {t("heldItems.filterAnyItem")}
+                        </MenuItem>
+                        {heldFilterItemIds.map((itemId) => (
+                            <MenuItem key={itemId} value={itemId}>
+                                {getFrlgHeldItemName(locale, itemId)}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                )}
             <TextField
                 label={t("labels.shininess")}
                 margin="normal"
@@ -832,6 +1028,13 @@ export default function CalibrationForm({
                 }
                 showRequiredAdvances={isReachableAdvancesFilterEnabled}
                 compareTargetName={compareTargetName}
+                heldPredictionContext={
+                    heldProfiles.length > 0 &&
+                    (searcherFormState.wildPokemon === -1 ||
+                        selectedHeldSlots !== undefined)
+                        ? heldPredictionContext
+                        : undefined
+                }
             />
         </Box>
     );

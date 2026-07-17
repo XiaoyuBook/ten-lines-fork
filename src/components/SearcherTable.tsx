@@ -16,6 +16,14 @@ import type {
 } from "../tenLines/generated";
 import { SEARCHER_COMPARE_TARGET_KEY } from "./CalibrationForm";
 import { setLocalStorageValue } from "../hooks/useLocalStorage";
+import {
+    FrlgHeldItemValue,
+    FrlgHeldRngValue,
+} from "./FrlgHeldItemDisplay";
+import {
+    predictFrlgHeldItem,
+    type FrlgHeldPredictionContext,
+} from "../utils/frlgHeldItems";
 
 type SearcherCompareTarget = {
     displayName?: string;
@@ -38,6 +46,7 @@ const SearcherTable = memo(function SearcherTable({
     isMultiMethod,
     showRequiredAdvances,
     compareTargetName,
+    heldPredictionContext,
 }: {
     rows:
         | (ExtendedSearcherState & { reachableAdvances?: number })[]
@@ -46,6 +55,7 @@ const SearcherTable = memo(function SearcherTable({
     isMultiMethod: boolean;
     showRequiredAdvances: boolean;
     compareTargetName?: string;
+    heldPredictionContext?: FrlgHeldPredictionContext;
 }) {
     const { t, resources } = useI18n();
     const [, setSearchParams] = useSearchParams();
@@ -103,6 +113,12 @@ const SearcherTable = memo(function SearcherTable({
                         {isMultiMethod && <TableCell>{t("table.method")}</TableCell>}
                         {!isStatic && <TableCell>{t("table.slot")}</TableCell>}
                         {!isStatic && <TableCell>{t("table.level")}</TableCell>}
+                        {heldPredictionContext && (
+                            <TableCell>{t("table.heldItem")}</TableCell>
+                        )}
+                        {heldPredictionContext && (
+                            <TableCell>{t("table.heldRng")}</TableCell>
+                        )}
                         <TableCell>{t("table.pid")}</TableCell>
                         <TableCell>{t("table.shiny")}</TableCell>
                         <TableCell>{t("table.nature")}</TableCell>
@@ -124,6 +140,18 @@ const SearcherTable = memo(function SearcherTable({
                         } else if (index > 1000) {
                             return null;
                         }
+                        const wildRow = !isStatic
+                            ? (row as ExtendedWildSearcherState)
+                            : undefined;
+                        const heldPrediction =
+                            wildRow && heldPredictionContext
+                                ? predictFrlgHeldItem({
+                                      ...heldPredictionContext,
+                                      method: wildRow.method,
+                                      species: wildRow.species,
+                                      iv2EndSeed: wildRow.iv2EndSeed,
+                                  })
+                                : undefined;
                         return (
                             <TableRow key={index}>
                                 <TableCell>{hexSeed(row.seed, 32)}</TableCell>
@@ -149,6 +177,20 @@ const SearcherTable = memo(function SearcherTable({
                                 {!isStatic && (
                                     <TableCell>
                                         {(row as ExtendedWildSearcherState).level}
+                                    </TableCell>
+                                )}
+                                {heldPredictionContext && (
+                                    <TableCell>
+                                        <FrlgHeldItemValue
+                                            prediction={heldPrediction}
+                                        />
+                                    </TableCell>
+                                )}
+                                {heldPredictionContext && (
+                                    <TableCell>
+                                        <FrlgHeldRngValue
+                                            prediction={heldPrediction}
+                                        />
                                     </TableCell>
                                 )}
                                 <TableCell>{hexSeed(row.pid, 32)}</TableCell>
