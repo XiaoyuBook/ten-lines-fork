@@ -26,7 +26,6 @@ function WildEncounterSelector({
     game = Game.Gen3,
     allowAnyPokemon = false,
     isSearcher = false,
-    onResolvedLocationChange,
 }: {
     wildCategory: number;
     wildLocation: number;
@@ -43,7 +42,6 @@ function WildEncounterSelector({
     game?: number;
     allowAnyPokemon?: boolean;
     isSearcher?: boolean;
-    onResolvedLocationChange?: (locationId: number | undefined) => void;
 }) {
     const { t, resources } = useI18n();
     const [wildLocations, setWildLocations] = useState<number[]>([]);
@@ -68,22 +66,6 @@ function WildEncounterSelector({
         wildLead,
         shouldFilterPokemon,
     };
-
-    useEffect(() => {
-        if (!onResolvedLocationChange) {
-            return;
-        }
-        if (wildLocations.length === 0) {
-            onResolvedLocationChange(undefined);
-            return;
-        }
-        onResolvedLocationChange(
-            getWildLocationId(
-                wildLocations,
-                normalizeWildLocationIndex(wildLocations, wildLocation)
-            )
-        );
-    }, [onResolvedLocationChange, wildLocation, wildLocations]);
 
     useEffect(() => {
         let cancelled = false;

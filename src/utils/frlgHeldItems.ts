@@ -14,7 +14,13 @@ export const FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT =
 
 export const HELD_ITEM_FILTER_ANY = -2;
 export const HELD_ITEM_FILTER_ANY_ITEM = -1;
+export const FRLG_HELD_SEARCH_MODE_H1_STABLE = "h1-stable";
+export const FRLG_HELD_SEARCH_MODE_ALL_METHODS = "all-methods";
 const FRLG_MAX_NATIONAL_DEX_SPECIES = 386;
+
+export type FrlgHeldSearchMode =
+    | typeof FRLG_HELD_SEARCH_MODE_H1_STABLE
+    | typeof FRLG_HELD_SEARCH_MODE_ALL_METHODS;
 
 export type FrlgHeldItemSlots = {
     common: number;
@@ -42,6 +48,11 @@ export type FrlgHeldPrediction = {
     profile: FrlgHeldOffsetProfile;
     baseline: FrlgHeldRollPrediction;
     alternate: FrlgHeldRollPrediction;
+};
+
+export type FrlgHeldSearchPrediction = {
+    slots: FrlgHeldItemSlots;
+    rolls: FrlgHeldRollPrediction[];
 };
 
 export type FrlgHeldPredictionContext = {
@@ -176,17 +187,30 @@ const ITEM_NAMES: Readonly<
 // observed/possible asynchronous +1 path, not a second guaranteed result.
 const HELD_OFFSET_PROFILES: readonly FrlgHeldOffsetProfile[] = [
     { location: 8, method: WILD_1, baseOffset: 164, alternateOffset: 165, status: "verified", samples: 48 },
+    { location: 9, method: WILD_1, baseOffset: 164, alternateOffset: 165, status: "verified" },
     { location: 10, method: WILD_1, baseOffset: 164, alternateOffset: 165, status: "verified", samples: 57 },
     { location: 10, method: WILD_2, baseOffset: 163, alternateOffset: 164, status: "verified", samples: 3 },
     { location: 10, method: WILD_4, baseOffset: 163, alternateOffset: 164, status: "verified", samples: 19 },
+    { location: 13, method: WILD_1, baseOffset: 170, alternateOffset: 171, status: "variable", samples: 21 },
+    { location: 13, method: WILD_4, baseOffset: 169, alternateOffset: 170, status: "variable" },
+    { location: 14, method: WILD_1, baseOffset: 170, alternateOffset: 171, status: "variable" },
+    { location: 20, method: WILD_1, baseOffset: 170, alternateOffset: 171, status: "variable" },
+    { location: 20, method: WILD_4, baseOffset: 169, alternateOffset: 170, status: "verified", samples: 6 },
+    { location: 27, method: WILD_1, baseOffset: 181, alternateOffset: 182, status: "verified", samples: 103 },
+    { location: 28, method: WILD_1, baseOffset: 165, alternateOffset: 166, status: "verified", samples: 43 },
     { location: 34, method: WILD_1, baseOffset: 168, alternateOffset: 169, status: "verified", samples: 87 },
     { location: 34, method: WILD_4, baseOffset: 167, alternateOffset: 168, status: "verified", samples: 12 },
     { location: 38, method: WILD_1, baseOffset: 168, alternateOffset: 169, status: "variable" },
     { location: 38, method: WILD_2, baseOffset: 167, alternateOffset: 168, status: "variable" },
     { location: 38, method: WILD_4, baseOffset: 167, alternateOffset: 168, status: "variable" },
+    { location: 39, method: WILD_1, baseOffset: 170, alternateOffset: 171, status: "verified", samples: 27 },
     { location: 91, method: WILD_1, baseOffset: 166, alternateOffset: 167, status: "verified", samples: 24 },
     { location: 99, method: WILD_1, baseOffset: 166, alternateOffset: 167, status: "verified", samples: 15 },
     { location: 100, method: WILD_1, baseOffset: 166, alternateOffset: 167, status: "verified", samples: 7 },
+    { location: 100, method: WILD_2, baseOffset: 165, alternateOffset: 166, status: "verified", samples: 2 },
+    { location: 100, method: WILD_4, baseOffset: 165, alternateOffset: 166, status: "verified", samples: 5 },
+    { location: 101, method: WILD_1, baseOffset: 166, alternateOffset: 167, status: "verified" },
+    { location: 101, method: WILD_4, baseOffset: 165, alternateOffset: 166, status: "verified" },
     { location: 110, method: WILD_1, baseOffset: 170, alternateOffset: 171, status: "verified", samples: 62 },
     { location: 110, method: WILD_4, baseOffset: 169, alternateOffset: 170, status: "verified", samples: 16 },
     { location: 111, method: WILD_1, baseOffset: 166, alternateOffset: 167, status: "verified", samples: 9 },
@@ -243,11 +267,39 @@ export function getFrlgHeldItemProbabilities(
 }
 
 export function advancePokeRng(seed: number, advances: number): number {
-    let state = seed >>> 0;
-    for (let index = 0; index < advances; index += 1) {
-        state = (Math.imul(state, 0x41c64e6d) + 0x6073) >>> 0;
+    let remaining = Math.max(0, Math.floor(advances));
+    let accumulatedMultiplier = 1;
+    let accumulatedIncrement = 0;
+    let currentMultiplier = 0x41c64e6d;
+    let currentIncrement = 0x6073;
+
+    while (remaining > 0) {
+        if (remaining % 2 === 1) {
+            accumulatedIncrement =
+                (Math.imul(currentMultiplier, accumulatedIncrement) +
+                    currentIncrement) >>>
+                0;
+            accumulatedMultiplier = Math.imul(
+                currentMultiplier,
+                accumulatedMultiplier
+            ) >>> 0;
+        }
+
+        currentIncrement =
+            (Math.imul(currentMultiplier, currentIncrement) +
+                currentIncrement) >>>
+            0;
+        currentMultiplier = Math.imul(
+            currentMultiplier,
+            currentMultiplier
+        ) >>> 0;
+        remaining = Math.floor(remaining / 2);
     }
-    return state;
+
+    return (
+        Math.imul(accumulatedMultiplier, seed >>> 0) +
+        accumulatedIncrement
+    ) >>> 0;
 }
 
 export function getFrlgHeldOffsetProfile(
@@ -310,6 +362,58 @@ function predictAtOffset(
         roll,
         itemId: getFrlgHeldItemForRoll(slots, roll),
     };
+}
+
+export function getFrlgHeldSearchOffsets(
+    h1StandardOffset: number,
+    searchMode: FrlgHeldSearchMode
+): number[] {
+    if (!Number.isInteger(h1StandardOffset) || h1StandardOffset <= 0) {
+        return [];
+    }
+    return searchMode === FRLG_HELD_SEARCH_MODE_ALL_METHODS
+        ? [h1StandardOffset - 1, h1StandardOffset, h1StandardOffset + 1]
+        : [h1StandardOffset, h1StandardOffset + 1];
+}
+
+export function predictFrlgHeldItemAtOffsets({
+    species,
+    iv2EndSeed,
+    offsets,
+}: {
+    species: number;
+    iv2EndSeed: number;
+    offsets: readonly number[];
+}): FrlgHeldSearchPrediction | undefined {
+    if (iv2EndSeed === 0 || offsets.length === 0) {
+        return undefined;
+    }
+    const slots = getFrlgHeldItemSlots(species);
+    if (!slots || offsets.some((offset) => offset < 0)) {
+        return undefined;
+    }
+    return {
+        slots,
+        rolls: offsets.map((offset) =>
+            predictAtOffset(iv2EndSeed, offset, slots)
+        ),
+    };
+}
+
+export function matchesFrlgHeldItemSearchFilter(
+    prediction: FrlgHeldSearchPrediction | undefined,
+    filter: number
+): boolean {
+    if (filter === HELD_ITEM_FILTER_ANY) {
+        return true;
+    }
+    if (!prediction) {
+        return false;
+    }
+    if (filter === HELD_ITEM_FILTER_ANY_ITEM) {
+        return prediction.rolls.every((roll) => roll.itemId !== 0);
+    }
+    return prediction.rolls.every((roll) => roll.itemId === filter);
 }
 
 export function predictFrlgHeldItem({

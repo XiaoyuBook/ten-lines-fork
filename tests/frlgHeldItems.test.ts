@@ -16,11 +16,17 @@ try {
 
     const {
         FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
+        FRLG_HELD_SEARCH_MODE_ALL_METHODS,
+        FRLG_HELD_SEARCH_MODE_H1_STABLE,
+        HELD_ITEM_FILTER_ANY_ITEM,
         advancePokeRng,
         getFrlgHeldItemForRoll,
         getFrlgHeldItemProbabilities,
         getFrlgHeldItemSlots,
         getFrlgHeldOffsetProfile,
+        getFrlgHeldSearchOffsets,
+        matchesFrlgHeldItemSearchFilter,
+        predictFrlgHeldItemAtOffsets,
         predictFrlgHeldItem,
     } = heldItems;
 
@@ -71,6 +77,34 @@ try {
     const iv2EndSeed = 0xcc39bd73;
     assert.equal(advancePokeRng(iv2EndSeed, 1), 0x4641146a);
     assert.equal(advancePokeRng(iv2EndSeed, 164), 0x070793a7);
+    let linearState = iv2EndSeed;
+    for (let index = 0; index < 100_000; index += 1) {
+        linearState =
+            (Math.imul(linearState, 0x41c64e6d) + 0x6073) >>> 0;
+    }
+    assert.equal(advancePokeRng(iv2EndSeed, 100_000), linearState);
+
+    assert.deepEqual(
+        getFrlgHeldSearchOffsets(
+            166,
+            FRLG_HELD_SEARCH_MODE_H1_STABLE
+        ),
+        [166, 167]
+    );
+    assert.deepEqual(
+        getFrlgHeldSearchOffsets(
+            166,
+            FRLG_HELD_SEARCH_MODE_ALL_METHODS
+        ),
+        [165, 166, 167]
+    );
+    assert.deepEqual(
+        getFrlgHeldSearchOffsets(
+            0,
+            FRLG_HELD_SEARCH_MODE_H1_STABLE
+        ),
+        []
+    );
 
     const prediction = predictFrlgHeldItem({
         profileSet: FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
@@ -100,6 +134,23 @@ try {
     assert.equal(meowthPrediction?.baseline.roll, 58);
     assert.equal(meowthPrediction?.baseline.itemId, 0);
 
+    const multiOffsetPrediction = predictFrlgHeldItemAtOffsets({
+        species: 52,
+        iv2EndSeed: 0xc5084076,
+        offsets: [165, 166, 167],
+    });
+    assert.deepEqual(
+        multiOffsetPrediction?.rolls.map(({ offset }) => offset),
+        [165, 166, 167]
+    );
+    assert.equal(
+        matchesFrlgHeldItemSearchFilter(
+            multiOffsetPrediction,
+            HELD_ITEM_FILTER_ANY_ITEM
+        ),
+        multiOffsetPrediction?.rolls.every(({ itemId }) => itemId !== 0)
+    );
+
     // Species omitted from the sparse source table are known no-item species,
     // not unknown predictions (important for the Any Pokemon result view).
     const bulbasaurPrediction = predictFrlgHeldItem({
@@ -119,6 +170,26 @@ try {
             1 << 3,
             0,
             110,
+            5
+        )?.baseOffset,
+        170
+    );
+    assert.equal(
+        getFrlgHeldOffsetProfile(
+            FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
+            1 << 3,
+            0,
+            27,
+            5
+        )?.baseOffset,
+        181
+    );
+    assert.equal(
+        getFrlgHeldOffsetProfile(
+            FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
+            1 << 3,
+            0,
+            14,
             5
         )?.baseOffset,
         170

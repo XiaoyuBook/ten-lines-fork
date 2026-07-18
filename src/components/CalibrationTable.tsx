@@ -22,14 +22,6 @@ import type {
 } from "../tenLines/generated";
 
 import type { CalibrationResultRow } from "./CalibrationComparePanel";
-import {
-    FrlgHeldItemValue,
-    FrlgHeldRngValue,
-} from "./FrlgHeldItemDisplay";
-import {
-    predictFrlgHeldItem,
-    type FrlgHeldPredictionContext,
-} from "../utils/frlgHeldItems";
 
 export type CalibrationTableColumn =
     | "seed"
@@ -39,8 +31,6 @@ export type CalibrationTableColumn =
     | "teachyTvAdvances"
     | "slot"
     | "level"
-    | "heldItem"
-    | "heldRng"
     | "pid"
     | "shiny"
     | "nature"
@@ -58,8 +48,6 @@ export const CALIBRATION_TABLE_COLUMN_OPTIONS: CalibrationTableColumn[] = [
     "teachyTvAdvances",
     "slot",
     "level",
-    "heldItem",
-    "heldRng",
     "pid",
     "shiny",
     "nature",
@@ -80,7 +68,6 @@ const CalibrationTable = memo(function CalibrationTable({
     hasTarget,
     visibleColumns,
     onAdd,
-    heldPredictionContext,
 }: {
     rows: ExtendedGeneratorState[] | ExtendedWildGeneratorState[];
     target: FRLGContiguousSeedEntry;
@@ -91,7 +78,6 @@ const CalibrationTable = memo(function CalibrationTable({
     hasTarget: boolean;
     visibleColumns: CalibrationTableColumn[];
     onAdd: (row: CalibrationResultRow, destination: "target" | "history") => void;
-    heldPredictionContext?: FrlgHeldPredictionContext;
 }) {
     const { t, resources } = useI18n();
     const [page, setPage] = useState(0);
@@ -122,18 +108,9 @@ const CalibrationTable = memo(function CalibrationTable({
                 if (column === "slot" || column === "level") {
                     return !isStatic;
                 }
-                if (column === "heldItem" || column === "heldRng") {
-                    return !isStatic && heldPredictionContext !== undefined;
-                }
                 return true;
             }),
-        [
-            heldPredictionContext,
-            isMultiMethod,
-            isStatic,
-            isTeachyTVMode,
-            visibleColumns,
-        ]
+        [isMultiMethod, isStatic, isTeachyTVMode, visibleColumns]
     );
 
     useEffect(() => {
@@ -165,18 +142,6 @@ const CalibrationTable = memo(function CalibrationTable({
                         const seedMS = frameToMS(row.seedTime / 16, gameConsole);
                         const offsetMS =
                             seedMS - frameToMS(target.seedTime / 16, gameConsole);
-                        const wildRow = !isStatic
-                            ? (row as ExtendedWildGeneratorState)
-                            : undefined;
-                        const heldPrediction =
-                            wildRow && heldPredictionContext
-                                ? predictFrlgHeldItem({
-                                      ...heldPredictionContext,
-                                      method: wildRow.method,
-                                      species: wildRow.species,
-                                      iv2EndSeed: wildRow.iv2EndSeed,
-                                  })
-                                : undefined;
 
                         return (
                             <TableRow key={absoluteIndex}>
@@ -312,22 +277,6 @@ const CalibrationTable = memo(function CalibrationTable({
                                                         (row as ExtendedWildGeneratorState)
                                                             .level
                                                     }
-                                                </TableCell>
-                                            );
-                                        case "heldItem":
-                                            return (
-                                                <TableCell key={`${absoluteIndex}-${column}`}>
-                                                    <FrlgHeldItemValue
-                                                        prediction={heldPrediction}
-                                                    />
-                                                </TableCell>
-                                            );
-                                        case "heldRng":
-                                            return (
-                                                <TableCell key={`${absoluteIndex}-${column}`}>
-                                                    <FrlgHeldRngValue
-                                                        prediction={heldPrediction}
-                                                    />
                                                 </TableCell>
                                             );
                                         case "pid":

@@ -218,6 +218,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
     en: {
         tabs: {
             searcher: "Searcher",
+            heldItems: "Held Items",
             idCombo: "ID Combo",
             initialSeed: "Initial Seed",
             calibration: "Calibration",
@@ -452,15 +453,38 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             heldRng: "Held-item RNG",
         },
         heldItems: {
+            pageTitle: "FRLG Wild Held Items",
+            pageDescription:
+                "Search FireRed Sweet Scent H1 frames using field-tested or manually entered held-item offsets.",
+            separatePageNotice:
+                "This is an independent tool. Its settings and results do not change Searcher or Calibration.",
+            seedAndAdvanceInstruction:
+                "Held-item prediction does not require TID, SID, or IV filters. Enter an initial seed and an Advance range; IVs remain visible in the results only.",
+            advanceSearchTooLarge:
+                "The selected range contains {count} Advances. Limit one search to {limit} Advances or fewer.",
+            searchMode: "Search mode",
+            searchModeH1Stable: "H1 stable (O / O+1)",
+            searchModeAllMethods: "H1/H2/H4 coverage (O-1 / O / O+1)",
+            searchModeH1StableHelp:
+                "Generates H1 frames and keeps a target only when both the standard H1 offset O and its possible +1 path O+1 match the selected held item.",
+            searchModeAllMethodsHelp:
+                "Generates H1 frames and keeps a target only when O-1, O, and O+1 all match. This covers the observed H2/H4 = H1-1 rule and the possible +1 path.",
+            standardOffset: "H1 standard Offset (O)",
+            offsetPresetAvailable:
+                "Preset H1 Offset: +{offset}. This mode checks {offsets}; you may edit the preset.",
+            offsetPresetUnknown:
+                "No tested preset exists for this location. Offset 0 means unknown; enter the H1 standard Offset before searching.",
+            offsetRequired:
+                "Enter an H1 standard Offset greater than 0 before filtering or searching.",
             enableSweetScentProfile:
                 "Use FireRed English Sweet Scent held-item profile (experimental)",
             sourceData: "FRLG source item rates:",
             profileAvailable:
                 "FireRed field-tested profile: {profiles}.",
             profileUnavailable:
-                "No field-tested FireRed offset exists for this location and Method. Exact prediction and filtering stay disabled.",
+                "No field-tested FireRed H1 Offset exists for this location. It defaults to 0 and can be entered manually.",
             interferenceWarning:
-                "NPC or asynchronous RNG can move the held-item call to the +1 candidate. The result table shows both paths.",
+                "NPC or asynchronous RNG can move the held-item call. The selected search mode explicitly checks its required adjacent paths.",
             samples: "{count} samples",
             baseline: "Baseline",
             alternate: "Possible +1",
@@ -471,6 +495,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             filterAnyItem: "Any held item",
             filterUnavailable:
                 "Exact filtering requires a stable field-tested baseline; variable dual-path profiles stay display-only.",
+            searchFailed: "Held-item search failed: {error}",
+            noResults: "No matching held-item results were found.",
+            resultCount: "Showing {count} results (up to {limit}).",
         },
         compare: {
             title: "Calibration Compare",
@@ -702,6 +729,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
     zh: {
         tabs: {
             searcher: "\u641c\u7d22\u5668",
+            heldItems: "\u643a\u5e26\u7269",
             idCombo: "ID \u7ec4\u5408",
             initialSeed: "\u521d\u59cb Seed",
             calibration: "\u6821\u51c6",
@@ -942,14 +970,38 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             heldRng: "携带物 RNG",
         },
         heldItems: {
+            pageTitle: "FRLG \u91ce\u751f\u643a\u5e26\u7269",
+            pageDescription:
+                "\u4f7f\u7528\u5b9e\u673a\u9884\u8bbe\u6216\u624b\u52a8 H1 Offset\uff0c\u641c\u7d22\u706b\u7ea2\u82f1\u6587\u7248\u751c\u751c\u9999\u6c14 H1 \u5e27\u3002",
+            separatePageNotice:
+                "\u8fd9\u662f\u72ec\u7acb\u5de5\u5177\uff1b\u672c\u9875\u7684\u8bbe\u7f6e\u548c\u7ed3\u679c\u4e0d\u4f1a\u6539\u52a8 Searcher \u6216 Calibration\u3002",
+            seedAndAdvanceInstruction:
+                "\u643a\u5e26\u7269\u9884\u6d4b\u4e0d\u9700\u8981 TID\u3001SID \u6216\u4e2a\u4f53\u503c\u7b5b\u9009\u3002\u53ea\u9700\u8f93\u5165\u521d\u59cb Seed \u548c Advance \u8303\u56f4\uff1b\u4e2a\u4f53\u503c\u4ec5\u5728\u7ed3\u679c\u4e2d\u663e\u793a\u3002",
+            advanceSearchTooLarge:
+                "\u5f53\u524d\u8303\u56f4\u5305\u542b {count} \u4e2a Advance\uff0c\u5355\u6b21\u641c\u7d22\u8bf7\u9650\u5236\u5728 {limit} \u4e2a\u4ee5\u5185\u3002",
+            searchMode: "\u641c\u7d22\u6a21\u5f0f",
+            searchModeH1Stable: "H1 \u7a33\u5b9a\uff08O / O+1\uff09",
+            searchModeAllMethods:
+                "H1/H2/H4 \u5168\u8986\u76d6\uff08O-1 / O / O+1\uff09",
+            searchModeH1StableHelp:
+                "\u751f\u6210 H1 \u5e27\uff1b\u53ea\u4fdd\u7559 H1 \u6807\u51c6 O \u4e0e\u53ef\u80fd\u7684 +1 \u8f68\u8ff9 O+1 \u90fd\u7b26\u5408\u6240\u9009\u643a\u5e26\u7269\u7684\u76ee\u6807\u3002",
+            searchModeAllMethodsHelp:
+                "\u751f\u6210 H1 \u5e27\uff1b\u53ea\u4fdd\u7559 O-1\u3001O\u3001O+1 \u5168\u90e8\u7b26\u5408\u7684\u76ee\u6807\u3002\u8fd9\u8986\u76d6\u5df2\u89c2\u5bdf\u5230\u7684 H2/H4 = H1-1 \u89c4\u5219\u53ca\u5176 +1 \u8f68\u8ff9\u3002",
+            standardOffset: "H1 \u6807\u51c6 Offset\uff08O\uff09",
+            offsetPresetAvailable:
+                "\u5df2\u5957\u7528 H1 Offset \u9884\u8bbe +{offset}\u3002\u5f53\u524d\u6a21\u5f0f\u68c0\u67e5 {offsets}\uff1b\u4ecd\u53ef\u624b\u52a8\u4fee\u6539\u3002",
+            offsetPresetUnknown:
+                "\u8be5\u5730\u70b9\u5c1a\u65e0\u5b9e\u6d4b\u9884\u8bbe\u3002Offset 0 \u8868\u793a\u672a\u77e5\uff1b\u641c\u7d22\u524d\u8bf7\u8f93\u5165 H1 \u6807\u51c6 Offset\u3002",
+            offsetRequired:
+                "\u8bf7\u5148\u8f93\u5165\u5927\u4e8e 0 \u7684 H1 \u6807\u51c6 Offset\uff0c\u518d\u7b5b\u9009\u6216\u641c\u7d22\u3002",
             enableSweetScentProfile:
                 "使用火红英文版甜甜香气携带物档案（实验）",
             sourceData: "FRLG 源码携带率：",
             profileAvailable: "火红实机验证档案：{profiles}。",
             profileUnavailable:
-                "该地点与生成方式尚无火红实机 Offset；精确预测和筛选保持禁用。",
+                "\u8be5\u5730\u70b9\u5c1a\u65e0\u706b\u7ea2\u5b9e\u673a H1 Offset\uff0c\u9ed8\u8ba4\u4e3a 0\uff0c\u53ef\u624b\u52a8\u8f93\u5165\u3002",
             interferenceWarning:
-                "NPC 或异步 RNG 可能让携带物判定移动到 +1 候选；结果表会同时显示两条轨迹。",
+                "NPC \u6216\u5f02\u6b65 RNG \u53ef\u80fd\u79fb\u52a8\u643a\u5e26\u7269\u5224\u5b9a\uff1b\u5f53\u524d\u641c\u7d22\u6a21\u5f0f\u4f1a\u660e\u786e\u68c0\u67e5\u6240\u9700\u7684\u76f8\u90bb\u8f68\u8ff9\u3002",
             samples: "{count} 个样本",
             baseline: "基准轨迹",
             alternate: "可能的 +1",
@@ -960,6 +1012,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             filterAnyItem: "任意携带物",
             filterUnavailable:
                 "只有稳定的实机基准 Offset 才启用精确筛选；双轨迹地点仅显示结果。",
+            searchFailed: "\u643a\u5e26\u7269\u641c\u7d22\u5931\u8d25\uff1a{error}",
+            noResults: "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u643a\u5e26\u7269\u7ed3\u679c\u3002",
+            resultCount:
+                "\u5f53\u524d\u663e\u793a {count} \u6761\u7ed3\u679c\uff08\u6700\u591a {limit} \u6761\uff09\u3002",
         },
         compare: {
             title: "\u6821\u51c6\u5bf9\u7167",

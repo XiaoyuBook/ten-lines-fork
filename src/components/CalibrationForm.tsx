@@ -79,12 +79,6 @@ import StaticEncounterSelector from "./StaticEncounterSelector";
 import TeachyTVEntry from "./TeachyTVEntry";
 import WildEncounterSelector from "./WildEncounterSelector";
 import { filterNatureOptions } from "../utils/natureSearch";
-import { FrlgHeldItemNotice } from "./FrlgHeldItemDisplay";
-import {
-    FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
-    getFrlgHeldOffsetProfiles,
-    type FrlgHeldPredictionContext,
-} from "../utils/frlgHeldItems";
 
 const CALIBRATION_COMPARE_COLUMN_OPTIONS: CalibrationCompareColumn[] = [
     "seed",
@@ -329,10 +323,6 @@ export default function CalibrationForm({
         bingoTvFluctuationMode,
         setCalibrationURLState,
     } = useCalibrationURLState();
-    const [resolvedWildLocationId, setResolvedWildLocationId] = useState<
-        number | undefined
-    >();
-    const [useFrlgHeldProfile, setUseFrlgHeldProfile] = useState(false);
 
     const [, setBingoBoard, , setBingoCounters] = useBingoBoard();
 
@@ -343,43 +333,6 @@ export default function CalibrationForm({
     const isFRLG = game.startsWith("fr") || game.startsWith("lg");
     const isFRLGE = isFRLG || game.startsWith("e_");
     const isSwitch = game.endsWith("nx");
-    const supportsFrlgHeldProfile = ["fr", "fr_eu", "fr_nx", "fr_mgba"].includes(
-        game
-    );
-    const selectedGame = SEED_IDENTIFIER_TO_GAME[game];
-    const heldPredictionContext: FrlgHeldPredictionContext | undefined =
-        useMemo(
-            () =>
-                !isStatic &&
-                useFrlgHeldProfile &&
-                supportsFrlgHeldProfile &&
-                resolvedWildLocationId !== undefined
-                    ? {
-                          profileSet:
-                              FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
-                          game: selectedGame,
-                          encounterCategory: calibrationFormState.wildCategory,
-                          location: resolvedWildLocationId,
-                      }
-                    : undefined,
-            [
-                calibrationFormState.wildCategory,
-                isStatic,
-                resolvedWildLocationId,
-                selectedGame,
-                supportsFrlgHeldProfile,
-                useFrlgHeldProfile,
-            ]
-        );
-    const heldProfiles = heldPredictionContext
-        ? getFrlgHeldOffsetProfiles(
-              heldPredictionContext.profileSet,
-              heldPredictionContext.game,
-              heldPredictionContext.encounterCategory,
-              heldPredictionContext.location,
-              calibrationFormState.method
-          )
-        : [];
     const usesSwitchJapaneseFRLGLabels = isSwitchJapaneseFRLGGame(game);
     const soundOptionLabels = {
         mono: usesSwitchJapaneseFRLGLabels
@@ -438,19 +391,6 @@ export default function CalibrationForm({
     const [rows, setRows] = useState<
         ExtendedGeneratorState[] | ExtendedWildGeneratorState[]
     >([]);
-    const searchRequestIdRef = useRef(0);
-    useEffect(() => {
-        searchRequestIdRef.current += 1;
-        setRows([]);
-    }, [
-        calibrationFormState.method,
-        calibrationFormState.shouldFilterPokemon,
-        calibrationFormState.wildCategory,
-        calibrationFormState.wildLocation,
-        calibrationFormState.wildPokemon,
-        game,
-        isStatic,
-    ]);
     const [searching, setSearching] = useState(false);
     const [hasSubmittedSearch, setHasSubmittedSearch] = useState(false);
     const [storedCompareSettings, setCompareSettings] =
@@ -1215,17 +1155,12 @@ export default function CalibrationForm({
             return;
         }
 
-        const requestId = ++searchRequestIdRef.current;
-
         const searchSeeds = seedList.slice(
             Math.max(0, targetSeedIndex - seedLeeway),
             Math.min(seedList.length, targetSeedIndex + seedLeeway + 1)
         );
         const submit = async () => {
             const tenLines = await fetchTenLines();
-            if (requestId !== searchRequestIdRef.current) {
-                return;
-            }
             setRows([]);
             setHasSubmittedSearch(true);
             setSearching(true);
@@ -1246,9 +1181,6 @@ export default function CalibrationForm({
                     calibrationFormState.gender,
                     ivRanges,
                     proxy((results: ExtendedGeneratorState[]) => {
-                        if (requestId !== searchRequestIdRef.current) {
-                            return;
-                        }
                         setRows((currentRows) => {
                             if (
                                 currentRows.length > 1000 ||
@@ -1282,9 +1214,6 @@ export default function CalibrationForm({
                     calibrationFormState.gender,
                     ivRanges,
                     proxy((results: ExtendedWildGeneratorState[]) => {
-                        if (requestId !== searchRequestIdRef.current) {
-                            return;
-                        }
                         setRows((currentRows) => {
                             if (
                                 currentRows.length > 1000 ||
@@ -1995,35 +1924,6 @@ export default function CalibrationForm({
                                         shouldFilterPokemon,
                                     }));
                                 }}
-                                onResolvedLocationChange={
-                                    setResolvedWildLocationId
-                                }
-                            />
-                        )}
-                        {!isStatic && supportsFrlgHeldProfile && (
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={useFrlgHeldProfile}
-                                        onChange={(event) =>
-                                            setUseFrlgHeldProfile(
-                                                event.target.checked
-                                            )
-                                        }
-                                    />
-                                }
-                                label={t("heldItems.enableSweetScentProfile")}
-                            />
-                        )}
-                        {!isStatic && heldPredictionContext && (
-                            <FrlgHeldItemNotice
-                                {...heldPredictionContext}
-                                method={calibrationFormState.method}
-                                species={
-                                    calibrationFormState.shouldFilterPokemon
-                                        ? calibrationFormState.wildPokemon
-                                        : -1
-                                }
                             />
                         )}
                         <TextField
@@ -2302,11 +2202,6 @@ export default function CalibrationForm({
                             hasTarget={Boolean(compareTarget)}
                             visibleColumns={orderedTableVisibleColumns}
                             onAdd={handleQuickAdd}
-                            heldPredictionContext={
-                                heldProfiles.length > 0
-                                    ? heldPredictionContext
-                                    : undefined
-                            }
                         />
                     </Box>
                 </Paper>
