@@ -1,7 +1,9 @@
 import {
     Alert,
+    Autocomplete,
     Box,
     Button,
+    createFilterOptions,
     MenuItem,
     TextField,
     Typography,
@@ -9,11 +11,16 @@ import {
     type Theme,
 } from "@mui/material";
 import { proxy } from "comlink";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
-import { useI18n } from "../i18n";
+import { getAllGameOptions, getConsoleOptions, useI18n } from "../i18n";
 import fetchTenLines, {
+    fetchSeedData,
+    fixGameConsole,
+    frameToMS,
     Game,
+    hexSeed,
     WILD_1,
 } from "../tenLines";
 import type {
@@ -47,6 +54,13 @@ const ENCOUNTER_CATEGORY = 0;
 const RESULT_LIMIT = 1000;
 const MAX_ADVANCES_PER_SEARCH = 100_000;
 const DEFAULT_ADVANCE_RANGE: [string, string] = ["0", "10000"];
+const DEFAULT_SEED_GAME = "fr_nx";
+const FIRE_RED_ENGLISH_SEED_GAMES = new Set([
+    "fr",
+    "fr_eu",
+    "fr_nx",
+    "fr_mgba",
+]);
 const UNFILTERED_IV_RANGES: [number, number][] = Array.from(
     { length: 6 },
     () => [0, 31] as [number, number]
@@ -55,6 +69,88 @@ const SEARCH_MODE_OPTIONS: FrlgHeldSearchMode[] = [
     FRLG_HELD_SEARCH_MODE_H1_STABLE,
     FRLG_HELD_SEARCH_MODE_ALL_METHODS,
 ];
+const targetSeedFilterOptions = createFilterOptions<FRLGContiguousSeedEntry>({
+    limit: 100,
+    stringify: (option) => hexSeed(option.initialSeed, 16),
+});
+
+interface HeldSeedURLState {
+    game: string;
+    sound: string;
+    buttonMode: string;
+    button: string;
+    heldButton: string;
+    gameConsole: string;
+    targetInitialSeed: string;
+}
+
+const HELD_SEED_QUERY_KEYS: Record<keyof HeldSeedURLState, string> = {
+    game: "heldSeedGame",
+    sound: "heldSeedSound",
+    buttonMode: "heldSeedButtonMode",
+    button: "heldSeedButton",
+    heldButton: "heldSeedExtraButton",
+    gameConsole: "heldSeedConsole",
+    targetInitialSeed: "heldTargetInitialSeed",
+};
+
+function useHeldSeedURLState() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const requestedGame =
+        searchParams.get(HELD_SEED_QUERY_KEYS.game) || DEFAULT_SEED_GAME;
+    const game = FIRE_RED_ENGLISH_SEED_GAMES.has(requestedGame)
+        ? requestedGame
+        : DEFAULT_SEED_GAME;
+    const isSwitch = game.endsWith("nx");
+    const sound =
+        searchParams.get(HELD_SEED_QUERY_KEYS.sound) || "stereo";
+    const buttonMode =
+        searchParams.get(HELD_SEED_QUERY_KEYS.buttonMode) ||
+        (isSwitch ? "h" : "a");
+    const button =
+        searchParams.get(HELD_SEED_QUERY_KEYS.button) || "a";
+    const heldButton =
+        searchParams.get(HELD_SEED_QUERY_KEYS.heldButton) || "none";
+    const gameConsole = fixGameConsole(
+        game,
+        searchParams.get(HELD_SEED_QUERY_KEYS.gameConsole) ||
+            (isSwitch ? "NX" : "GBA")
+    );
+    const targetSeedText =
+        searchParams.get(HELD_SEED_QUERY_KEYS.targetInitialSeed) ||
+        "DEAD";
+    const parsedTargetSeed = Number.parseInt(targetSeedText, 16);
+    const targetSeedValue = Number.isNaN(parsedTargetSeed)
+        ? 0xdead
+        : parsedTargetSeed & 0xffff;
+
+    const setHeldSeedURLState = useCallback(
+        (state: Partial<HeldSeedURLState>) => {
+            setSearchParams((previous) => {
+                const next = new URLSearchParams(previous);
+                for (const [key, value] of Object.entries(state)) {
+                    next.set(
+                        HELD_SEED_QUERY_KEYS[key as keyof HeldSeedURLState],
+                        value
+                    );
+                }
+                return next;
+            });
+        },
+        [setSearchParams]
+    );
+
+    return {
+        game,
+        sound,
+        buttonMode,
+        button,
+        heldButton,
+        gameConsole,
+        targetSeedValue,
+        setHeldSeedURLState,
+    };
+}
 
 function resultKey(row: ExtendedWildGeneratorState) {
     return `${row.initialSeed}:${row.advances}:${row.method}:${row.pid}:${row.encounterSlot}`;
@@ -68,8 +164,21 @@ export default function FrlgHeldItemSearcherPage({
     hidden?: boolean;
 }) {
     const { locale, t } = useI18n();
-    const [initialSeed, setInitialSeed] = useState("DEAD");
-    const [initialSeedIsValid, setInitialSeedIsValid] = useState(true);
+    const {
+        game,
+        sound,
+        buttonMode,
+        button,
+        heldButton,
+        gameConsole,
+        targetSeedValue,
+        setHeldSeedURLState,
+    } = useHeldSeedURLState();
+    const [seedList, setSeedList] = useState<FRLGContiguousSeedEntry[]>([]);
+    const [seedListLoading, setSeedListLoading] = useState(true);
+    const [seedListError, setSeedListError] = useState<string>();
+    const [targetSeedInput, setTargetSeedInput] = useState("");
+    const [targetSeedIsValid, setTargetSeedIsValid] = useState(true);
     const [advanceRangeStrings, setAdvanceRangeStrings] = useState(
         DEFAULT_ADVANCE_RANGE
     );
@@ -89,6 +198,126 @@ export default function FrlgHeldItemSearcherPage({
     const [hasSearched, setHasSearched] = useState(false);
     const [searchError, setSearchError] = useState<string>();
     const requestIdRef = useRef(0);
+    const normalizeSeedInput = useCallback(
+        (value: string) => value.trim().replace(/^0x/i, "").toUpperCase(),
+        []
+    );
+
+    const targetSeedIndex = useMemo(
+        () =>
+            seedList.findIndex(
+                (seed) => seed.initialSeed === targetSeedValue
+            ),
+        [seedList, targetSeedValue]
+    );
+    const targetSeed =
+        targetSeedIndex === -1 ? undefined : seedList[targetSeedIndex];
+    const fireRedSeedGameOptions = useMemo(
+        () =>
+            getAllGameOptions(t).filter((option) =>
+                FIRE_RED_ENGLISH_SEED_GAMES.has(option.value)
+            ),
+        [t]
+    );
+
+    useEffect(() => {
+        if (hidden) {
+            setSeedList([]);
+            setSeedListLoading(false);
+            setSeedListError(undefined);
+            return;
+        }
+
+        let cancelled = false;
+        setSeedListLoading(true);
+        setSeedListError(undefined);
+        setSeedList([]);
+
+        const loadSeedList = async () => {
+            try {
+                const [seedData, tenLines] = await Promise.all([
+                    fetchSeedData(game),
+                    fetchTenLines(),
+                ]);
+                const nextSeedList =
+                    await tenLines.get_contiguous_seed_list(
+                        seedData,
+                        `${sound}_${buttonMode}_${button}`,
+                        game,
+                        heldButton
+                    );
+                if (cancelled) {
+                    return;
+                }
+
+                setSeedList(nextSeedList);
+            } catch (error) {
+                if (!cancelled) {
+                    console.error(
+                        "Failed to load FRLG held-item seed list",
+                        error
+                    );
+                    setSeedListError(
+                        error instanceof Error
+                            ? error.message
+                            : String(error)
+                    );
+                }
+            } finally {
+                if (!cancelled) {
+                    setSeedListLoading(false);
+                }
+            }
+        };
+
+        void loadSeedList();
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        game,
+        sound,
+        buttonMode,
+        button,
+        heldButton,
+        hidden,
+    ]);
+
+    useEffect(() => {
+        if (
+            hidden ||
+            seedListLoading ||
+            seedList.length === 0 ||
+            seedList.some(
+                (seed) => seed.initialSeed === targetSeedValue
+            )
+        ) {
+            return;
+        }
+
+        const fallbackSeed =
+            seedList[Math.min(51, seedList.length - 1)];
+        setHeldSeedURLState({
+            targetInitialSeed: hexSeed(fallbackSeed.initialSeed, 16),
+        });
+    }, [
+        seedList,
+        seedListLoading,
+        targetSeedValue,
+        setHeldSeedURLState,
+        hidden,
+    ]);
+
+    useEffect(() => {
+        setTargetSeedInput(hexSeed(targetSeedValue, 16));
+    }, [targetSeedValue]);
+
+    useEffect(() => {
+        setTargetSeedIsValid(
+            seedListLoading ||
+                (seedList.length > 0 && targetSeedIndex !== -1)
+        );
+    }, [seedList.length, seedListLoading, targetSeedIndex]);
 
     const advanceRange: [number, number] = [
         parseInt(advanceRangeStrings[0], 10),
@@ -145,7 +374,12 @@ export default function FrlgHeldItemSearcherPage({
         searchMode,
         selection,
         heldItemFilter,
-        initialSeed,
+        targetSeedValue,
+        game,
+        sound,
+        buttonMode,
+        button,
+        heldButton,
         advanceSignature,
         standardOffset,
     ]);
@@ -172,7 +406,10 @@ export default function FrlgHeldItemSearcherPage({
             hidden ||
             searching ||
             !selection ||
-            !initialSeedIsValid ||
+            seedListLoading ||
+            !!seedListError ||
+            !targetSeedIsValid ||
+            !targetSeed ||
             !advanceRangeIsValid ||
             advanceSearchSpaceTooLarge ||
             !hasUsableOffset
@@ -192,9 +429,10 @@ export default function FrlgHeldItemSearcherPage({
                 const tenLines = await fetchTenLines();
                 const seeds: FRLGContiguousSeedEntry[] = [
                     {
-                        initialSeed: parseInt(initialSeed, 16),
-                        seedTime: 0,
-                        settings: "",
+                        ...targetSeed,
+                        settings:
+                            targetSeed.settings ??
+                            `${sound}_${buttonMode}_${button}`,
                     },
                 ];
                 await tenLines.check_seeds_wild(
@@ -286,18 +524,207 @@ export default function FrlgHeldItemSearcherPage({
                 {t("heldItems.seedAndAdvanceInstruction")}
             </Alert>
 
-            <NumericalInput
-                label={t("table.initialSeed")}
-                name="heldInitialSeed"
-                minimumValue={0}
-                maximumValue={0xffff}
-                isHex
-                value={initialSeed}
-                disabled={searching}
-                onChange={(_event, value) => {
-                    setInitialSeed(value.value.toUpperCase());
-                    setInitialSeedIsValid(value.isValid);
+            <TextField
+                label={t("labels.game")}
+                margin="normal"
+                value={game}
+                onChange={(event) => {
+                    const nextGame = event.target.value;
+                    const nextIsSwitch = nextGame.endsWith("nx");
+                    setHeldSeedURLState({
+                        game: nextGame,
+                        gameConsole: nextIsSwitch ? "NX" : "GBA",
+                        buttonMode: nextIsSwitch ? "h" : "a",
+                    });
                 }}
+                select
+                fullWidth
+                disabled={searching}
+            >
+                {fireRedSeedGameOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                    </MenuItem>
+                ))}
+            </TextField>
+            <TextField
+                label={t("labels.sound")}
+                margin="normal"
+                value={sound}
+                onChange={(event) =>
+                    setHeldSeedURLState({ sound: event.target.value })
+                }
+                select
+                fullWidth
+                disabled={searching}
+            >
+                <MenuItem value="mono">{t("common.mono")}</MenuItem>
+                <MenuItem value="stereo">{t("common.stereo")}</MenuItem>
+            </TextField>
+            <TextField
+                label={t("labels.buttonMode")}
+                margin="normal"
+                value={buttonMode}
+                onChange={(event) =>
+                    setHeldSeedURLState({
+                        buttonMode: event.target.value,
+                    })
+                }
+                select
+                fullWidth
+                disabled={searching}
+            >
+                <MenuItem value="a">L=A</MenuItem>
+                <MenuItem value="h">{t("options.help")}</MenuItem>
+                <MenuItem value="r">LR</MenuItem>
+            </TextField>
+            <TextField
+                label={t("labels.seedButton")}
+                margin="normal"
+                value={button}
+                onChange={(event) =>
+                    setHeldSeedURLState({ button: event.target.value })
+                }
+                select
+                fullWidth
+                disabled={searching}
+            >
+                <MenuItem value="a">A</MenuItem>
+                <MenuItem value="start">{t("options.start")}</MenuItem>
+                <MenuItem value="l">L (L=A)</MenuItem>
+            </TextField>
+            <TextField
+                label={t("labels.extraButton")}
+                margin="normal"
+                value={heldButton}
+                onChange={(event) =>
+                    setHeldSeedURLState({
+                        heldButton: event.target.value,
+                    })
+                }
+                select
+                fullWidth
+                disabled={searching}
+            >
+                <MenuItem value="none">{t("common.none")}</MenuItem>
+                <MenuItem value="startup_select">
+                    {t("options.startupSelect")}
+                </MenuItem>
+                <MenuItem value="startup_a">
+                    {t("options.startupA")}
+                </MenuItem>
+                <MenuItem value="blackout_r">
+                    {t("options.blackoutR")}
+                </MenuItem>
+                <MenuItem value="blackout_a">
+                    {t("options.blackoutA")}
+                </MenuItem>
+                <MenuItem value="blackout_l">
+                    {t("options.blackoutL")}
+                </MenuItem>
+                <MenuItem value="blackout_al">
+                    {t("options.blackoutAL")}
+                </MenuItem>
+            </TextField>
+            <TextField
+                label={t("labels.console")}
+                margin="normal"
+                value={gameConsole}
+                onChange={(event) =>
+                    setHeldSeedURLState({
+                        gameConsole: event.target.value,
+                    })
+                }
+                select
+                fullWidth
+                disabled={searching}
+            >
+                {getConsoleOptions(t, game.endsWith("nx")).map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                    </MenuItem>
+                ))}
+            </TextField>
+            <Autocomplete
+                freeSolo
+                options={seedList}
+                value={targetSeed ?? null}
+                inputValue={targetSeedInput}
+                loading={seedListLoading}
+                onInputChange={(_event, newInputValue) => {
+                    const normalized = normalizeSeedInput(newInputValue);
+                    setTargetSeedInput(normalized);
+                    if (normalized === "") {
+                        setTargetSeedIsValid(false);
+                        return;
+                    }
+
+                    const parsedSeed = Number.parseInt(normalized, 16);
+                    const exists = seedList.some(
+                        (seed) => seed.initialSeed === parsedSeed
+                    );
+                    setTargetSeedIsValid(exists);
+                    if (exists) {
+                        setHeldSeedURLState({
+                            targetInitialSeed: hexSeed(parsedSeed, 16),
+                        });
+                    }
+                }}
+                onChange={(_event, newValue) => {
+                    if (!newValue || typeof newValue === "string") {
+                        return;
+                    }
+                    setTargetSeedInput(
+                        hexSeed(newValue.initialSeed, 16)
+                    );
+                    setTargetSeedIsValid(true);
+                    setHeldSeedURLState({
+                        targetInitialSeed: hexSeed(
+                            newValue.initialSeed,
+                            16
+                        ),
+                    });
+                }}
+                getOptionLabel={(item) => {
+                    if (typeof item === "string") {
+                        return item;
+                    }
+                    return `${hexSeed(item.initialSeed, 16)} (${frameToMS(
+                        item.seedTime / 16,
+                        gameConsole
+                    )}ms)`;
+                }}
+                isOptionEqualToValue={(option, value) =>
+                    option.initialSeed === value.initialSeed
+                }
+                filterOptions={targetSeedFilterOptions}
+                renderInput={(params) => (
+                    <TextField
+                        {...params}
+                        label={t("labels.targetSeed")}
+                        margin="normal"
+                        error={
+                            !seedListLoading &&
+                            (seedList.length === 0 ||
+                                !targetSeedIsValid)
+                        }
+                        helperText={
+                            seedListError
+                                ? seedListError
+                                : !seedListLoading &&
+                                    seedList.length === 0
+                                  ? t("messages.noKnownSeeds")
+                                  : !seedListLoading &&
+                                      !targetSeedIsValid
+                                    ? t("messages.invalidTargetSeed")
+                                    : undefined
+                        }
+                    />
+                )}
+                disablePortal
+                selectOnFocus
+                fullWidth
+                disabled={searching}
             />
             <RangeInput
                 label={t("labels.advances")}
@@ -431,7 +858,10 @@ export default function FrlgHeldItemSearcherPage({
                 disabled={
                     searching ||
                     !selection ||
-                    !initialSeedIsValid ||
+                    seedListLoading ||
+                    !!seedListError ||
+                    !targetSeedIsValid ||
+                    !targetSeed ||
                     !advanceRangeIsValid ||
                     advanceSearchSpaceTooLarge ||
                     !hasUsableOffset
