@@ -1475,9 +1475,16 @@ export default function CalibrationForm({
                             label={t("labels.game")}
                             margin="normal"
                             style={{ textAlign: "left" }}
-                            onChange={(event) =>
-                                setCalibrationURLState({ game: event.target.value })
-                            }
+                            onChange={(event) => {
+                                const nextGame = event.target.value;
+                                setCalibrationURLState({
+                                    game: nextGame,
+                                    gameConsole: fixGameConsole(
+                                        nextGame,
+                                        gameConsole
+                                    ),
+                                });
+                            }}
                             value={game}
                             select
                             fullWidth

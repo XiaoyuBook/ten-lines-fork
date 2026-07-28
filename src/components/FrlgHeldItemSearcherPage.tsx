@@ -21,6 +21,7 @@ import fetchTenLines, {
     frameToMS,
     Game,
     hexSeed,
+    SEED_IDENTIFIER_TO_GAME,
     WILD_1,
 } from "../tenLines";
 import type {
@@ -53,14 +54,9 @@ import RangeInput from "./RangeInput";
 const ENCOUNTER_CATEGORY = 0;
 const RESULT_LIMIT = 1000;
 const MAX_ADVANCES_PER_SEARCH = 100_000;
-const DEFAULT_ADVANCE_RANGE: [string, string] = ["0", "10000"];
+const DEFAULT_ADVANCE_RANGE: [string, string] = ["1000", "100000"];
 const DEFAULT_SEED_GAME = "fr_nx";
-const FIRE_RED_ENGLISH_SEED_GAMES = new Set([
-    "fr",
-    "fr_eu",
-    "fr_nx",
-    "fr_mgba",
-]);
+const ENGLISH_SWITCH_FRLG_SEED_GAMES = new Set(["fr_nx", "lg_nx"]);
 const UNFILTERED_IV_RANGES: [number, number][] = Array.from(
     { length: 6 },
     () => [0, 31] as [number, number]
@@ -85,20 +81,22 @@ interface HeldSeedURLState {
 }
 
 const HELD_SEED_QUERY_KEYS: Record<keyof HeldSeedURLState, string> = {
-    game: "heldSeedGame",
+    game: "game",
     sound: "heldSeedSound",
     buttonMode: "heldSeedButtonMode",
     button: "heldSeedButton",
     heldButton: "heldSeedExtraButton",
-    gameConsole: "heldSeedConsole",
+    gameConsole: "gameConsole",
     targetInitialSeed: "heldTargetInitialSeed",
 };
 
 function useHeldSeedURLState() {
     const [searchParams, setSearchParams] = useSearchParams();
-    const requestedGame =
-        searchParams.get(HELD_SEED_QUERY_KEYS.game) || DEFAULT_SEED_GAME;
-    const game = FIRE_RED_ENGLISH_SEED_GAMES.has(requestedGame)
+    const requestedGameParam = searchParams.get(HELD_SEED_QUERY_KEYS.game);
+    const requestedGame = requestedGameParam || DEFAULT_SEED_GAME;
+    const requestedGameIsSupported =
+        ENGLISH_SWITCH_FRLG_SEED_GAMES.has(requestedGame);
+    const game = requestedGameIsSupported
         ? requestedGame
         : DEFAULT_SEED_GAME;
     const isSwitch = game.endsWith("nx");
@@ -111,11 +109,16 @@ function useHeldSeedURLState() {
         searchParams.get(HELD_SEED_QUERY_KEYS.button) || "a";
     const heldButton =
         searchParams.get(HELD_SEED_QUERY_KEYS.heldButton) || "none";
+    const requestedGameConsole = searchParams.get(
+        HELD_SEED_QUERY_KEYS.gameConsole
+    );
     const gameConsole = fixGameConsole(
         game,
-        searchParams.get(HELD_SEED_QUERY_KEYS.gameConsole) ||
-            (isSwitch ? "NX" : "GBA")
+        requestedGameConsole || (isSwitch ? "NX" : "GBA")
     );
+    const sharedGameNeedsNormalization =
+        requestedGameParam !== game ||
+        requestedGameConsole !== gameConsole;
     const targetSeedText =
         searchParams.get(HELD_SEED_QUERY_KEYS.targetInitialSeed) ||
         "DEAD";
@@ -142,6 +145,7 @@ function useHeldSeedURLState() {
 
     return {
         game,
+        sharedGameNeedsNormalization,
         sound,
         buttonMode,
         button,
@@ -166,6 +170,7 @@ export default function FrlgHeldItemSearcherPage({
     const { locale, t } = useI18n();
     const {
         game,
+        sharedGameNeedsNormalization,
         sound,
         buttonMode,
         button,
@@ -212,13 +217,30 @@ export default function FrlgHeldItemSearcherPage({
     );
     const targetSeed =
         targetSeedIndex === -1 ? undefined : seedList[targetSeedIndex];
-    const fireRedSeedGameOptions = useMemo(
+    const heldSeedGameOptions = useMemo(
         () =>
             getAllGameOptions(t).filter((option) =>
-                FIRE_RED_ENGLISH_SEED_GAMES.has(option.value)
+                ENGLISH_SWITCH_FRLG_SEED_GAMES.has(option.value)
             ),
         [t]
     );
+    const encounterGame =
+        SEED_IDENTIFIER_TO_GAME[game] ?? Game.FireRed;
+
+    useEffect(() => {
+        if (!hidden && sharedGameNeedsNormalization) {
+            setHeldSeedURLState({
+                game,
+                gameConsole,
+            });
+        }
+    }, [
+        game,
+        gameConsole,
+        hidden,
+        sharedGameNeedsNormalization,
+        setHeldSeedURLState,
+    ]);
 
     useEffect(() => {
         if (hidden) {
@@ -335,13 +357,13 @@ export default function FrlgHeldItemSearcherPage({
             selection
                 ? getFrlgHeldOffsetProfile(
                       FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
-                      Game.FireRed,
+                      encounterGame,
                       ENCOUNTER_CATEGORY,
                       selection.locationId,
                       WILD_1
                   )
                 : undefined,
-        [selection]
+        [encounterGame, selection]
     );
     const standardOffsetValue = parseInt(standardOffset, 10);
     const searchOffsets = getFrlgHeldSearchOffsets(
@@ -440,7 +462,7 @@ export default function FrlgHeldItemSearcherPage({
                     advanceRange,
                     [0, 0],
                     0,
-                    Game.FireRed,
+                    encounterGame,
                     0,
                     0,
                     ENCOUNTER_CATEGORY,
@@ -533,7 +555,10 @@ export default function FrlgHeldItemSearcherPage({
                     const nextIsSwitch = nextGame.endsWith("nx");
                     setHeldSeedURLState({
                         game: nextGame,
-                        gameConsole: nextIsSwitch ? "NX" : "GBA",
+                        gameConsole: fixGameConsole(
+                            nextGame,
+                            gameConsole
+                        ),
                         buttonMode: nextIsSwitch ? "h" : "a",
                     });
                 }}
@@ -541,7 +566,7 @@ export default function FrlgHeldItemSearcherPage({
                 fullWidth
                 disabled={searching}
             >
-                {fireRedSeedGameOptions.map((option) => (
+                {heldSeedGameOptions.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
                         {option.label}
                     </MenuItem>
@@ -778,6 +803,7 @@ export default function FrlgHeldItemSearcherPage({
 
             <FrlgHeldEncounterSelector
                 active={!hidden && !searching}
+                game={encounterGame}
                 value={selection}
                 onChange={setSelection}
             />
@@ -813,7 +839,7 @@ export default function FrlgHeldItemSearcherPage({
                     profileSet={
                         FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT
                     }
-                    game={Game.FireRed}
+                    game={encounterGame}
                     encounterCategory={ENCOUNTER_CATEGORY}
                     location={selection.locationId}
                     method={WILD_1}
@@ -892,6 +918,12 @@ export default function FrlgHeldItemSearcherPage({
                         rows={rows}
                         standardOffset={standardOffsetValue}
                         searchMode={searchMode}
+                        calibrationSeedSettings={{
+                            sound,
+                            buttonMode,
+                            button,
+                            heldButton,
+                        }}
                     />
                 </>
             )}

@@ -45,6 +45,7 @@ import {
     buildSeedSettingKey,
     filterFrlgEggGameOptions,
     getSeedRangeAroundTarget,
+    isFrlgEggGame,
     parseEggSeedSettings,
     type EggSeedSettings,
 } from "./frlgEggHelpers";
@@ -206,11 +207,22 @@ export default function EggCalibrationForm({
         });
     };
 
-    const game = searchParams.get("game") || "fr";
+    const requestedGame = searchParams.get("game");
+    const requestedGameConsole = searchParams.get("gameConsole");
+    const fallbackGame = requestedGameConsole?.startsWith("NX")
+        ? "fr_nx"
+        : "fr";
+    const game =
+        requestedGame && isFrlgEggGame(requestedGame)
+            ? requestedGame
+            : fallbackGame;
     const gameConsole = fixGameConsole(
         game,
-        searchParams.get("gameConsole") || "GBA"
+        requestedGameConsole || (game.endsWith("nx") ? "NX" : "GBA")
     );
+    const sharedGameNeedsNormalization =
+        requestedGame !== game ||
+        requestedGameConsole !== gameConsole;
     const heldSettingsText =
         searchParams.get("heldSettings") || buildEggSeedSettings(parseEggSeedSettings(undefined));
     const pickupSettingsText =
@@ -272,6 +284,23 @@ export default function EggCalibrationForm({
     const [secretIDValid, setSecretIDValid] = useState(true);
     const [childPidValid, setChildPidValid] = useState(true);
     const [childIvRangesValid, setChildIvRangesValid] = useState(true);
+    useEffect(() => {
+        if (hidden || !sharedGameNeedsNormalization) {
+            return;
+        }
+        setSearchParams((previous) => {
+            const params = new URLSearchParams(previous);
+            params.set("game", game);
+            params.set("gameConsole", gameConsole);
+            return params;
+        });
+    }, [
+        game,
+        gameConsole,
+        hidden,
+        setSearchParams,
+        sharedGameNeedsNormalization,
+    ]);
 
     const gameOptions = useMemo(
         () => filterFrlgEggGameOptions(getAllGameOptions(t)),

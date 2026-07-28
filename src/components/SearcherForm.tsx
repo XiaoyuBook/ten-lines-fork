@@ -16,6 +16,7 @@ import {
 import fetchTenLines, {
     COMBINED_WILD_METHOD,
     fetchSeedData,
+    fixGameConsole,
     SEED_IDENTIFIER_TO_GAME,
     STATIC_2,
     STATIC_4,
@@ -56,6 +57,7 @@ export interface SearcherFormState {
 
 export interface SearcherURLState {
     game: string;
+    gameConsole: string;
     trainerID: string;
     secretID: string;
     reachableAdvancesFilter: string;
@@ -67,6 +69,10 @@ export interface SearcherURLState {
 function useSearcherURLState() {
     const [searchParams, setSearchParams] = useSearchParams();
     const game = searchParams.get("game") || "r_painting";
+    const gameConsole = fixGameConsole(
+        game,
+        searchParams.get("gameConsole") || "GBA"
+    );
     const trainerID = searchParams.get("trainerID") || "0";
     const secretID = searchParams.get("secretID") || "0";
     const sound = searchParams.get("sound") || "any";
@@ -87,6 +93,7 @@ function useSearcherURLState() {
     };
     return {
         game,
+        gameConsole,
         trainerID,
         secretID,
         sound,
@@ -192,6 +199,7 @@ export default function CalibrationForm({
         });
     const {
         game,
+        gameConsole,
         trainerID,
         secretID,
         sound,
@@ -487,11 +495,16 @@ export default function CalibrationForm({
                 label={t("labels.game")}
                 margin="normal"
                 style={{ textAlign: "left" }}
-                onChange={(event) =>
+                onChange={(event) => {
+                    const nextGame = event.target.value;
                     setSearcherURLState({
-                        game: event.target.value,
-                    })
-                }
+                        game: nextGame,
+                        gameConsole: fixGameConsole(
+                            nextGame,
+                            gameConsole
+                        ),
+                    });
+                }}
                 value={game}
                 select
                 fullWidth

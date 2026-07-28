@@ -455,9 +455,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         heldItems: {
             pageTitle: "FRLG Wild Held Items",
             pageDescription:
-                "Search FireRed Sweet Scent H1 frames using field-tested or manually entered held-item offsets.",
+                "Search English Switch FireRed or LeafGreen Sweet Scent H1 frames. Tested Offset presets currently apply to FireRed only.",
             separatePageNotice:
-                "This is an independent tool. Its settings and results do not change Searcher or Calibration.",
+                "Search-specific settings and results stay independent. Game, console, TID, and SID are shared across pages.",
             seedAndAdvanceInstruction:
                 "Held-item prediction does not require TID, SID, or IV filters. Enter an initial seed and an Advance range; IVs remain visible in the results only.",
             advanceSearchTooLarge:
@@ -972,9 +972,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         heldItems: {
             pageTitle: "FRLG \u91ce\u751f\u643a\u5e26\u7269",
             pageDescription:
-                "\u4f7f\u7528\u5b9e\u673a\u9884\u8bbe\u6216\u624b\u52a8 H1 Offset\uff0c\u641c\u7d22\u706b\u7ea2\u82f1\u6587\u7248\u751c\u751c\u9999\u6c14 H1 \u5e27\u3002",
+                "\u641c\u7d22 Switch \u82f1\u6587\u7248\u706b\u7ea2\u6216\u53f6\u7eff\u7684\u751c\u751c\u9999\u6c14 H1 \u5e27\u3002\u5f53\u524d\u5b9e\u6d4b Offset \u9884\u8bbe\u4ec5\u9002\u7528\u4e8e\u706b\u7ea2\u3002",
             separatePageNotice:
-                "\u8fd9\u662f\u72ec\u7acb\u5de5\u5177\uff1b\u672c\u9875\u7684\u8bbe\u7f6e\u548c\u7ed3\u679c\u4e0d\u4f1a\u6539\u52a8 Searcher \u6216 Calibration\u3002",
+                "\u641c\u7d22\u4e13\u7528\u8bbe\u7f6e\u548c\u7ed3\u679c\u4ecd\u4fdd\u6301\u72ec\u7acb\uff1b\u6e38\u620f\u3001\u673a\u578b\u3001TID \u548c SID \u4f1a\u5728\u5404\u9875\u9762\u540c\u6b65\u3002",
             seedAndAdvanceInstruction:
                 "\u643a\u5e26\u7269\u9884\u6d4b\u4e0d\u9700\u8981 TID\u3001SID \u6216\u4e2a\u4f53\u503c\u7b5b\u9009\u3002\u53ea\u9700\u8f93\u5165\u521d\u59cb Seed \u548c Advance \u8303\u56f4\uff1b\u4e2a\u4f53\u503c\u4ec5\u5728\u7ed3\u679c\u4e2d\u663e\u793a\u3002",
             advanceSearchTooLarge:

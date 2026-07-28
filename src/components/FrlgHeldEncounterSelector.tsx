@@ -2,7 +2,7 @@ import { MenuItem, TextField } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getLocation, getName, useI18n } from "../i18n";
-import fetchTenLines, { Game } from "../tenLines";
+import fetchTenLines from "../tenLines";
 import { getFrlgHeldItemSlots } from "../utils/frlgHeldItems";
 
 const FRLG_GRASS_ENCOUNTER_CATEGORY = 0;
@@ -21,6 +21,7 @@ export type FrlgHeldEncounterSelection = FrlgHeldLocationOption & {
 export type FrlgHeldEncounterSelectorProps = {
     /** Resource loading is suspended while the page is hidden/inactive. */
     active: boolean;
+    game: number;
     value?: FrlgHeldEncounterSelection;
     onChange: (selection: FrlgHeldEncounterSelection | undefined) => void;
 };
@@ -39,24 +40,22 @@ function speciesHasHeldItem(speciesForm: number) {
 
 export default function FrlgHeldEncounterSelector({
     active,
+    game,
     value,
     onChange,
 }: FrlgHeldEncounterSelectorProps) {
     const { t, resources } = useI18n();
     const [speciesOptions, setSpeciesOptions] = useState<SpeciesOption[]>([]);
     const [status, setStatus] = useState<ResourceStatus>("idle");
-    const loadStartedRef = useRef(false);
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
 
     useEffect(() => {
-        if (!active || loadStartedRef.current) {
+        if (!active) {
             return;
         }
 
-        loadStartedRef.current = true;
         let cancelled = false;
-        let completed = false;
         setStatus("loading");
         setSpeciesOptions([]);
         onChangeRef.current(undefined);
@@ -65,7 +64,7 @@ export default function FrlgHeldEncounterSelector({
             try {
                 const tenLines = await fetchTenLines();
                 const locationIds = (await tenLines.get_wild_locations(
-                    Game.FireRed,
+                    game,
                     FRLG_GRASS_ENCOUNTER_CATEGORY
                 )) as number[];
                 if (cancelled) return;
@@ -81,7 +80,7 @@ export default function FrlgHeldEncounterSelector({
                     allLocations.map(async (location) => ({
                         ...location,
                         speciesForms: await tenLines.get_area_species(
-                            Game.FireRed,
+                            game,
                             FRLG_GRASS_ENCOUNTER_CATEGORY,
                             location.locationIndex
                         ),
@@ -137,7 +136,6 @@ export default function FrlgHeldEncounterSelector({
 
                 setSpeciesOptions(nextOptions);
                 setStatus("ready");
-                completed = true;
             } catch (error) {
                 if (cancelled) return;
                 console.error(
@@ -146,18 +144,14 @@ export default function FrlgHeldEncounterSelector({
                 );
                 setSpeciesOptions([]);
                 setStatus("error");
-                completed = true;
             }
         };
 
         void loadOptions();
         return () => {
             cancelled = true;
-            if (!completed) {
-                loadStartedRef.current = false;
-            }
         };
-    }, [active, resources]);
+    }, [active, game, resources]);
 
     useEffect(() => {
         if (!active || status !== "ready") {
@@ -276,7 +270,7 @@ export default function FrlgHeldEncounterSelector({
                         key={`${location.locationIndex}-${location.locationId}`}
                         value={location.locationIndex}
                     >
-                        {getLocation(resources, Game.FireRed, location.locationId)}
+                        {getLocation(resources, game, location.locationId)}
                     </MenuItem>
                 ))}
             </TextField>

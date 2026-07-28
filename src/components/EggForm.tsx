@@ -1,5 +1,6 @@
 import { proxy } from "comlink";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
     Autocomplete,
     Box,
@@ -41,6 +42,7 @@ import {
     calculateEggSearchProgress,
     filterFrlgEggGameOptions,
     isCompatibleEggParentPair,
+    isFrlgEggGame,
 } from "./frlgEggHelpers";
 
 const DEFAULT_IVS = DEFAULT_FRLG_EGG_PARENT_IVS.map((value) => value.toString());
@@ -83,10 +85,51 @@ export default function EggForm({
     hidden?: boolean;
 }) {
     const { t, resources } = useI18n();
-    const [game, setGame] = useState("fr");
-    const [gameConsole, setGameConsole] = useState("GBA");
-    const [trainerID, setTrainerID] = useState("0");
-    const [secretID, setSecretID] = useState("0");
+    const [searchParams, setSearchParams] = useSearchParams();
+    const requestedGame = searchParams.get("game");
+    const requestedGameConsole = searchParams.get("gameConsole");
+    const fallbackGame = requestedGameConsole?.startsWith("NX")
+        ? "fr_nx"
+        : "fr";
+    const game =
+        requestedGame && isFrlgEggGame(requestedGame)
+            ? requestedGame
+            : fallbackGame;
+    const gameConsole = fixGameConsole(
+        game,
+        requestedGameConsole || (game.endsWith("nx") ? "NX" : "GBA")
+    );
+    const sharedGameNeedsNormalization =
+        requestedGame !== game ||
+        requestedGameConsole !== gameConsole;
+    const trainerID = searchParams.get("trainerID") || "0";
+    const secretID = searchParams.get("secretID") || "0";
+    const setSharedURLState = (state: Record<string, string>) => {
+        setSearchParams((previous) => {
+            const params = new URLSearchParams(previous);
+            for (const [key, value] of Object.entries(state)) {
+                params.set(key, value);
+            }
+            return params;
+        });
+    };
+    useEffect(() => {
+        if (hidden || !sharedGameNeedsNormalization) {
+            return;
+        }
+        setSearchParams((previous) => {
+            const params = new URLSearchParams(previous);
+            params.set("game", game);
+            params.set("gameConsole", gameConsole);
+            return params;
+        });
+    }, [
+        game,
+        gameConsole,
+        hidden,
+        setSearchParams,
+        sharedGameNeedsNormalization,
+    ]);
     const [method, setMethod] = useState(DEFAULT_FRLG_EGG_METHOD.toString());
     const [compatibility, setCompatibility] = useState(
         DEFAULT_FRLG_EGG_COMPATIBILITY.toString()
@@ -337,10 +380,13 @@ export default function EggForm({
                     value={game}
                     onChange={(event) => {
                         const nextGame = event.target.value;
-                        setGame(nextGame);
-                        setGameConsole((currentConsole) =>
-                            fixGameConsole(nextGame, currentConsole)
-                        );
+                        setSharedURLState({
+                            game: nextGame,
+                            gameConsole: fixGameConsole(
+                                nextGame,
+                                gameConsole
+                            ),
+                        });
                     }}
                     select
                     fullWidth
@@ -356,7 +402,12 @@ export default function EggForm({
                     label={t("labels.console")}
                     value={fixedGameConsole}
                     onChange={(event) =>
-                        setGameConsole(fixGameConsole(game, event.target.value))
+                        setSharedURLState({
+                            gameConsole: fixGameConsole(
+                                game,
+                                event.target.value
+                            ),
+                        })
                     }
                     select
                     fullWidth
@@ -408,7 +459,9 @@ export default function EggForm({
                     value={trainerID}
                     minimumValue={0}
                     maximumValue={65535}
-                    onChange={(_, next) => setTrainerID(next.value)}
+                    onChange={(_, next) =>
+                        setSharedURLState({ trainerID: next.value })
+                    }
                 />
                 <NumericalInput
                     label={t("labels.secretId")}
@@ -416,7 +469,9 @@ export default function EggForm({
                     value={secretID}
                     minimumValue={0}
                     maximumValue={65535}
-                    onChange={(_, next) => setSecretID(next.value)}
+                    onChange={(_, next) =>
+                        setSharedURLState({ secretID: next.value })
+                    }
                 />
                 <NumericalInput
                     label={t("labels.maxResults")}
