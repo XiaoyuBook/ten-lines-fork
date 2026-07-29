@@ -21,6 +21,8 @@ export type FrlgHeldEncounterSelection = FrlgHeldLocationOption & {
 export type FrlgHeldEncounterSelectorProps = {
     /** Resource loading is suspended while the page is hidden/inactive. */
     active: boolean;
+    /** Inputs are disabled without restarting the resource lifecycle. */
+    disabled?: boolean;
     game: number;
     value?: FrlgHeldEncounterSelection;
     onChange: (selection: FrlgHeldEncounterSelection | undefined) => void;
@@ -40,6 +42,7 @@ function speciesHasHeldItem(speciesForm: number) {
 
 export default function FrlgHeldEncounterSelector({
     active,
+    disabled = false,
     game,
     value,
     onChange,
@@ -223,7 +226,7 @@ export default function FrlgHeldEncounterSelector({
                 }}
                 select
                 fullWidth
-                disabled={!active || status !== "ready"}
+                disabled={!active || disabled || status !== "ready"}
                 helperText={helperText}
             >
                 {speciesOptions.map((option) => (
@@ -261,7 +264,10 @@ export default function FrlgHeldEncounterSelector({
                 select
                 fullWidth
                 disabled={
-                    !active || status !== "ready" || !selectedSpecies
+                    !active ||
+                    disabled ||
+                    status !== "ready" ||
+                    !selectedSpecies
                 }
                 helperText={helperText}
             >

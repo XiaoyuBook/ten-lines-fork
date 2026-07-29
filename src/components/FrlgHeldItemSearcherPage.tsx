@@ -802,7 +802,8 @@ export default function FrlgHeldItemSearcherPage({
             </Alert>
 
             <FrlgHeldEncounterSelector
-                active={!hidden && !searching}
+                active={!hidden}
+                disabled={searching}
                 game={encounterGame}
                 value={selection}
                 onChange={setSelection}
