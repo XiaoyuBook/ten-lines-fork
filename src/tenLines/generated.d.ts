@@ -53,6 +53,7 @@ export interface ExtendedGeneratorState {
 }
 
 export interface ExtendedWildGeneratorState extends ExtendedGeneratorState {
+    iv2EndSeed: number;
     encounterSlot: number;
     species: number;
     form: number;
@@ -98,6 +99,7 @@ export interface ExtendedSearcherState {
 }
 
 export interface ExtendedWildSearcherState extends ExtendedSearcherState {
+    iv2EndSeed: number;
     encounterSlot: number;
     species: number;
     form: number;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import React from "react";
 import {
     Autocomplete,
@@ -14,6 +14,7 @@ import { useSearchParams } from "react-router-dom";
 
 import fetchTenLines, {
     fetchSeedData,
+    fixGameConsole,
     SEED_IDENTIFIER_TO_GAME,
     STATIC_2,
     STATIC_4,
@@ -42,24 +43,48 @@ interface IdComboFormState {
 
 interface IdComboURLState {
     game: string;
+    gameConsole: string;
     idAdvancesMin: string;
     idAdvancesMax: string;
     idMaxResults: string;
-    idTid: string;
-    idSid: string;
+    trainerID: string;
+    secretID: string;
 }
 
 function useIdComboURLState() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const requestedGame = searchParams.get("game");
+    const legacyGame = searchParams.get("idGame");
+    const requestedGameConsole = searchParams.get("gameConsole");
+    const requestedGameValue = requestedGame || legacyGame;
+    const fallbackGame = requestedGameConsole?.startsWith("NX")
+        ? "fr_nx"
+        : "e_painting";
     const game =
-        searchParams.get("game") ||
-        searchParams.get("idGame") ||
-        "fr";
+        requestedGameValue === "e_painting" ||
+        requestedGameValue?.startsWith("fr") ||
+        requestedGameValue?.startsWith("lg")
+            ? requestedGameValue
+            : fallbackGame;
+    const gameConsole = fixGameConsole(
+        game,
+        requestedGameConsole || (game.endsWith("nx") ? "NX" : "GBA")
+    );
+    const sharedGameNeedsNormalization =
+        requestedGame !== game ||
+        requestedGameConsole !== gameConsole ||
+        legacyGame !== null;
     const idAdvancesMin = searchParams.get("idAdvancesMin") || "1000";
     const idAdvancesMax = searchParams.get("idAdvancesMax") || "10000";
     const maxResults = searchParams.get("idMaxResults") || "2000";
-    const tid = searchParams.get("idTid") || "";
-    const sid = searchParams.get("idSid") || "";
+    const tid =
+        searchParams.get("trainerID") ??
+        searchParams.get("idTid") ??
+        "";
+    const sid =
+        searchParams.get("secretID") ??
+        searchParams.get("idSid") ??
+        "";
 
     const setIdComboURLState = (state: Partial<IdComboURLState>) => {
         setSearchParams((prev) => {
@@ -69,12 +94,20 @@ function useIdComboURLState() {
             if (state.game !== undefined) {
                 prev.delete("idGame");
             }
+            if (state.trainerID !== undefined) {
+                prev.delete("idTid");
+            }
+            if (state.secretID !== undefined) {
+                prev.delete("idSid");
+            }
             return prev;
         });
     };
 
     return {
         game,
+        gameConsole,
+        sharedGameNeedsNormalization,
         idAdvancesMin,
         idAdvancesMax,
         maxResults,
@@ -133,6 +166,8 @@ export default function IdComboForm({
 
     const {
         game,
+        gameConsole,
+        sharedGameNeedsNormalization,
         idAdvancesMin,
         idAdvancesMax,
         maxResults,
@@ -140,6 +175,18 @@ export default function IdComboForm({
         sid,
         setIdComboURLState,
     } = useIdComboURLState();
+    useEffect(() => {
+        if (hidden || !sharedGameNeedsNormalization) {
+            return;
+        }
+        setIdComboURLState({ game, gameConsole });
+    }, [
+        game,
+        gameConsole,
+        hidden,
+        setIdComboURLState,
+        sharedGameNeedsNormalization,
+    ]);
 
     const [rows, setRows] = useState<IDComboRow[]>([]);
     const [searching, setSearching] = useState(false);
@@ -399,9 +446,16 @@ export default function IdComboForm({
                 label={t("labels.game")}
                 margin="normal"
                 style={{ textAlign: "left" }}
-                onChange={(event) =>
-                    setIdComboURLState({ game: event.target.value })
-                }
+                onChange={(event) => {
+                    const nextGame = event.target.value;
+                    setIdComboURLState({
+                        game: nextGame,
+                        gameConsole: fixGameConsole(
+                            nextGame,
+                            gameConsole
+                        ),
+                    });
+                }}
                 value={game}
                 select
                 fullWidth
@@ -438,7 +492,7 @@ export default function IdComboForm({
                             (/^\d+$/.test(value) &&
                                 parseInt(value, 10) >= 0 &&
                                 parseInt(value, 10) <= 65535);
-                        setIdComboURLState({ idTid: value });
+                        setIdComboURLState({ trainerID: value });
                         setTidIsValid(isValid);
                     }}
                     error={!tidIsValid}
@@ -473,7 +527,7 @@ export default function IdComboForm({
                             (/^\d+$/.test(value) &&
                                 parseInt(value, 10) >= 0 &&
                                 parseInt(value, 10) <= 65535);
-                        setIdComboURLState({ idSid: value });
+                        setIdComboURLState({ secretID: value });
                         setSidIsValid(isValid);
                     }}
                     error={!sidIsValid}

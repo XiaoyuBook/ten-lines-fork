@@ -10,6 +10,8 @@
 #include <Core/Parents/States/State.hpp>
 #include <Core/Parents/States/WildState.hpp>
 #include <Core/Parents/States/IDState.hpp>
+#include <Core/RNG/LCRNG.hpp>
+#include <Core/RNG/LCRNGReverse.hpp>
 #include <algorithm>
 #include <emscripten.h>
 #include <emscripten/bind.h>
@@ -115,6 +117,44 @@ inline Profile3 build_profile(Game game, u16 trainer_id, u16 secret_id)
     return Profile3("", game, trainer_id, secret_id, false);
 }
 
+inline u32 recover_iv2_end_seed(Method method, const WildState& state)
+{
+    const auto& ivs = state.getIVs();
+    u32 seeds[6];
+    int size = LCRNGReverse::recoverPokeRNGIV(
+        ivs[0],
+        ivs[1],
+        ivs[2],
+        ivs[3],
+        ivs[4],
+        ivs[5],
+        seeds,
+        method);
+
+    for (int i = 0; i < size; i++) {
+        PokeRNGR reverse(seeds[i]);
+        if (method == Method::Method2) {
+            reverse.next();
+        }
+
+        u32 recovered_pid = static_cast<u32>(reverse.nextUShort()) << 16;
+        recovered_pid |= reverse.nextUShort();
+        if (recovered_pid != state.getPID()) {
+            continue;
+        }
+
+        PokeRNG forward(seeds[i]);
+        const u32 candidate = forward.advance(method == Method::Method4 ? 2 : 1);
+        const u16 expected_iv2 = ivs[5] | (ivs[3] << 5) | (ivs[4] << 10);
+        if (((candidate >> 16) & 0x7fff) != expected_iv2) {
+            continue;
+        }
+        return candidate;
+    }
+
+    return 0;
+}
+
 class ExtendedGeneratorState : public GeneratorState {
 public:
     ExtendedGeneratorState(u16 initial_seed, u32 seed_time, u32 ttv_advances, u16 species, u8 form, const GeneratorState& state)
@@ -153,6 +193,7 @@ public:
         , initialSeed(initial_seed)
         , seedTime(seed_time)
         , ttvAdvances(ttv_advances)
+        , iv2EndSeed(recover_iv2_end_seed(method, state))
     {
         this->method = static_cast<std::underlying_type_t<Method>>(method) + 4;
     }
@@ -176,6 +217,7 @@ public:
     u16 initialSeed;
     u32 seedTime;
     u32 ttvAdvances;
+    u32 iv2EndSeed;
     int method;
 };
 
@@ -272,6 +314,7 @@ class ExtendedWildSearcherState : public WildSearcherState {
 public:
     ExtendedWildSearcherState(Method method, const WildSearcherState& state)
         : WildSearcherState(state)
+        , iv2EndSeed(recover_iv2_end_seed(method, state))
     {
         this->method = static_cast<std::underlying_type_t<Method>>(method) + 4;
     }
@@ -291,6 +334,7 @@ public:
     using WildSearcherState::shiny;
     using WildSearcherState::specie;
 
+    u32 iv2EndSeed;
     int method;
 };
 

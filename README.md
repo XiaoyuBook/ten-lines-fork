@@ -53,6 +53,7 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - Dynamic correction tool for use alongside [Xuan Yelin](https://space.bilibili.com/29039016?spm_id_from=333.1387.fans.user_card.click)'s script, with TV / non-TV support, preserved previous-round values, and split history tables
 - Reachable-advance prefiltering in Searcher
 - Searcher perfect-IV-count filtering for `1V` to `6V`
+- A separate experimental FRLG wild held-item tab using the field-tested English FireRed Sweet Scent profile
 - FRLG reachable-search sound filtering with an `Any` option
 - English / Chinese UI toggle
 - Chinese naming resources for Gen 3 data shown in the interface
@@ -94,6 +95,15 @@ This fork reduces that problem by letting Searcher pre-filter targets using an a
 - The perfect-IV-count filter is separate from manual IV ranges: once enabled, it enumerates every possible combination of exactly `N` perfect stats and searches across those combinations automatically
 - For FRLG reachable filtering, choosing Sound = `Any` checks both `Mono` and `Stereo` routes internally and keeps the lower reachable advance result for the same seed
 - Searcher rows can pass a selected target forward into Initial Seed / Calibration so later steps can reuse the intended species and spread context
+
+## Held Items Notes
+
+- Held-item searching lives in its own top-level tab and does not add controls or columns to Searcher or Calibration
+- The tab only offers Pokémon that actually have a held item in FireRed/LeafGreen; all of their grass/cave locations remain selectable
+- It scans a 16-bit initial seed forward over a selected Advance range (up to 100,000 per search); TID, SID, and IV filters are not required
+- Known locations automatically fill the field-tested H1 standard Offset; unknown locations use `0` and require a manual Offset before searching
+- **H1 stable** requires the selected item at `O` and `O+1`; **H1/H2/H4 coverage** requires it at `O-1`, `O`, and `O+1`
+- Results show every checked Offset, roll, and predicted item; the removed four-track `O+2` mode is not included
 
 ## ID Combo Notes
 
