@@ -455,7 +455,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         heldItems: {
             pageTitle: "FRLG Wild Held Items",
             pageDescription:
-                "Search English Switch FireRed or LeafGreen Sweet Scent H1 frames. Tested Offset presets currently apply to FireRed only.",
+                "Search English Switch FireRed or LeafGreen H1 frames for grass/caves, Rock Smash, Surfing, and all three rods. Tested Offset presets currently apply to FireRed only.",
             separatePageNotice:
                 "Search-specific settings and results stay independent. Game, console, TID, and SID are shared across pages.",
             seedAndAdvanceInstruction:
@@ -477,7 +477,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             offsetRequired:
                 "Enter an H1 standard Offset greater than 0 before filtering or searching.",
             enableSweetScentProfile:
-                "Use FireRed English Sweet Scent held-item profile (experimental)",
+                "Use English Switch FRLG held-item profiles (experimental)",
             sourceData: "FRLG source item rates:",
             profileAvailable:
                 "FireRed field-tested profile: {profiles}.",
@@ -972,7 +972,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         heldItems: {
             pageTitle: "FRLG \u91ce\u751f\u643a\u5e26\u7269",
             pageDescription:
-                "\u641c\u7d22 Switch \u82f1\u6587\u7248\u706b\u7ea2\u6216\u53f6\u7eff\u7684\u751c\u751c\u9999\u6c14 H1 \u5e27\u3002\u5f53\u524d\u5b9e\u6d4b Offset \u9884\u8bbe\u4ec5\u9002\u7528\u4e8e\u706b\u7ea2\u3002",
+                "\u641c\u7d22 Switch \u82f1\u6587\u7248\u706b\u7ea2\u6216\u53f6\u7eff\u7684\u8349\u4e1b/\u6d1e\u7a9f\u3001\u788e\u5ca9\u3001\u51b2\u6d6a\u548c\u4e09\u79cd\u9493\u7aff H1 \u5e27\u3002\u5f53\u524d\u5b9e\u6d4b Offset \u9884\u8bbe\u4ec5\u9002\u7528\u4e8e\u706b\u7ea2\u3002",
             separatePageNotice:
                 "\u641c\u7d22\u4e13\u7528\u8bbe\u7f6e\u548c\u7ed3\u679c\u4ecd\u4fdd\u6301\u72ec\u7acb\uff1b\u6e38\u620f\u3001\u673a\u578b\u3001TID \u548c SID \u4f1a\u5728\u5404\u9875\u9762\u540c\u6b65\u3002",
             seedAndAdvanceInstruction:
@@ -995,7 +995,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             offsetRequired:
                 "\u8bf7\u5148\u8f93\u5165\u5927\u4e8e 0 \u7684 H1 \u6807\u51c6 Offset\uff0c\u518d\u7b5b\u9009\u6216\u641c\u7d22\u3002",
             enableSweetScentProfile:
-                "使用火红英文版甜甜香气携带物档案（实验）",
+                "使用 Switch 英文版 FRLG 携带物档案（实验）",
             sourceData: "FRLG 源码携带率：",
             profileAvailable: "火红实机验证档案：{profiles}。",
             profileUnavailable:

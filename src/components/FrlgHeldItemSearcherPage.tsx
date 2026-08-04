@@ -29,7 +29,13 @@ import type {
     FRLGContiguousSeedEntry,
 } from "../tenLines/generated";
 import {
-    FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
+    FRLG_HELD_ENCOUNTER_GOOD_ROD,
+    FRLG_HELD_ENCOUNTER_GRASS,
+    FRLG_HELD_ENCOUNTER_OLD_ROD,
+    FRLG_HELD_ENCOUNTER_ROCK_SMASH,
+    FRLG_HELD_ENCOUNTER_SUPER_ROD,
+    FRLG_HELD_ENCOUNTER_SURFING,
+    FRLG_HELD_PROFILE_ENGLISH_SWITCH,
     FRLG_HELD_SEARCH_MODE_ALL_METHODS,
     FRLG_HELD_SEARCH_MODE_H1_STABLE,
     HELD_ITEM_FILTER_ANY,
@@ -51,7 +57,6 @@ import FrlgHeldItemResultsTable from "./FrlgHeldItemResultsTable";
 import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 
-const ENCOUNTER_CATEGORY = 0;
 const RESULT_LIMIT = 1000;
 const MAX_ADVANCES_PER_SEARCH = 100_000;
 const DEFAULT_ADVANCE_RANGE: [string, string] = ["1000", "100000"];
@@ -65,6 +70,14 @@ const SEARCH_MODE_OPTIONS: FrlgHeldSearchMode[] = [
     FRLG_HELD_SEARCH_MODE_H1_STABLE,
     FRLG_HELD_SEARCH_MODE_ALL_METHODS,
 ];
+const ENCOUNTER_CATEGORY_OPTIONS = [
+    { value: FRLG_HELD_ENCOUNTER_GRASS, labelKey: "options.grass" },
+    { value: FRLG_HELD_ENCOUNTER_ROCK_SMASH, labelKey: "options.rockSmash" },
+    { value: FRLG_HELD_ENCOUNTER_SURFING, labelKey: "options.surfing" },
+    { value: FRLG_HELD_ENCOUNTER_OLD_ROD, labelKey: "options.oldRod" },
+    { value: FRLG_HELD_ENCOUNTER_GOOD_ROD, labelKey: "options.goodRod" },
+    { value: FRLG_HELD_ENCOUNTER_SUPER_ROD, labelKey: "options.superRod" },
+] as const;
 const targetSeedFilterOptions = createFilterOptions<FRLGContiguousSeedEntry>({
     limit: 100,
     stringify: (option) => hexSeed(option.initialSeed, 16),
@@ -190,6 +203,9 @@ export default function FrlgHeldItemSearcherPage({
     const [advanceRangeIsValid, setAdvanceRangeIsValid] = useState(true);
     const [searchMode, setSearchMode] = useState<FrlgHeldSearchMode>(
         FRLG_HELD_SEARCH_MODE_H1_STABLE
+    );
+    const [encounterCategory, setEncounterCategory] = useState(
+        FRLG_HELD_ENCOUNTER_GRASS
     );
     const [selection, setSelection] =
         useState<FrlgHeldEncounterSelection>();
@@ -356,14 +372,14 @@ export default function FrlgHeldItemSearcherPage({
         () =>
             selection
                 ? getFrlgHeldOffsetProfile(
-                      FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
+                      FRLG_HELD_PROFILE_ENGLISH_SWITCH,
                       encounterGame,
-                      ENCOUNTER_CATEGORY,
+                      encounterCategory,
                       selection.locationId,
                       WILD_1
                   )
                 : undefined,
-        [encounterGame, selection]
+        [encounterCategory, encounterGame, selection]
     );
     const standardOffsetValue = parseInt(standardOffset, 10);
     const searchOffsets = getFrlgHeldSearchOffsets(
@@ -394,6 +410,7 @@ export default function FrlgHeldItemSearcherPage({
     }, [
         hidden,
         searchMode,
+        encounterCategory,
         selection,
         heldItemFilter,
         targetSeedValue,
@@ -465,7 +482,7 @@ export default function FrlgHeldItemSearcherPage({
                     encounterGame,
                     0,
                     0,
-                    ENCOUNTER_CATEGORY,
+                    encounterCategory,
                     selection.locationIndex,
                     selection.speciesForm,
                     WILD_1,
@@ -801,10 +818,29 @@ export default function FrlgHeldItemSearcherPage({
                 )}
             </Alert>
 
+            <TextField
+                label={t("labels.category")}
+                margin="normal"
+                value={encounterCategory}
+                onChange={(event) =>
+                    setEncounterCategory(Number(event.target.value))
+                }
+                select
+                fullWidth
+                disabled={searching}
+            >
+                {ENCOUNTER_CATEGORY_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {t(option.labelKey)}
+                    </MenuItem>
+                ))}
+            </TextField>
+
             <FrlgHeldEncounterSelector
                 active={!hidden}
                 disabled={searching}
                 game={encounterGame}
+                encounterCategory={encounterCategory}
                 value={selection}
                 onChange={setSelection}
             />
@@ -838,10 +874,10 @@ export default function FrlgHeldItemSearcherPage({
             {selection && (
                 <FrlgHeldItemNotice
                     profileSet={
-                        FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT
+                        FRLG_HELD_PROFILE_ENGLISH_SWITCH
                     }
                     game={encounterGame}
-                    encounterCategory={ENCOUNTER_CATEGORY}
+                    encounterCategory={encounterCategory}
                     location={selection.locationId}
                     method={WILD_1}
                     species={selection.speciesForm}
