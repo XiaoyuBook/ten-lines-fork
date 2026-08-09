@@ -27,6 +27,10 @@ import RangeInput from "./RangeInput";
 import StaticEncounterSelector from "./StaticEncounterSelector";
 import IdComboTable, { type IDComboRow } from "./IdComboTable";
 import { filterNatureOptions } from "../utils/natureSearch";
+import {
+    applyEggIvPreset,
+    FRLG_EGG_IV_PRESETS,
+} from "./frlgEggHelpers";
 
 const MAX_ID_ADVANCES_SEARCH = 65535;
 
@@ -191,6 +195,7 @@ export default function IdComboForm({
     const [rows, setRows] = useState<IDComboRow[]>([]);
     const [searching, setSearching] = useState(false);
     const [summary, setSummary] = useState("");
+    const [ivPreset, setIvPreset] = useState("");
 
     const [ivRangesAreValid, setIvRangesAreValid] = useState(true);
     const [idRangeIsValid, setIdRangeIsValid] = useState(true);
@@ -707,8 +712,39 @@ export default function IdComboForm({
                     </MenuItem>
                 ))}
             </TextField>
+            <TextField
+                label={t("labels.ivPreset")}
+                margin="normal"
+                value={ivPreset}
+                onChange={(event) => {
+                    const nextPreset = event.target.value;
+                    setIvPreset(nextPreset);
+                    const presetOption = FRLG_EGG_IV_PRESETS.find(
+                        (option) => option.value === nextPreset
+                    );
+                    if (presetOption) {
+                        setIvRangesAreValid(true);
+                        setFormState((data) => ({
+                            ...data,
+                            ivRangeStrings: applyEggIvPreset(
+                                presetOption.value
+                            ),
+                        }));
+                    }
+                }}
+                select
+                fullWidth
+            >
+                <MenuItem value="">{t("common.any")}</MenuItem>
+                {FRLG_EGG_IV_PRESETS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                        {t(option.labelKey)}
+                    </MenuItem>
+                ))}
+            </TextField>
             <IvEntry
                 onChange={(_event, value) => {
+                    setIvPreset("");
                     setIvRangesAreValid(value.isValid);
                     setFormState((data) => ({
                         ...data,

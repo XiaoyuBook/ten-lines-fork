@@ -444,6 +444,18 @@ export function matchesFrlgHeldItemSearchFilter(
     return prediction.rolls.every((roll) => roll.itemId === filter);
 }
 
+export function matchesFrlgHeldShinyFilter(
+    row: { shiny: number },
+    shiny: number
+): boolean {
+    // PokeFinder marks Gen 3 shinies as 1 (star) or 2 (square); "yes" must
+    // match any shiny value, not just the star variant.
+    if (shiny === 0) {
+        return row.shiny === 0;
+    }
+    return row.shiny !== 0;
+}
+
 export function predictFrlgHeldItem({
     profileSet,
     game,

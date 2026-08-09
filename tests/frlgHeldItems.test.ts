@@ -32,6 +32,7 @@ try {
         getFrlgHeldOffsetProfile,
         getFrlgHeldSearchOffsets,
         matchesFrlgHeldItemSearchFilter,
+        matchesFrlgHeldShinyFilter,
         predictFrlgHeldItemAtOffsets,
         predictFrlgHeldItem,
     } = heldItems;
@@ -41,6 +42,23 @@ try {
         FRLG_HELD_PROFILE_ENGLISH_SWITCH
     );
     assert.deepEqual(FRLG_HELD_ENCOUNTER_CATEGORIES, [0, 3, 4, 6, 7, 8]);
+
+    assert.equal(
+        matchesFrlgHeldShinyFilter({ shiny: 1 }, 1),
+        true
+    );
+    assert.equal(
+        matchesFrlgHeldShinyFilter({ shiny: 2 }, 1),
+        true
+    );
+    assert.equal(
+        matchesFrlgHeldShinyFilter({ shiny: 0 }, 1),
+        false
+    );
+    assert.equal(
+        matchesFrlgHeldShinyFilter({ shiny: 0 }, 0),
+        true
+    );
 
     assert.deepEqual(getFrlgHeldItemSlots(35), {
         common: 0,

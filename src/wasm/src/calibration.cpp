@@ -166,8 +166,18 @@ void check_seeds_wild(
 
     searching_callback(true);
 
+    // Whole-library searches pass hundreds of thousands of seeds. Batch result
+    // callbacks instead of flushing per seed to avoid marshalling every seed.
+    constexpr u32 RESULT_BATCH_SIZE = 100;
+    emscripten::typed_array<ExtendedWildGeneratorState> batch;
+    auto flush_batch = [&]() {
+        if (batch.size() > 0) {
+            result_callback(batch);
+            batch = emscripten::typed_array<ExtendedWildGeneratorState>();
+        }
+    };
+
     for (int i = 0; i < seeds.size(); i++) {
-        emscripten::typed_array<ExtendedWildGeneratorState> results;
         FRLGContiguousSeedEntry entry = seeds[i];
 
         u16 seed = entry.initialSeed;
@@ -190,12 +200,15 @@ void check_seeds_wild(
                     filter);
                 auto generator_results = generator.generate(seed);
                 for (auto& generator_result : generator_results) {
-                    results.push_back(ExtendedWildGeneratorState(seed, seed_time, ttv_advances, m, generator_result));
+                    batch.push_back(ExtendedWildGeneratorState(seed, seed_time, ttv_advances, m, generator_result));
+                    if (batch.size() >= RESULT_BATCH_SIZE) {
+                        flush_batch();
+                    }
                 }
             }
-            result_callback(results);
         }
     }
+    flush_batch();
     searching_callback(false);
 }
 

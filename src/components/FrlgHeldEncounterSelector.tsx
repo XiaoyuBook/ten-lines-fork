@@ -61,7 +61,6 @@ export default function FrlgHeldEncounterSelector({
         let cancelled = false;
         setStatus("loading");
         setSpeciesOptions([]);
-        onChangeRef.current(undefined);
 
         const loadOptions = async () => {
             try {

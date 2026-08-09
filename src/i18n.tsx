@@ -281,6 +281,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             hiddenPower: "Hidden Power",
             ability: "Ability",
             perfectIvCount: "Perfect IV Count",
+            perfectIvPreset: "Perfect IV Preset",
             category: "Category",
             pokemon: "Pokemon",
             location: "Location",
@@ -387,6 +388,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             select: "Select",
             startup: "Startup",
             blackout: "Blackout",
+            yes: "Yes",
+            no: "No",
             normal: "Normal",
             split: "Split",
             alternate: "Alternate",
@@ -498,6 +501,13 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             searchFailed: "Held-item search failed: {error}",
             noResults: "No matching held-item results were found.",
             resultCount: "Showing {count} results (up to {limit}).",
+            shinyOnlyMode: "Shiny + frame range mode",
+            shinyOnlyModeHelp:
+                "Searches the entire seed library ({count} seeds) and filters only by shiny status and the Advance range based on the entered TID/SID. Held-item and Offset checks are skipped.",
+            shinyFilter: "Shiny filter",
+            noResultsShiny: "No matching shiny results were found.",
+            shinySearchWorkload:
+                "This search covers {frames} frames ({seeds} seeds × {advances} Advances per seed) and may take a long time.",
         },
         compare: {
             title: "Calibration Compare",
@@ -792,6 +802,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             hiddenPower: "\u89c9\u9192\u529b\u91cf",
             ability: "\u7279\u6027",
             perfectIvCount: "\u6ee1\u4e2a\u4f53\u503c\u6570\u91cf",
+            perfectIvPreset: "\u6ee1\u4e2a\u4f53\u9884\u8bbe",
             category: "\u5206\u7c7b",
             pokemon: "\u5b9d\u53ef\u68a6",
             location: "\u5730\u70b9",
@@ -903,6 +914,8 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             select: "\u9009\u62e9",
             startup: "\u542f\u52a8",
             blackout: "\u9ed1\u5c4f",
+            yes: "\u662f",
+            no: "\u5426",
             normal: "Normal",
             split: "Split",
             alternate: "Alternate",
@@ -1016,6 +1029,14 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             noResults: "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u643a\u5e26\u7269\u7ed3\u679c\u3002",
             resultCount:
                 "\u5f53\u524d\u663e\u793a {count} \u6761\u7ed3\u679c\uff08\u6700\u591a {limit} \u6761\uff09\u3002",
+            shinyOnlyMode: "\u95ea\u5149\u0020\u002b\u0020\u5e27\u6570\u8303\u56f4\u6a21\u5f0f",
+            shinyOnlyModeHelp:
+                "\u641c\u7d22\u6574\u4e2a\u0020seed\u0020\u5e93\uff08\u5171\u0020{count}\u0020\u6761\uff09\uff0c\u53ea\u6309\u95ea\u5149\u72b6\u6001\u4e0e\u0020Advance\uff08\u5e27\u6570\uff09\u8303\u56f4\u7b5b\u9009\uff1b\u8df3\u8fc7\u643a\u5e26\u7269\u4e0e\u0020Offset\u0020\u5224\u5b9a\u3002",
+            shinyFilter: "\u95ea\u5149\u7b5b\u9009",
+            noResultsShiny:
+                "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u95ea\u5149\u7ed3\u679c\u3002",
+            shinySearchWorkload:
+                "\u672c\u6b21\u641c\u7d22\u8986\u76d6\u0020{frames}\u0020\u5e27\uff08{seeds}\u0020\u6761\u0020seed\u0020\u00d7\u0020\u6bcf\u6761\u0020{advances}\u0020\u5e27\uff09\uff0c\u8017\u65f6\u53ef\u80fd\u8f83\u957f\u3002",
         },
         compare: {
             title: "\u6821\u51c6\u5bf9\u7167",

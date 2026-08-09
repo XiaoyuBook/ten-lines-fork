@@ -138,6 +138,10 @@ const InitialSeedTable = memo(function InitialSeedTable({
         setSearchParams((previous) => {
             const params = new URLSearchParams(previous);
             params.set("targetInitialSeed", hexSeed(row.initialSeed, 16));
+            params.set(
+                "calibrationTransfer",
+                `${row.initialSeed}-${row.advances}-${Date.now()}`
+            );
             if (isTeachyTVMode) {
                 const ttv = teachyTVConversion(row.advances, teachyTVRegularOut);
                 params.set(
