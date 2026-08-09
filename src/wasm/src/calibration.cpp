@@ -126,7 +126,7 @@ void check_seeds_static(
     searching_callback(false);
 }
 
-void check_seeds_wild(
+void check_seeds_wild_limited(
     emscripten::typed_array<FRLGContiguousSeedEntry> seeds,
     emscripten::typed_range<u32> advances_range,
     emscripten::typed_range<u32> ttv_advances_range,
@@ -143,6 +143,8 @@ void check_seeds_wild(
     int nature,
     u8 gender,
     emscripten::typed_array<emscripten::typed_range<u8>> iv_ranges,
+    u8 result_shininess,
+    u32 result_limit,
     emscripten::callback<void(emscripten::typed_array<ExtendedWildGeneratorState>)> result_callback,
     emscripten::callback<void(bool)> searching_callback)
 {
@@ -170,19 +172,32 @@ void check_seeds_wild(
     // callbacks instead of flushing per seed to avoid marshalling every seed.
     constexpr u32 RESULT_BATCH_SIZE = 100;
     emscripten::typed_array<ExtendedWildGeneratorState> batch;
+    u32 result_count = 0;
+    bool result_limit_reached = false;
     auto flush_batch = [&]() {
         if (batch.size() > 0) {
             result_callback(batch);
             batch = emscripten::typed_array<ExtendedWildGeneratorState>();
         }
     };
+    auto matches_result_shininess = [result_shininess](const WildGeneratorState& state) {
+        if (result_shininess == 255) {
+            return true;
+        }
+        if (result_shininess == 0) {
+            return state.getShiny() == 0;
+        }
+        return state.getShiny() != 0;
+    };
 
-    for (int i = 0; i < seeds.size(); i++) {
+    for (int i = 0; i < seeds.size() && !result_limit_reached; i++) {
         FRLGContiguousSeedEntry entry = seeds[i];
 
         u16 seed = entry.initialSeed;
         u32 seed_time = entry.seedTime;
-        for (u32 ttv_advances = initial_ttv_advances; ttv_advances <= ending_ttv_advances; ttv_advances++) {
+        for (u32 ttv_advances = initial_ttv_advances;
+             ttv_advances <= ending_ttv_advances && !result_limit_reached;
+             ttv_advances++) {
             u32 starting_advances = starting_final_frame > ttv_advances ? starting_final_frame - ttv_advances : 0;
             u32 ending_advances = ending_final_frame > ttv_advances ? ending_final_frame - ttv_advances : 0;
             u32 max_advances = ending_advances - starting_advances;
@@ -200,10 +215,21 @@ void check_seeds_wild(
                     filter);
                 auto generator_results = generator.generate(seed);
                 for (auto& generator_result : generator_results) {
+                    if (!matches_result_shininess(generator_result)) {
+                        continue;
+                    }
                     batch.push_back(ExtendedWildGeneratorState(seed, seed_time, ttv_advances, m, generator_result));
+                    result_count++;
                     if (batch.size() >= RESULT_BATCH_SIZE) {
                         flush_batch();
                     }
+                    if (result_limit > 0 && result_count >= result_limit) {
+                        result_limit_reached = true;
+                        break;
+                    }
+                }
+                if (result_limit_reached) {
+                    break;
                 }
             }
         }
@@ -212,8 +238,54 @@ void check_seeds_wild(
     searching_callback(false);
 }
 
+void check_seeds_wild(
+    emscripten::typed_array<FRLGContiguousSeedEntry> seeds,
+    emscripten::typed_range<u32> advances_range,
+    emscripten::typed_range<u32> ttv_advances_range,
+    u32 offset,
+    Game game,
+    u16 trainer_id,
+    u16 secret_id,
+    Encounter encounter_category,
+    u16 location,
+    int pokemon,
+    Method method,
+    Lead lead,
+    u8 shininess,
+    int nature,
+    u8 gender,
+    emscripten::typed_array<emscripten::typed_range<u8>> iv_ranges,
+    emscripten::callback<void(emscripten::typed_array<ExtendedWildGeneratorState>)> result_callback,
+    emscripten::callback<void(bool)> searching_callback)
+{
+    check_seeds_wild_limited(
+        seeds,
+        advances_range,
+        ttv_advances_range,
+        offset,
+        game,
+        trainer_id,
+        secret_id,
+        encounter_category,
+        location,
+        pokemon,
+        method,
+        lead,
+        shininess,
+        nature,
+        gender,
+        iv_ranges,
+        255,
+        0,
+        result_callback,
+        searching_callback);
+}
+
 EMSCRIPTEN_BINDINGS(calibration)
 {
     emscripten::smart_function("check_seeds_static", &check_seeds_static);
     emscripten::smart_function("check_seeds_wild", &check_seeds_wild);
+    emscripten::smart_function(
+        "check_seeds_wild_limited",
+        &check_seeds_wild_limited);
 }

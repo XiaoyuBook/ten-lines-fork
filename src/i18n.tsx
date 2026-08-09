@@ -503,7 +503,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             resultCount: "Showing {count} results (up to {limit}).",
             shinyOnlyMode: "Shiny + frame range mode",
             shinyOnlyModeHelp:
-                "Searches the entire seed library ({count} seeds) and filters only by shiny status and the Advance range based on the entered TID/SID. Held-item and Offset checks are skipped.",
+                "Searches the entire seed library ({count} seeds) and filters only by shiny status and the Advance range based on the entered TID/SID. Held-item and Offset checks are skipped. WASM stops after {limit} matching results.",
             shinyFilter: "Shiny filter",
             noResultsShiny: "No matching shiny results were found.",
             shinySearchWorkload:
@@ -1031,7 +1031,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5f53\u524d\u663e\u793a {count} \u6761\u7ed3\u679c\uff08\u6700\u591a {limit} \u6761\uff09\u3002",
             shinyOnlyMode: "\u95ea\u5149\u0020\u002b\u0020\u5e27\u6570\u8303\u56f4\u6a21\u5f0f",
             shinyOnlyModeHelp:
-                "\u641c\u7d22\u6574\u4e2a\u0020seed\u0020\u5e93\uff08\u5171\u0020{count}\u0020\u6761\uff09\uff0c\u53ea\u6309\u95ea\u5149\u72b6\u6001\u4e0e\u0020Advance\uff08\u5e27\u6570\uff09\u8303\u56f4\u7b5b\u9009\uff1b\u8df3\u8fc7\u643a\u5e26\u7269\u4e0e\u0020Offset\u0020\u5224\u5b9a\u3002",
+                "\u641c\u7d22\u6574\u4e2a\u0020seed\u0020\u5e93\uff08\u5171\u0020{count}\u0020\u6761\uff09\uff0c\u53ea\u6309\u95ea\u5149\u72b6\u6001\u4e0e\u0020Advance\uff08\u5e27\u6570\uff09\u8303\u56f4\u7b5b\u9009\uff1b\u8df3\u8fc7\u643a\u5e26\u7269\u4e0e\u0020Offset\u0020\u5224\u5b9a\u3002WASM\u0020\u5728\u6536\u96c6\u5230\u0020{limit}\u0020\u6761\u5339\u914d\u7ed3\u679c\u540e\u7acb\u5373\u505c\u6b62\u3002",
             shinyFilter: "\u95ea\u5149\u7b5b\u9009",
             noResultsShiny:
                 "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u95ea\u5149\u7ed3\u679c\u3002",

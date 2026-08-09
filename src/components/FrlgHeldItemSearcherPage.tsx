@@ -508,7 +508,7 @@ export default function FrlgHeldItemSearcherPage({
                             },
                         ]
                       : [];
-                await tenLines.check_seeds_wild(
+                await tenLines.check_seeds_wild_limited(
                     seeds,
                     advanceRange,
                     [0, 0],
@@ -525,6 +525,8 @@ export default function FrlgHeldItemSearcherPage({
                     -1,
                     255,
                     UNFILTERED_IV_RANGES,
+                    shinyOnlyMode ? shinyFilter : 255,
+                    shinyOnlyMode ? RESULT_LIMIT : 0,
                     proxy((results: ExtendedWildGeneratorState[]) => {
                         if (requestIdRef.current !== requestId) {
                             return;
@@ -886,6 +888,7 @@ export default function FrlgHeldItemSearcherPage({
                     <Alert severity="info" sx={{ my: 1, textAlign: "left" }}>
                         {t("heldItems.shinyOnlyModeHelp", {
                             count: seedList.length.toLocaleString(),
+                            limit: RESULT_LIMIT.toLocaleString(),
                         })}
                     </Alert>
                     {!advanceSearchSpaceTooLarge &&
