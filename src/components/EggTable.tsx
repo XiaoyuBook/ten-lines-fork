@@ -92,7 +92,10 @@ const EggTable = memo(function EggTable({
 
         setLocalStorageValue(
             EGG_COMPARE_TARGET_STORAGE_KEY,
-            createEggCalibrationCompareEntry(row)
+            createEggCalibrationCompareEntry(
+                row,
+                calibrationContext.gameConsole
+            )
         );
         setSearchParams((previous) => {
             const params = new URLSearchParams(previous);
@@ -101,6 +104,8 @@ const EggTable = memo(function EggTable({
             params.set("gameConsole", calibrationContext.gameConsole);
             params.set("heldSeed", hexSeed(row.heldInitialSeed, 16));
             params.set("pickupSeed", hexSeed(row.pickupInitialSeed, 16));
+            params.set("heldSeedTime", row.heldSeedTime.toString());
+            params.set("pickupSeedTime", row.pickupSeedTime.toString());
             params.set("heldSettings", row.heldSettings);
             params.set("pickupSettings", row.pickupSettings);
             params.set("seedLeeway", "20");

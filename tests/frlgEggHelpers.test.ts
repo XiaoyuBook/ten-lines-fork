@@ -19,6 +19,7 @@ import {
     calculateEggSearchProgress,
     countMatchingInitialSeedPairs,
     filterFrlgEggGameOptions,
+    findSeedOccurrenceIndex,
     formatEggSearchError,
     formatEggSeedTime,
     formatInheritanceSlot,
@@ -310,6 +311,24 @@ assert.deepEqual(
     getSeedRangeAroundTarget([{ initialSeed: 0x10 }], 0x99, 1),
     []
 );
+const duplicateSeedEntries = [
+    { initialSeed: 0x10, seedTime: 100 },
+    { initialSeed: 0x20, seedTime: 200 },
+    { initialSeed: 0x10, seedTime: 300 },
+    { initialSeed: 0x30, seedTime: 400 },
+];
+assert.equal(findSeedOccurrenceIndex(duplicateSeedEntries, 0x10, 300), 2);
+assert.equal(findSeedOccurrenceIndex(duplicateSeedEntries, 0x10), 0);
+assert.equal(findSeedOccurrenceIndex(duplicateSeedEntries, 0x10, 999), 0);
+assert.deepEqual(
+    getSeedRangeAroundTarget(
+        duplicateSeedEntries,
+        0x10,
+        1,
+        findSeedOccurrenceIndex(duplicateSeedEntries, 0x10, 300)
+    ).map((seed) => seed.seedTime),
+    [200, 300, 400]
+);
 assert.deepEqual(buildFrameLeewayRange(1000, 10), [990, 1010]);
 assert.deepEqual(buildFrameLeewayRange(5, 10), [0, 15]);
 assert.deepEqual(paginateEggResults([0, 1, 2, 3, 4], 0, 2), [0, 1]);
@@ -348,11 +367,37 @@ assert.deepEqual(
             pickupAdvances: 1000,
         },
         "NX",
+        "NX",
         (frame) => frame * 10
     ),
     {
         heldSeedTime: 100,
         pickupSeedTime: -100,
+        heldAdvances: 12,
+        pickupAdvances: -2,
+    }
+);
+assert.deepEqual(
+    getEggCompareDeltas(
+        {
+            heldSeedTime: 1760,
+            pickupSeedTime: 1440,
+            heldAdvances: 1012,
+            pickupAdvances: 998,
+        },
+        {
+            heldSeedTime: 1600,
+            pickupSeedTime: 1600,
+            heldAdvances: 1000,
+            pickupAdvances: 1000,
+        },
+        "NX",
+        "GBA",
+        (frame, system) => frame * 10 + (system === "NX" ? 500 : 100)
+    ),
+    {
+        heldSeedTime: 500,
+        pickupSeedTime: 300,
         heldAdvances: 12,
         pickupAdvances: -2,
     }

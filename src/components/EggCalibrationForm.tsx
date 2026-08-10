@@ -54,6 +54,7 @@ import {
     buildEggSeedSettings,
     buildSeedSettingKey,
     filterFrlgEggGameOptions,
+    findSeedOccurrenceIndex,
     formatEggSearchError,
     formatEggSeedTime,
     getPreferredEggSeedSettings,
@@ -79,6 +80,15 @@ const DEFAULT_CHILD_IV_RANGES: [string, string][] = [
 const parseDecimal = (value: string) => parseInt(value, 10);
 const parseHex = (value: string) => parseInt(value, 16);
 const parseRange = (value: [string, string]) => value.map(parseDecimal);
+
+function parseOptionalSeedTime(value: string | null): number | undefined {
+    if (value === null) {
+        return undefined;
+    }
+
+    const parsed = parseDecimal(value);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
 
 function parseIvList(value: string | null): string[] {
     const parts = value?.split(",") ?? [];
@@ -227,7 +237,7 @@ function EggSeedAutocomplete({
     loading: boolean;
     isValid: boolean;
     onValidityChange: (isValid: boolean) => void;
-    onChange: (value: string) => void;
+    onChange: (value: string, seedTime?: number) => void;
 }) {
     const { t } = useI18n();
     const [inputValue, setInputValue] = useState(
@@ -293,7 +303,7 @@ function EggSeedAutocomplete({
                 const normalized = hexSeed(nextValue.initialSeed, 16);
                 setInputValue(formatSeedLabel(nextValue));
                 onValidityChange(true);
-                onChange(normalized);
+                onChange(normalized, nextValue.seedTime);
             }}
             getOptionLabel={(option) => {
                 if (typeof option === "string") {
@@ -303,7 +313,8 @@ function EggSeedAutocomplete({
                 return formatSeedLabel(option);
             }}
             isOptionEqualToValue={(option, value) =>
-                option.initialSeed === value.initialSeed
+                option.initialSeed === value.initialSeed &&
+                option.seedTime === value.seedTime
             }
             filterOptions={(options, state) => {
                 const normalizedInput = normalizeHexInput(
@@ -362,11 +373,15 @@ export default function EggCalibrationForm({
 }) {
     const { t, resources } = useI18n();
     const [searchParams, setSearchParams] = useSearchParams();
-    const setURLState = useCallback((state: Record<string, string>) => {
+    const setURLState = useCallback((state: Record<string, string | null>) => {
         setSearchParams((previous) => {
             const params = new URLSearchParams(previous);
             for (const [key, value] of Object.entries(state)) {
-                params.set(key, value);
+                if (value === null) {
+                    params.delete(key);
+                } else {
+                    params.set(key, value);
+                }
             }
             return params;
         });
@@ -402,6 +417,12 @@ export default function EggCalibrationForm({
     );
     const heldSeed = searchParams.get("heldSeed") || "0000";
     const pickupSeed = searchParams.get("pickupSeed") || "0000";
+    const heldSeedTime = parseOptionalSeedTime(
+        searchParams.get("heldSeedTime")
+    );
+    const pickupSeedTime = parseOptionalSeedTime(
+        searchParams.get("pickupSeedTime")
+    );
     const seedLeeway = searchParams.get("seedLeeway") || "20";
     const heldAdvances: [string, string] = [
         searchParams.get("heldAdvancesMin") || DEFAULT_FRLG_EGG_ADVANCE_RANGE[0].toString(),
@@ -492,22 +513,28 @@ export default function EggCalibrationForm({
     const usesSwitchJapaneseFRLGLabels = isSwitchJapaneseFRLGGame(game);
     const heldSeedValue = parseHex(heldSeed);
     const pickupSeedValue = parseHex(pickupSeed);
-    const heldTargetIndex = heldSeedList.findIndex(
-        (seed) => seed.initialSeed === heldSeedValue
+    const heldTargetIndex = findSeedOccurrenceIndex(
+        heldSeedList,
+        heldSeedValue,
+        heldSeedTime
     );
-    const pickupTargetIndex = pickupSeedList.findIndex(
-        (seed) => seed.initialSeed === pickupSeedValue
+    const pickupTargetIndex = findSeedOccurrenceIndex(
+        pickupSeedList,
+        pickupSeedValue,
+        pickupSeedTime
     );
     const parsedSeedLeeway = seedLeewayValid ? parseDecimal(seedLeeway) : 0;
     const heldSearchSeeds = getSeedRangeAroundTarget(
         heldSeedList,
         heldSeedValue,
-        parsedSeedLeeway
+        parsedSeedLeeway,
+        heldTargetIndex
     );
     const pickupSearchSeeds = getSeedRangeAroundTarget(
         pickupSeedList,
         pickupSeedValue,
-        parsedSeedLeeway
+        parsedSeedLeeway,
+        pickupTargetIndex
     );
     const seedPairCount = heldSearchSeeds.length * pickupSearchSeeds.length;
     const inputsAreValid =
@@ -634,17 +661,20 @@ export default function EggCalibrationForm({
     useEffect(() => {
         const nextURLState: Record<string, string> = {};
         if (heldSeedList.length > 0 && heldTargetIndex === -1) {
-            nextURLState.heldSeed = hexSeed(
-                heldSeedList[Math.min(51, heldSeedList.length - 1)].initialSeed,
-                16
-            );
+            const defaultHeldSeed =
+                heldSeedList[Math.min(51, heldSeedList.length - 1)];
+            nextURLState.heldSeed = hexSeed(defaultHeldSeed.initialSeed, 16);
+            nextURLState.heldSeedTime = defaultHeldSeed.seedTime.toString();
         }
         if (pickupSeedList.length > 0 && pickupTargetIndex === -1) {
+            const defaultPickupSeed =
+                pickupSeedList[Math.min(51, pickupSeedList.length - 1)];
             nextURLState.pickupSeed = hexSeed(
-                pickupSeedList[Math.min(51, pickupSeedList.length - 1)]
-                    .initialSeed,
+                defaultPickupSeed.initialSeed,
                 16
             );
+            nextURLState.pickupSeedTime =
+                defaultPickupSeed.seedTime.toString();
         }
         if (Object.keys(nextURLState).length > 0) {
             setURLState(nextURLState);
@@ -768,8 +798,14 @@ export default function EggCalibrationForm({
                         loading={seedListsLoading}
                         isValid={heldSeedValid}
                         onValidityChange={setHeldSeedValid}
-                        onChange={(nextValue) =>
-                            setURLState({ heldSeed: nextValue })
+                        onChange={(nextValue, seedTime) =>
+                            setURLState({
+                                heldSeed: nextValue,
+                                heldSeedTime:
+                                    seedTime === undefined
+                                        ? null
+                                        : seedTime.toString(),
+                            })
                         }
                     />
                     <RangeInput
@@ -811,8 +847,14 @@ export default function EggCalibrationForm({
                         loading={seedListsLoading}
                         isValid={pickupSeedValid}
                         onValidityChange={setPickupSeedValid}
-                        onChange={(nextValue) =>
-                            setURLState({ pickupSeed: nextValue })
+                        onChange={(nextValue, seedTime) =>
+                            setURLState({
+                                pickupSeed: nextValue,
+                                pickupSeedTime:
+                                    seedTime === undefined
+                                        ? null
+                                        : seedTime.toString(),
+                            })
                         }
                     />
                     <RangeInput
@@ -887,7 +929,9 @@ export default function EggCalibrationForm({
                                 {t("labels.eggGeneration")}
                             </Typography>
                             {heldSearchSeeds.map((seed) => (
-                                <div key={seed.initialSeed}>
+                                <div
+                                    key={`${seed.initialSeed}-${seed.seedTime}`}
+                                >
                                     {hexSeed(seed.initialSeed, 16)}
                                 </div>
                             ))}
@@ -897,7 +941,9 @@ export default function EggCalibrationForm({
                                 {t("labels.eggPickup")}
                             </Typography>
                             {pickupSearchSeeds.map((seed) => (
-                                <div key={seed.initialSeed}>
+                                <div
+                                    key={`${seed.initialSeed}-${seed.seedTime}`}
+                                >
                                     {hexSeed(seed.initialSeed, 16)}
                                 </div>
                             ))}
@@ -1207,7 +1253,10 @@ export default function EggCalibrationForm({
                     gameConsole={gameConsole}
                     compareTargetExists={compareTarget !== null}
                     onAddCompareEntry={(row, destination) => {
-                        const entry = createEggCalibrationCompareEntry(row);
+                        const entry = createEggCalibrationCompareEntry(
+                            row,
+                            gameConsole
+                        );
                         if (destination === "target") {
                             setCompareTarget(entry);
                             return;
