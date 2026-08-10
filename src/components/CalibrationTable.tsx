@@ -19,7 +19,7 @@ import type {
     ExtendedGeneratorState,
     ExtendedWildGeneratorState,
     FRLGContiguousSeedEntry,
-} from "../tenLines/generated";
+} from "../tenLines/generated.d";
 
 import type { CalibrationResultRow } from "./CalibrationComparePanel";
 

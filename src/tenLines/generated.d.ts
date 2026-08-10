@@ -5,7 +5,6 @@ export interface FRLGContiguousSeedEntry {
     settings?: string;
     [key: string]: any;
 }
-
 export interface IVRange {
     min: number;
     max: number;
@@ -150,6 +149,3 @@ export interface MainModule {
         height: number
     ) => StatsOcrResult | Promise<StatsOcrResult>;
 }
-
-declare const MainModuleFactory: () => Promise<MainModule>;
-export default MainModuleFactory;

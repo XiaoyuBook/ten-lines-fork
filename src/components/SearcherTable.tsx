@@ -13,7 +13,7 @@ import { hexSeed } from "../tenLines";
 import type {
     ExtendedSearcherState,
     ExtendedWildSearcherState,
-} from "../tenLines/generated";
+} from "../tenLines/generated.d";
 import { SEARCHER_COMPARE_TARGET_KEY } from "./CalibrationForm";
 import { setLocalStorageValue } from "../hooks/useLocalStorage";
 

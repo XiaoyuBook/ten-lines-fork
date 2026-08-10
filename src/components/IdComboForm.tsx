@@ -19,7 +19,7 @@ import fetchTenLines, {
     STATIC_2,
     STATIC_4,
 } from "../tenLines";
-import type { ExtendedIDState, ExtendedSearcherState } from "../tenLines/generated";
+import type { ExtendedIDState, ExtendedSearcherState } from "../tenLines/generated.d";
 import { getIdComboGameOptions, useI18n } from "../i18n";
 import IvEntry from "./IvEntry";
 import NumericalInput from "./NumericalInput";

@@ -316,6 +316,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             ivPreset: "IV Preset",
             bingoTvFluctuationMode: "TV Fluctuation Mode",
             showInheritance: "Show Inheritance",
+            skipEarlyEggSeeds:
+                "Skip the first {count} seeds in each seed table",
+            sameEggInitialSeed:
+                "Use the same seed for egg generation and pickup",
         },
         options: {
             rubyPaintingSeed: "Ruby Painting Seed",
@@ -837,6 +841,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             ivPreset: "\u4e2a\u4f53\u9884\u8bbe",
             bingoTvFluctuationMode: "TV\u6ce2\u52a8\u6a21\u5f0f",
             showInheritance: "\u663e\u793a\u9057\u4f20",
+            skipEarlyEggSeeds:
+                "\u5ffd\u7565\u6bcf\u4e2a Seed \u8868\u524d {count} \u4e2a Seed",
+            sameEggInitialSeed:
+                "\u86cb\u751f\u6210\u4e0e\u86cb\u9886\u53d6\u4f7f\u7528\u76f8\u540c Seed",
         },
         options: {
             rubyPaintingSeed: "\u7ea2\u5b9d\u77f3\u7ed8\u753b Seed",

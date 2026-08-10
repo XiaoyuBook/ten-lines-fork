@@ -28,7 +28,7 @@ import {
     type EnumeratedStaticTemplate3,
     type ExtendedSearcherState,
     type ExtendedWildSearcherState,
-} from "../tenLines/generated";
+} from "../tenLines/generated.d";
 import React from "react";
 import { getAllGameOptions, getName, useI18n } from "../i18n";
 import IvEntry from "./IvEntry";

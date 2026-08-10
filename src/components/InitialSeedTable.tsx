@@ -12,7 +12,7 @@ import { memo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { frameToMS, hexSeed, teachyTVConversion } from "../tenLines";
-import type { InitialSeedResult } from "../tenLines/generated";
+import type { InitialSeedResult } from "../tenLines/generated.d";
 import { setLocalStorageValue } from "../hooks/useLocalStorage";
 import {
     COMPARE_TARGET_STORAGE_KEY,
