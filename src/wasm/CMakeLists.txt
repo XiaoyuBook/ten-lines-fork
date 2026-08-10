@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(wasm_library)
 
+include(CTest)
+
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 execute_process(
@@ -78,3 +80,26 @@ target_link_libraries(ten_lines PRIVATE embind)
 target_link_libraries(ten_lines PRIVATE PokeFinderCore)
 
 target_link_options(ten_lines PRIVATE ${WASM_FLAGS})
+
+if(BUILD_TESTING)
+    add_executable(frlg_egg_inheritance_test
+        tests/frlg_egg_inheritance_test.cpp
+    )
+    target_include_directories(frlg_egg_inheritance_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/PokeFinder/Source
+    )
+
+    if(EMSCRIPTEN)
+        find_program(NODE_EXECUTABLE node REQUIRED)
+        add_test(
+            NAME frlg_egg_inheritance
+            COMMAND ${NODE_EXECUTABLE} $<TARGET_FILE:frlg_egg_inheritance_test>
+        )
+    else()
+        add_test(
+            NAME frlg_egg_inheritance
+            COMMAND $<TARGET_FILE:frlg_egg_inheritance_test>
+        )
+    endif()
+endif()

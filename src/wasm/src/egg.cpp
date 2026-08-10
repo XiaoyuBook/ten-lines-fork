@@ -1,4 +1,5 @@
 #include "initial_seed.hpp"
+#include "frlg_egg_inheritance.hpp"
 #include "pokefinder_glue.hpp"
 #include "util.hpp"
 #include <Core/Enum/Game.hpp>
@@ -117,36 +118,6 @@ StateFilter build_egg_filter(
     return StateFilter(gender, ability, shininess, 0, 255, 0, 255, false, min_ivs, max_ivs, natures, powers);
 }
 
-void set_frlg_inheritance(
-    const Daycare& daycare,
-    std::array<u8, 6>& ivs,
-    std::array<u8, 6>& inheritance,
-    const u8* inherited_stats,
-    const u8* inherited_parents)
-{
-    constexpr u8 stat_order[6] = { 0, 1, 2, 5, 3, 4 };
-    u8 available[6] = { 0, 1, 2, 3, 4, 5 };
-    auto remove_available = [&available](u8 index, u8 size) {
-        for (u8 i = index; i < size; i++) {
-            available[i] = available[i + 1];
-        }
-    };
-
-    u8 stat = available[inherited_stats[0]];
-    ivs[stat_order[stat]] = daycare.getParentIV(inherited_parents[0], stat_order[stat]);
-    inheritance[stat_order[stat]] = inherited_parents[0] + 1;
-    remove_available(stat, 5);
-
-    stat = available[inherited_stats[1]];
-    ivs[stat_order[stat]] = daycare.getParentIV(inherited_parents[1], stat_order[stat]);
-    inheritance[stat_order[stat]] = inherited_parents[1] + 1;
-    remove_available(stat, 4);
-
-    stat = available[inherited_stats[2]];
-    ivs[stat_order[stat]] = daycare.getParentIV(inherited_parents[2], stat_order[stat]);
-    inheritance[stat_order[stat]] = inherited_parents[2] + 1;
-}
-
 std::vector<EggState3> generate_frlg_pid_states(
     u32 held_seed,
     u32 pickup_seed,
@@ -257,7 +228,7 @@ std::vector<EggState3> generate_frlg_pid_states(
             static_cast<u8>(go.nextUShort(2)),
         };
         std::array<u8, 6> inheritance = { 0, 0, 0, 0, 0, 0 };
-        set_frlg_inheritance(daycare, ivs, inheritance, inherited_stats, inherited_parents);
+        frlg_egg::set_inheritance(daycare, ivs, inheritance, inherited_stats, inherited_parents);
 
         for (auto state : held_states) {
             const PersonalInfo* info = male && (target_pid & 0x8000) ? male : base;
