@@ -1,10 +1,11 @@
 import { proxy } from "comlink";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Autocomplete,
     Box,
     Button,
     Checkbox,
+    createFilterOptions,
     Dialog,
     DialogContent,
     FormControlLabel,
@@ -17,33 +18,46 @@ import {
 } from "@mui/material";
 import { useSearchParams } from "react-router-dom";
 
+import useLocalStorage from "../hooks/useLocalStorage";
 import { getAllGameOptions, getConsoleOptions, getName, useI18n } from "../i18n";
 import fetchTenLines, {
     fetchSeedData,
     fixGameConsole,
+    frameToMS,
     hexSeed,
     SEED_IDENTIFIER_TO_GAME,
 } from "../tenLines";
 import type {
     ExtendedEggGeneratorState,
     FRLGContiguousSeedEntry,
-} from "../tenLines/generated";
+} from "../tenLines/generated.d";
 import IvEntry from "./IvEntry";
 import IvCalculator from "./IvCalculator";
 import NumericalInput from "./NumericalInput";
 import RangeInput from "./RangeInput";
 import EggTable from "./EggTable";
+import EggCalibrationComparePanel, {
+    createEggCalibrationCompareEntry,
+    EGG_COMPARE_HISTORY_STORAGE_KEY,
+    EGG_COMPARE_TARGET_STORAGE_KEY,
+    type EggCalibrationCompareEntry,
+} from "./EggCalibrationComparePanel";
 import { filterNatureOptions } from "../utils/natureSearch";
 import {
     DEFAULT_FRLG_EGG_ADVANCE_RANGE,
     DEFAULT_FRLG_EGG_COMPATIBILITY,
     DEFAULT_FRLG_EGG_METHOD,
     DEFAULT_FRLG_EGG_PARENT_IVS,
+    DEFAULT_EGG_SEED_SETTINGS,
     FRLG_EGG_COMPATIBILITY_OPTIONS,
     FRLG_EGG_METHODS,
     buildEggSeedSettings,
     buildSeedSettingKey,
     filterFrlgEggGameOptions,
+    findSeedOccurrenceIndex,
+    formatEggSearchError,
+    formatEggSeedTime,
+    getPreferredEggSeedSettings,
     getSeedRangeAroundTarget,
     isFrlgEggGame,
     parseEggSeedSettings,
@@ -66,6 +80,15 @@ const DEFAULT_CHILD_IV_RANGES: [string, string][] = [
 const parseDecimal = (value: string) => parseInt(value, 10);
 const parseHex = (value: string) => parseInt(value, 16);
 const parseRange = (value: [string, string]) => value.map(parseDecimal);
+
+function parseOptionalSeedTime(value: string | null): number | undefined {
+    if (value === null) {
+        return undefined;
+    }
+
+    const parsed = parseDecimal(value);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
 
 function parseIvList(value: string | null): string[] {
     const parts = value?.split(",") ?? [];
@@ -188,6 +211,159 @@ function HexInput({
     );
 }
 
+const eggSeedFilterOptions = createFilterOptions<FRLGContiguousSeedEntry>({
+    limit: 100,
+    stringify: (option) => hexSeed(option.initialSeed, 16),
+});
+
+function EggSeedAutocomplete({
+    label,
+    name,
+    seeds,
+    seedValue,
+    targetIndex,
+    gameConsole,
+    loading,
+    isValid,
+    onValidityChange,
+    onChange,
+}: {
+    label: string;
+    name: string;
+    seeds: FRLGContiguousSeedEntry[];
+    seedValue: string;
+    targetIndex: number;
+    gameConsole: string;
+    loading: boolean;
+    isValid: boolean;
+    onValidityChange: (isValid: boolean) => void;
+    onChange: (value: string, seedTime?: number) => void;
+}) {
+    const { t } = useI18n();
+    const [inputValue, setInputValue] = useState(
+        normalizeHexInput(seedValue, 4)
+    );
+    const targetSeed = targetIndex === -1 ? null : seeds[targetIndex];
+    const seedTimeUnit = t("messages.ms");
+    const formatSeedLabel = (seed: FRLGContiguousSeedEntry) =>
+        `${hexSeed(seed.initialSeed, 16)} (${formatEggSeedTime(
+            seed.seedTime,
+            gameConsole,
+            frameToMS
+        )}${seedTimeUnit})`;
+    const targetSeedLabel = targetSeed
+        ? formatSeedLabel(targetSeed)
+        : normalizeHexInput(seedValue, 4);
+
+    useEffect(() => {
+        setInputValue(targetSeedLabel);
+        if (targetSeed !== null) {
+            onValidityChange(true);
+        }
+    }, [onValidityChange, targetSeed, targetSeedLabel]);
+
+    return (
+        <Autocomplete
+            freeSolo
+            forcePopupIcon
+            openOnFocus
+            options={seeds}
+            loading={loading}
+            loadingText={t("common.loadingResources")}
+            value={targetSeed}
+            inputValue={inputValue}
+            disabled={loading}
+            onInputChange={(_event, nextInputValue, reason) => {
+                if (reason === "reset" && targetSeed) {
+                    setInputValue(formatSeedLabel(targetSeed));
+                    return;
+                }
+
+                const normalized = normalizeHexInput(nextInputValue, 4);
+                setInputValue(normalized);
+                if (normalized === "") {
+                    onValidityChange(false);
+                    return;
+                }
+
+                const parsedSeed = parseHex(normalized);
+                const exists = seeds.some(
+                    (seed) => seed.initialSeed === parsedSeed
+                );
+                onValidityChange(exists);
+                if (exists) {
+                    onChange(hexSeed(parsedSeed, 16));
+                }
+            }}
+            onChange={(_event, nextValue) => {
+                if (!nextValue || typeof nextValue === "string") {
+                    return;
+                }
+
+                const normalized = hexSeed(nextValue.initialSeed, 16);
+                setInputValue(formatSeedLabel(nextValue));
+                onValidityChange(true);
+                onChange(normalized, nextValue.seedTime);
+            }}
+            getOptionLabel={(option) => {
+                if (typeof option === "string") {
+                    return option;
+                }
+
+                return formatSeedLabel(option);
+            }}
+            isOptionEqualToValue={(option, value) =>
+                option.initialSeed === value.initialSeed &&
+                option.seedTime === value.seedTime
+            }
+            filterOptions={(options, state) => {
+                const normalizedInput = normalizeHexInput(
+                    state.inputValue,
+                    4
+                );
+                const normalizedSeedValue = normalizeHexInput(seedValue, 4);
+
+                return eggSeedFilterOptions(options, {
+                    ...state,
+                    inputValue:
+                        targetSeed === null &&
+                        normalizedInput === normalizedSeedValue
+                            ? ""
+                            : normalizedInput,
+                });
+            }}
+            renderInput={(params) => {
+                const hasNoSeeds = !loading && seeds.length === 0;
+                const hasInvalidSeed =
+                    !loading &&
+                    !hasNoSeeds &&
+                    (!isValid || targetIndex === -1);
+                const helperText = loading
+                    ? t("common.loadingResources")
+                    : hasNoSeeds
+                      ? t("messages.noKnownSeeds")
+                      : hasInvalidSeed
+                        ? t("messages.invalidTargetSeed")
+                        : undefined;
+
+                return (
+                    <TextField
+                        {...params}
+                        label={label}
+                        name={name}
+                        margin="normal"
+                        error={hasNoSeeds || hasInvalidSeed}
+                        helperText={helperText}
+                    />
+                );
+            }}
+            disablePortal
+            selectOnFocus
+            fullWidth
+        />
+    );
+}
+
 export default function EggCalibrationForm({
     sx,
     hidden,
@@ -197,15 +373,19 @@ export default function EggCalibrationForm({
 }) {
     const { t, resources } = useI18n();
     const [searchParams, setSearchParams] = useSearchParams();
-    const setURLState = (state: Record<string, string>) => {
+    const setURLState = useCallback((state: Record<string, string | null>) => {
         setSearchParams((previous) => {
             const params = new URLSearchParams(previous);
             for (const [key, value] of Object.entries(state)) {
-                params.set(key, value);
+                if (value === null) {
+                    params.delete(key);
+                } else {
+                    params.set(key, value);
+                }
             }
             return params;
         });
-    };
+    }, [setSearchParams]);
 
     const requestedGame = searchParams.get("game");
     const requestedGameConsole = searchParams.get("gameConsole");
@@ -237,6 +417,12 @@ export default function EggCalibrationForm({
     );
     const heldSeed = searchParams.get("heldSeed") || "0000";
     const pickupSeed = searchParams.get("pickupSeed") || "0000";
+    const heldSeedTime = parseOptionalSeedTime(
+        searchParams.get("heldSeedTime")
+    );
+    const pickupSeedTime = parseOptionalSeedTime(
+        searchParams.get("pickupSeedTime")
+    );
     const seedLeeway = searchParams.get("seedLeeway") || "20";
     const heldAdvances: [string, string] = [
         searchParams.get("heldAdvancesMin") || DEFAULT_FRLG_EGG_ADVANCE_RANGE[0].toString(),
@@ -268,6 +454,7 @@ export default function EggCalibrationForm({
 
     const [heldSeedList, setHeldSeedList] = useState<FRLGContiguousSeedEntry[]>([]);
     const [pickupSeedList, setPickupSeedList] = useState<FRLGContiguousSeedEntry[]>([]);
+    const [seedListsLoading, setSeedListsLoading] = useState(true);
     const [seedDialogOpen, setSeedDialogOpen] = useState(false);
     const [rows, setRows] = useState<ExtendedEggGeneratorState[]>([]);
     const [searching, setSearching] = useState(false);
@@ -301,6 +488,14 @@ export default function EggCalibrationForm({
         setSearchParams,
         sharedGameNeedsNormalization,
     ]);
+    const [compareTarget, setCompareTarget] =
+        useLocalStorage<EggCalibrationCompareEntry | null>(
+            EGG_COMPARE_TARGET_STORAGE_KEY,
+            null
+        );
+    const [compareHistory, setCompareHistory] = useLocalStorage<
+        EggCalibrationCompareEntry[]
+    >(EGG_COMPARE_HISTORY_STORAGE_KEY, []);
 
     const gameOptions = useMemo(
         () => filterFrlgEggGameOptions(getAllGameOptions(t)),
@@ -318,25 +513,32 @@ export default function EggCalibrationForm({
     const usesSwitchJapaneseFRLGLabels = isSwitchJapaneseFRLGGame(game);
     const heldSeedValue = parseHex(heldSeed);
     const pickupSeedValue = parseHex(pickupSeed);
-    const heldTargetIndex = heldSeedList.findIndex(
-        (seed) => seed.initialSeed === heldSeedValue
+    const heldTargetIndex = findSeedOccurrenceIndex(
+        heldSeedList,
+        heldSeedValue,
+        heldSeedTime
     );
-    const pickupTargetIndex = pickupSeedList.findIndex(
-        (seed) => seed.initialSeed === pickupSeedValue
+    const pickupTargetIndex = findSeedOccurrenceIndex(
+        pickupSeedList,
+        pickupSeedValue,
+        pickupSeedTime
     );
     const parsedSeedLeeway = seedLeewayValid ? parseDecimal(seedLeeway) : 0;
     const heldSearchSeeds = getSeedRangeAroundTarget(
         heldSeedList,
         heldSeedValue,
-        parsedSeedLeeway
+        parsedSeedLeeway,
+        heldTargetIndex
     );
     const pickupSearchSeeds = getSeedRangeAroundTarget(
         pickupSeedList,
         pickupSeedValue,
-        parsedSeedLeeway
+        parsedSeedLeeway,
+        pickupTargetIndex
     );
     const seedPairCount = heldSearchSeeds.length * pickupSearchSeeds.length;
     const inputsAreValid =
+        !seedListsLoading &&
         heldSeedValid &&
         pickupSeedValid &&
         heldTargetIndex !== -1 &&
@@ -352,10 +554,13 @@ export default function EggCalibrationForm({
         childIvRangesValid;
 
     useEffect(() => {
+        let cancelled = false;
+        setSeedListsLoading(true);
+
         const fetchSeedLists = async () => {
             const seedData = await fetchSeedData(game);
             const tenLines = await fetchTenLines();
-            const [nextHeldSeeds, nextPickupSeeds] = await Promise.all([
+            let [nextHeldSeeds, nextPickupSeeds] = await Promise.all([
                 tenLines.get_contiguous_seed_list(
                     seedData,
                     seedSettingsKey(heldSettings),
@@ -369,11 +574,118 @@ export default function EggCalibrationForm({
                     pickupSettings.extraButton
                 ),
             ]);
+
+            let nextHeldSettings = heldSettingsText;
+            let nextPickupSettings = pickupSettingsText;
+            if (nextHeldSeeds.length === 0 || nextPickupSeeds.length === 0) {
+                let fallbackSettings: string | null = buildEggSeedSettings(
+                    DEFAULT_EGG_SEED_SETTINGS
+                );
+                let fallbackSeeds =
+                    await tenLines.get_contiguous_seed_list(
+                        seedData,
+                        seedSettingsKey(DEFAULT_EGG_SEED_SETTINGS),
+                        game,
+                        DEFAULT_EGG_SEED_SETTINGS.extraButton
+                    );
+
+                if (fallbackSeeds.length === 0) {
+                    const allSeeds =
+                        await tenLines.get_all_contiguous_seed_list(
+                            seedData,
+                            game
+                        );
+                    fallbackSettings =
+                        getPreferredEggSeedSettings(allSeeds);
+                    fallbackSeeds =
+                        fallbackSettings === null
+                            ? []
+                            : allSeeds.filter(
+                                  (seed) =>
+                                      seed.settings === fallbackSettings
+                              );
+                }
+
+                if (nextHeldSeeds.length === 0) {
+                    nextHeldSeeds = fallbackSeeds;
+                    nextHeldSettings =
+                        fallbackSettings ?? nextHeldSettings;
+                }
+                if (nextPickupSeeds.length === 0) {
+                    nextPickupSeeds = fallbackSeeds;
+                    nextPickupSettings =
+                        fallbackSettings ?? nextPickupSettings;
+                }
+            }
+
+            if (cancelled) {
+                return;
+            }
+
             setHeldSeedList(nextHeldSeeds);
             setPickupSeedList(nextPickupSeeds);
+            setSeedListsLoading(false);
+
+            const nextURLState: Record<string, string> = {};
+            if (nextHeldSettings !== heldSettingsText) {
+                nextURLState.heldSettings = nextHeldSettings;
+            }
+            if (nextPickupSettings !== pickupSettingsText) {
+                nextURLState.pickupSettings = nextPickupSettings;
+            }
+            if (Object.keys(nextURLState).length > 0) {
+                setURLState(nextURLState);
+            }
         };
-        void fetchSeedLists();
-    }, [game, heldSettingsText, pickupSettingsText]);
+        void fetchSeedLists().catch((error: unknown) => {
+            if (!cancelled) {
+                setSeedListsLoading(false);
+                setMessage(
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        game,
+        heldSettings,
+        heldSettingsText,
+        pickupSettings,
+        pickupSettingsText,
+        setURLState,
+    ]);
+
+    useEffect(() => {
+        const nextURLState: Record<string, string> = {};
+        if (heldSeedList.length > 0 && heldTargetIndex === -1) {
+            const defaultHeldSeed =
+                heldSeedList[Math.min(51, heldSeedList.length - 1)];
+            nextURLState.heldSeed = hexSeed(defaultHeldSeed.initialSeed, 16);
+            nextURLState.heldSeedTime = defaultHeldSeed.seedTime.toString();
+        }
+        if (pickupSeedList.length > 0 && pickupTargetIndex === -1) {
+            const defaultPickupSeed =
+                pickupSeedList[Math.min(51, pickupSeedList.length - 1)];
+            nextURLState.pickupSeed = hexSeed(
+                defaultPickupSeed.initialSeed,
+                16
+            );
+            nextURLState.pickupSeedTime =
+                defaultPickupSeed.seedTime.toString();
+        }
+        if (Object.keys(nextURLState).length > 0) {
+            setURLState(nextURLState);
+        }
+    }, [
+        heldSeedList,
+        heldTargetIndex,
+        pickupSeedList,
+        pickupTargetIndex,
+        setURLState,
+    ]);
 
     const runSearch = async () => {
         setMessage("");
@@ -412,6 +724,7 @@ export default function EggCalibrationForm({
                 buildEggSeedSettings(heldSettings),
                 buildEggSeedSettings(pickupSettings),
                 usePidFilter ? parseHex(childPid) : -1,
+                false,
                 proxy((batch: ExtendedEggGeneratorState[]) => {
                     receivedResults += batch.length;
                     setRows((currentRows) => [...currentRows, ...batch]);
@@ -428,7 +741,7 @@ export default function EggCalibrationForm({
                 setMessage(t("messages.noEggResults"));
             }
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : String(error));
+            setMessage(formatEggSearchError(error));
         } finally {
             setSearching(false);
         }
@@ -447,38 +760,52 @@ export default function EggCalibrationForm({
                 void runSearch();
             }}
         >
-            <Typography variant="h5" sx={{ mt: 2 }}>
-                {t("tabs.eggCalibration")}
-            </Typography>
-
             <Box
                 sx={{
                     display: "grid",
-                    gridTemplateColumns: { xs: "1fr", lg: "repeat(2, 1fr)" },
+                    gridTemplateColumns: {
+                        xs: "minmax(0, 1fr)",
+                        xl: "minmax(720px, 2fr) minmax(300px, 1fr)",
+                    },
                     gap: 2,
+                    alignItems: "start",
                 }}
             >
+                <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="h5" sx={{ mt: 2 }}>
+                        {t("tabs.eggCalibration")}
+                    </Typography>
+
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns: {
+                                xs: "1fr",
+                                lg: "repeat(2, 1fr)",
+                            },
+                            gap: 2,
+                        }}
+                    >
                 <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="h6">{t("labels.eggGeneration")}</Typography>
-                    <HexInput
+                    <EggSeedAutocomplete
                         label={t("table.heldSeed")}
                         name="eggCalibrationHeldSeed"
-                        value={heldSeed}
-                        maxDigits={4}
-                        maximumValue={0xffff}
-                        onChange={(nextValue, isValid) => {
-                            setHeldSeedValid(isValid);
+                        seeds={heldSeedList}
+                        seedValue={heldSeed}
+                        targetIndex={heldTargetIndex}
+                        gameConsole={gameConsole}
+                        loading={seedListsLoading}
+                        isValid={heldSeedValid}
+                        onValidityChange={setHeldSeedValid}
+                        onChange={(nextValue, seedTime) =>
                             setURLState({
                                 heldSeed: nextValue,
-                            });
-                        }}
-                        helperText={
-                            heldSeedList.length > 0 && heldTargetIndex === -1
-                                ? t("messages.invalidTargetSeed")
-                                : undefined
-                        }
-                        externalError={
-                            heldSeedList.length > 0 && heldTargetIndex === -1
+                                heldSeedTime:
+                                    seedTime === undefined
+                                        ? null
+                                        : seedTime.toString(),
+                            })
                         }
                     />
                     <RangeInput
@@ -510,25 +837,24 @@ export default function EggCalibrationForm({
 
                 <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="h6">{t("labels.eggPickup")}</Typography>
-                    <HexInput
+                    <EggSeedAutocomplete
                         label={t("table.pickupSeed")}
                         name="eggCalibrationPickupSeed"
-                        value={pickupSeed}
-                        maxDigits={4}
-                        maximumValue={0xffff}
-                        onChange={(nextValue, isValid) => {
-                            setPickupSeedValid(isValid);
+                        seeds={pickupSeedList}
+                        seedValue={pickupSeed}
+                        targetIndex={pickupTargetIndex}
+                        gameConsole={gameConsole}
+                        loading={seedListsLoading}
+                        isValid={pickupSeedValid}
+                        onValidityChange={setPickupSeedValid}
+                        onChange={(nextValue, seedTime) =>
                             setURLState({
                                 pickupSeed: nextValue,
-                            });
-                        }}
-                        helperText={
-                            pickupSeedList.length > 0 && pickupTargetIndex === -1
-                                ? t("messages.invalidTargetSeed")
-                                : undefined
-                        }
-                        externalError={
-                            pickupSeedList.length > 0 && pickupTargetIndex === -1
+                                pickupSeedTime:
+                                    seedTime === undefined
+                                        ? null
+                                        : seedTime.toString(),
+                            })
                         }
                     />
                     <RangeInput
@@ -557,7 +883,7 @@ export default function EggCalibrationForm({
                         }}
                     />
                 </Paper>
-            </Box>
+                    </Box>
 
             <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                 <NumericalInput
@@ -603,7 +929,9 @@ export default function EggCalibrationForm({
                                 {t("labels.eggGeneration")}
                             </Typography>
                             {heldSearchSeeds.map((seed) => (
-                                <div key={seed.initialSeed}>
+                                <div
+                                    key={`${seed.initialSeed}-${seed.seedTime}`}
+                                >
                                     {hexSeed(seed.initialSeed, 16)}
                                 </div>
                             ))}
@@ -613,7 +941,9 @@ export default function EggCalibrationForm({
                                 {t("labels.eggPickup")}
                             </Typography>
                             {pickupSearchSeeds.map((seed) => (
-                                <div key={seed.initialSeed}>
+                                <div
+                                    key={`${seed.initialSeed}-${seed.seedTime}`}
+                                >
                                     {hexSeed(seed.initialSeed, 16)}
                                 </div>
                             ))}
@@ -921,8 +1251,67 @@ export default function EggCalibrationForm({
                     rows={rows}
                     showInheritance
                     gameConsole={gameConsole}
+                    compareTargetExists={compareTarget !== null}
+                    onAddCompareEntry={(row, destination) => {
+                        const entry = createEggCalibrationCompareEntry(
+                            row,
+                            gameConsole
+                        );
+                        if (destination === "target") {
+                            setCompareTarget(entry);
+                            return;
+                        }
+                        setCompareHistory(
+                            (entries: EggCalibrationCompareEntry[]) => [
+                                ...entries,
+                                entry,
+                            ]
+                        );
+                    }}
+                    targetSeedTimes={
+                        heldTargetIndex !== -1 && pickupTargetIndex !== -1
+                            ? {
+                                  held: heldSeedList[heldTargetIndex].seedTime,
+                                  pickup:
+                                      pickupSeedList[pickupTargetIndex].seedTime,
+                              }
+                            : undefined
+                    }
                 />
             )}
+                </Box>
+
+                <Box
+                    sx={{
+                        minWidth: 0,
+                        position: { xl: "sticky" },
+                        top: { xl: 16 },
+                        alignSelf: "start",
+                    }}
+                >
+                    <EggCalibrationComparePanel
+                        targetEntry={compareTarget}
+                        historyEntries={compareHistory}
+                        gameConsole={gameConsole}
+                        onDeleteTarget={() => setCompareTarget(null)}
+                        onDeleteHistoryEntry={(id) =>
+                            setCompareHistory(
+                                (entries: EggCalibrationCompareEntry[]) =>
+                                    entries.filter(
+                                        (
+                                            entry: EggCalibrationCompareEntry
+                                        ) => entry.id !== id
+                                    )
+                            )
+                        }
+                        onClearAll={() => {
+                            setCompareTarget(null);
+                            setCompareHistory([]);
+                        }}
+                        onClearHistory={() => setCompareHistory([])}
+                    />
+                </Box>
+            </Box>
         </Box>
     );
 }

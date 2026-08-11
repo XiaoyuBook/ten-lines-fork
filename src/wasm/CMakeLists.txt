@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(wasm_library)
 
+option(TEN_LINES_BUILD_TESTS "Build ten-lines WASM regression tests" OFF)
+
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 execute_process(
@@ -43,6 +45,7 @@ add_executable(ten_lines
     src/calibration.cpp
     src/egg.cpp
     src/fetch_util.cpp
+    src/frlg_egg_pid.cpp
     src/id_combo.cpp
     src/initial_seed.cpp
     src/iv_calc.cpp
@@ -64,12 +67,12 @@ set(WASM_FLAGS
     -sNO_DISABLE_EXCEPTION_CATCHING
     -sEXPORT_ES6=1
     -sENVIRONMENT=worker
-    --emit-tsd ${WASM_LIB_DIR}/index.d.ts
+    --emit-tsd ${WASM_LIB_DIR}/index-combined.d.ts
 )
 
 set_target_properties(ten_lines PROPERTIES
     LIBRARY_NAME "tenLines"
-    OUTPUT_NAME "index"
+    OUTPUT_NAME "index-combined"
     EXECUTABLE_OUTPUT_PATH ${WASM_LIB_DIR}
     RUNTIME_OUTPUT_DIRECTORY ${WASM_LIB_DIR}
 )
@@ -78,3 +81,19 @@ target_link_libraries(ten_lines PRIVATE embind)
 target_link_libraries(ten_lines PRIVATE PokeFinderCore)
 
 target_link_options(ten_lines PRIVATE ${WASM_FLAGS})
+
+if(TEN_LINES_BUILD_TESTS)
+    enable_testing()
+
+    add_executable(frlg_egg_pid_test
+        tests/frlg_egg_pid_test.cpp
+        src/frlg_egg_pid.cpp
+    )
+    target_include_directories(frlg_egg_pid_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(frlg_egg_pid_test PRIVATE PokeFinderCore)
+    if(EMSCRIPTEN)
+        target_link_options(frlg_egg_pid_test PRIVATE -sENVIRONMENT=node)
+    endif()
+
+    add_test(NAME frlg_egg_pid COMMAND frlg_egg_pid_test)
+endif()

@@ -10,11 +10,17 @@ const server = await createServer({
 });
 
 try {
+    const tenLines = await server.ssrLoadModule("/src/tenLines/index.ts");
     const heldItems = await server.ssrLoadModule(
         "/src/utils/frlgHeldItems.ts"
     );
+    const { WILD_2, WILD_4 } = tenLines;
 
     const {
+        FRLG_HELD_ENCOUNTER_CATEGORIES,
+        FRLG_HELD_ENCOUNTER_GRASS,
+        FRLG_HELD_ENCOUNTER_SUPER_ROD,
+        FRLG_HELD_PROFILE_ENGLISH_SWITCH,
         FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
         FRLG_HELD_SEARCH_MODE_ALL_METHODS,
         FRLG_HELD_SEARCH_MODE_H1_STABLE,
@@ -26,9 +32,33 @@ try {
         getFrlgHeldOffsetProfile,
         getFrlgHeldSearchOffsets,
         matchesFrlgHeldItemSearchFilter,
+        matchesFrlgHeldShinyFilter,
         predictFrlgHeldItemAtOffsets,
         predictFrlgHeldItem,
     } = heldItems;
+
+    assert.equal(
+        FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
+        FRLG_HELD_PROFILE_ENGLISH_SWITCH
+    );
+    assert.deepEqual(FRLG_HELD_ENCOUNTER_CATEGORIES, [0, 3, 4, 6, 7, 8]);
+
+    assert.equal(
+        matchesFrlgHeldShinyFilter({ shiny: 1 }, 1),
+        true
+    );
+    assert.equal(
+        matchesFrlgHeldShinyFilter({ shiny: 2 }, 1),
+        true
+    );
+    assert.equal(
+        matchesFrlgHeldShinyFilter({ shiny: 0 }, 1),
+        false
+    );
+    assert.equal(
+        matchesFrlgHeldShinyFilter({ shiny: 0 }, 0),
+        true
+    );
 
     assert.deepEqual(getFrlgHeldItemSlots(35), {
         common: 0,
@@ -168,7 +198,7 @@ try {
         getFrlgHeldOffsetProfile(
             FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
             1 << 3,
-            0,
+            FRLG_HELD_ENCOUNTER_GRASS,
             110,
             5
         )?.baseOffset,
@@ -178,7 +208,7 @@ try {
         getFrlgHeldOffsetProfile(
             FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
             1 << 3,
-            0,
+            FRLG_HELD_ENCOUNTER_GRASS,
             27,
             5
         )?.baseOffset,
@@ -188,7 +218,7 @@ try {
         getFrlgHeldOffsetProfile(
             FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
             1 << 3,
-            0,
+            FRLG_HELD_ENCOUNTER_GRASS,
             14,
             5
         )?.baseOffset,
@@ -198,7 +228,7 @@ try {
         getFrlgHeldOffsetProfile(
             FRLG_HELD_PROFILE_FIRE_RED_ENGLISH_SWEET_SCENT,
             1 << 4,
-            0,
+            FRLG_HELD_ENCOUNTER_GRASS,
             110,
             5
         ),
@@ -206,6 +236,48 @@ try {
     );
     assert.equal(
         getFrlgHeldOffsetProfile("unsupported", 1 << 3, 0, 110, 5),
+        undefined
+    );
+
+    const safariSuperRodH1 = getFrlgHeldOffsetProfile(
+        FRLG_HELD_PROFILE_ENGLISH_SWITCH,
+        1 << 3,
+        FRLG_HELD_ENCOUNTER_SUPER_ROD,
+        20,
+        5
+    );
+    assert.equal(safariSuperRodH1?.baseOffset, 170);
+    assert.equal(safariSuperRodH1?.alternateOffset, 171);
+    assert.equal(safariSuperRodH1?.encounterCategory, 8);
+    assert.equal(safariSuperRodH1?.samples, 9);
+    assert.equal(
+        getFrlgHeldOffsetProfile(
+            FRLG_HELD_PROFILE_ENGLISH_SWITCH,
+            1 << 3,
+            FRLG_HELD_ENCOUNTER_SUPER_ROD,
+            20,
+            WILD_2
+        )?.baseOffset,
+        169
+    );
+    assert.equal(
+        getFrlgHeldOffsetProfile(
+            FRLG_HELD_PROFILE_ENGLISH_SWITCH,
+            1 << 3,
+            FRLG_HELD_ENCOUNTER_SUPER_ROD,
+            20,
+            WILD_4
+        )?.baseOffset,
+        169
+    );
+    assert.equal(
+        getFrlgHeldOffsetProfile(
+            FRLG_HELD_PROFILE_ENGLISH_SWITCH,
+            1 << 4,
+            FRLG_HELD_ENCOUNTER_SUPER_ROD,
+            20,
+            5
+        ),
         undefined
     );
 } finally {

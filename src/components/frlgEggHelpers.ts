@@ -12,6 +12,15 @@ export type EggSeedSettings = {
 };
 export type EggSeedWithSettings = { settings?: string };
 export type SeedWithInitialSeed = { initialSeed: number };
+export type SeedWithInitialSeedAndTime = SeedWithInitialSeed & {
+    seedTime: number;
+};
+export type EggCompareTimingRow = {
+    heldSeedTime: number;
+    pickupSeedTime: number;
+    heldAdvances: number;
+    pickupAdvances: number;
+};
 export type EggSeedSearchPhase<T> = {
     heldSeeds: T[];
     pickupSeeds: T[];
@@ -24,9 +33,10 @@ export const DEFAULT_FRLG_EGG_COMPATIBILITY = 20;
 export const DEFAULT_FRLG_EGG_ADVANCE_RANGE = [1000, 5000] as const;
 export const DEFAULT_FRLG_EGG_PARENT_IVS = [31, 31, 31, 31, 31, 31] as const;
 export const DEFAULT_FRLG_EGG_MAX_RESULTS = 10;
+export const DEFAULT_FRLG_EGG_SEED_SKIP_COUNT = 10;
 export const DEFAULT_EGG_SEED_SETTINGS: EggSeedSettings = {
     sound: "mono",
-    buttonMode: "a",
+    buttonMode: "h",
     seedButton: "a",
     extraButton: "none",
 };
@@ -122,8 +132,56 @@ export function isNoExtraButtonEggSeed(seed: EggSeedWithSettings): boolean {
     return seed.settings?.endsWith("_none") === true;
 }
 
-export function buildEggSeedSearchPhases<T extends EggSeedWithSettings>(
-    seeds: T[]
+export function getPreferredEggSeedSettings(
+    seeds: EggSeedWithSettings[]
+): string | null {
+    return (
+        seeds.find(isNoExtraButtonEggSeed)?.settings ??
+        seeds.find((seed) => seed.settings !== undefined)?.settings ??
+        null
+    );
+}
+
+export function skipEggSeedTableEntries<T extends EggSeedWithSettings>(
+    seeds: T[],
+    skipCount: number
+): T[] {
+    if (skipCount <= 0) {
+        return seeds;
+    }
+
+    const settingCounts = new Map<string, number>();
+    return seeds.filter((seed) => {
+        const settings = seed.settings ?? "";
+        const settingIndex = settingCounts.get(settings) ?? 0;
+        settingCounts.set(settings, settingIndex + 1);
+        return settingIndex >= skipCount;
+    });
+}
+
+export function countMatchingInitialSeedPairs<
+    T extends SeedWithInitialSeed,
+    U extends SeedWithInitialSeed,
+>(heldSeeds: T[], pickupSeeds: U[]): number {
+    const pickupCounts = new Map<number, number>();
+    for (const seed of pickupSeeds) {
+        pickupCounts.set(
+            seed.initialSeed,
+            (pickupCounts.get(seed.initialSeed) ?? 0) + 1
+        );
+    }
+
+    return heldSeeds.reduce(
+        (total, seed) => total + (pickupCounts.get(seed.initialSeed) ?? 0),
+        0
+    );
+}
+
+export function buildEggSeedSearchPhases<
+    T extends EggSeedWithSettings & SeedWithInitialSeed,
+>(
+    seeds: T[],
+    sameInitialSeedOnly = false
 ): EggSeedSearchPhase<T>[] {
     const noExtraSeeds = seeds.filter(isNoExtraButtonEggSeed);
     const extraSeeds = seeds.filter((seed) => !isNoExtraButtonEggSeed(seed));
@@ -137,7 +195,9 @@ export function buildEggSeedSearchPhases<T extends EggSeedWithSettings>(
     let pairOffset = 0;
 
     for (const [heldSeeds, pickupSeeds] of orderedGroups) {
-        const pairCount = heldSeeds.length * pickupSeeds.length;
+        const pairCount = sameInitialSeedOnly
+            ? countMatchingInitialSeedPairs(heldSeeds, pickupSeeds)
+            : heldSeeds.length * pickupSeeds.length;
         if (pairCount === 0) {
             continue;
         }
@@ -148,19 +208,45 @@ export function buildEggSeedSearchPhases<T extends EggSeedWithSettings>(
     return phases;
 }
 
+export function findSeedOccurrenceIndex<T extends SeedWithInitialSeedAndTime>(
+    seeds: T[],
+    targetSeed: number,
+    targetSeedTime?: number
+): number {
+    if (targetSeedTime !== undefined) {
+        const occurrenceIndex = seeds.findIndex(
+            (seed) =>
+                seed.initialSeed === targetSeed &&
+                seed.seedTime === targetSeedTime
+        );
+        if (occurrenceIndex !== -1) {
+            return occurrenceIndex;
+        }
+    }
+
+    return seeds.findIndex((seed) => seed.initialSeed === targetSeed);
+}
+
 export function getSeedRangeAroundTarget<T extends SeedWithInitialSeed>(
     seeds: T[],
     targetSeed: number,
-    leeway: number
+    leeway: number,
+    targetIndex?: number
 ): T[] {
-    const targetIndex = seeds.findIndex((seed) => seed.initialSeed === targetSeed);
-    if (targetIndex === -1) {
+    const resolvedTargetIndex =
+        targetIndex !== undefined &&
+        targetIndex >= 0 &&
+        targetIndex < seeds.length &&
+        seeds[targetIndex].initialSeed === targetSeed
+            ? targetIndex
+            : seeds.findIndex((seed) => seed.initialSeed === targetSeed);
+    if (resolvedTargetIndex === -1) {
         return [];
     }
 
     return seeds.slice(
-        Math.max(0, targetIndex - leeway),
-        Math.min(seeds.length, targetIndex + leeway + 1)
+        Math.max(0, resolvedTargetIndex - leeway),
+        Math.min(seeds.length, resolvedTargetIndex + leeway + 1)
     );
 }
 
@@ -200,6 +286,74 @@ export function formatEggSeedTime(
     frameToMs: (frame: number, system: string) => number
 ): number {
     return frameToMs(seedTime / 16, gameConsole);
+}
+
+export function formatEggSearchError(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+    if (typeof error === "string") {
+        return error;
+    }
+    if (error && typeof error === "object") {
+        const message = Reflect.get(error, "message");
+        if (typeof message === "string" && message.length > 0) {
+            return message;
+        }
+        try {
+            return JSON.stringify(error);
+        } catch {
+            return String(error);
+        }
+    }
+    return String(error);
+}
+
+export function getEggSeedTimeOffset(
+    seedTime: number,
+    targetSeedTime: number,
+    gameConsole: string,
+    frameToMs: (frame: number, system: string) => number
+): number {
+    return (
+        formatEggSeedTime(seedTime, gameConsole, frameToMs) -
+        formatEggSeedTime(targetSeedTime, gameConsole, frameToMs)
+    );
+}
+
+export function getEggCompareDeltas(
+    row: EggCompareTimingRow,
+    baseline: EggCompareTimingRow,
+    rowGameConsole: string,
+    baselineGameConsole: string,
+    frameToMs: (frame: number, system: string) => number
+) {
+    return {
+        heldSeedTime:
+            formatEggSeedTime(
+                row.heldSeedTime,
+                rowGameConsole,
+                frameToMs
+            ) -
+            formatEggSeedTime(
+                baseline.heldSeedTime,
+                baselineGameConsole,
+                frameToMs
+            ),
+        pickupSeedTime:
+            formatEggSeedTime(
+                row.pickupSeedTime,
+                rowGameConsole,
+                frameToMs
+            ) -
+            formatEggSeedTime(
+                baseline.pickupSeedTime,
+                baselineGameConsole,
+                frameToMs
+            ),
+        heldAdvances: row.heldAdvances - baseline.heldAdvances,
+        pickupAdvances: row.pickupAdvances - baseline.pickupAdvances,
+    };
 }
 
 export function formatInheritanceSlot(value: number): string {
