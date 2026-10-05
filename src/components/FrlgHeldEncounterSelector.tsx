@@ -59,6 +59,7 @@ export default function FrlgHeldEncounterSelector({
         }
 
         let cancelled = false;
+        onChangeRef.current(undefined);
         setStatus("loading");
         setSpeciesOptions([]);
 

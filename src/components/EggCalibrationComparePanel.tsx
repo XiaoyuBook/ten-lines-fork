@@ -29,6 +29,7 @@ export const EGG_COMPARE_HISTORY_STORAGE_KEY = "egg-calibration-compare-history"
 export interface EggCalibrationCompareEntry {
     id: string;
     row: ExtendedEggGeneratorState;
+    gameConsole?: string;
 }
 
 type EggCompareColumn =
@@ -55,12 +56,14 @@ const EGG_COMPARE_COLUMNS: EggCompareColumn[] = [
 ];
 
 export function createEggCalibrationCompareEntry(
-    row: ExtendedEggGeneratorState
+    row: ExtendedEggGeneratorState,
+    gameConsole: string
 ): EggCalibrationCompareEntry {
     return {
         id:
             globalThis.crypto?.randomUUID?.() ??
             `${Date.now()}-${Math.random()}`,
+        gameConsole,
         row: {
             ...row,
             ivs: [...row.ivs] as ExtendedEggGeneratorState["ivs"],
@@ -91,17 +94,25 @@ function EggCompareCell({
     row,
     baseline,
     gameConsole,
+    baselineGameConsole,
 }: {
     column: EggCompareColumn;
     row: ExtendedEggGeneratorState;
     baseline: ExtendedEggGeneratorState | null;
     gameConsole: string;
+    baselineGameConsole: string;
 }) {
     const { t, resources } = useI18n();
     const deltas =
         baseline === null
             ? null
-            : getEggCompareDeltas(row, baseline, gameConsole, frameToMS);
+            : getEggCompareDeltas(
+                  row,
+                  baseline,
+                  gameConsole,
+                  baselineGameConsole,
+                  frameToMS
+              );
 
     if (column === "heldSeed" || column === "pickupSeed") {
         const isHeld = column === "heldSeed";
@@ -180,6 +191,7 @@ function EggTargetSummary({
 }) {
     const { t } = useI18n();
     const isShiny = entry.row.shiny > 0;
+    const entryGameConsole = entry.gameConsole ?? gameConsole;
 
     return (
         <Paper
@@ -255,7 +267,8 @@ function EggTargetSummary({
                             column={column}
                             row={entry.row}
                             baseline={null}
-                            gameConsole={gameConsole}
+                            gameConsole={entryGameConsole}
+                            baselineGameConsole={entryGameConsole}
                         />
                     </Box>
                 ))}
@@ -425,7 +438,14 @@ const EggCalibrationComparePanel = memo(function EggCalibrationComparePanel({
                                                 baseline={
                                                     targetEntry?.row ?? null
                                                 }
-                                                gameConsole={gameConsole}
+                                                gameConsole={
+                                                    entry.gameConsole ??
+                                                    gameConsole
+                                                }
+                                                baselineGameConsole={
+                                                    targetEntry?.gameConsole ??
+                                                    gameConsole
+                                                }
                                             />
                                         </TableCell>
                                     ))}
