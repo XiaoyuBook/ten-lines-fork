@@ -4,7 +4,9 @@ import { createServer } from "vite";
 
 const server = await createServer({
     appType: "custom",
+    configFile: false,
     server: { middlewareMode: true },
+    optimizeDeps: { noDiscovery: true },
 });
 
 try {

@@ -34,6 +34,14 @@ type SpeciesOption = {
 
 type ResourceStatus = "idle" | "loading" | "ready" | "error";
 
+type EncounterResources = {
+    key: string;
+    status: ResourceStatus;
+    speciesOptions: SpeciesOption[];
+};
+
+const EMPTY_SPECIES_OPTIONS: SpeciesOption[] = [];
+
 function speciesHasHeldItem(speciesForm: number) {
     const slots = getFrlgHeldItemSlots(speciesForm & 0x7ff);
     return Boolean(slots && (slots.common !== 0 || slots.rare !== 0));
@@ -48,8 +56,20 @@ export default function FrlgHeldEncounterSelector({
     onChange,
 }: FrlgHeldEncounterSelectorProps) {
     const { t, resources } = useI18n();
-    const [speciesOptions, setSpeciesOptions] = useState<SpeciesOption[]>([]);
-    const [status, setStatus] = useState<ResourceStatus>("idle");
+    const resourceKey = `${game}:${encounterCategory}`;
+    const [encounterResources, setEncounterResources] =
+        useState<EncounterResources>({
+            key: resourceKey,
+            status: "idle",
+            speciesOptions: [],
+        });
+    const resourcesAreCurrent = encounterResources.key === resourceKey;
+    const speciesOptions = resourcesAreCurrent
+        ? encounterResources.speciesOptions
+        : EMPTY_SPECIES_OPTIONS;
+    const status = resourcesAreCurrent
+        ? encounterResources.status
+        : "loading";
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
 
@@ -59,9 +79,13 @@ export default function FrlgHeldEncounterSelector({
         }
 
         let cancelled = false;
-        onChangeRef.current(undefined);
-        setStatus("loading");
-        setSpeciesOptions([]);
+        // Reloading after a tab switch must not invalidate the parent's results.
+        // Normalize the retained selection only after this dataset is ready.
+        setEncounterResources({
+            key: resourceKey,
+            status: "loading",
+            speciesOptions: [],
+        });
 
         const loadOptions = async () => {
             try {
@@ -137,16 +161,22 @@ export default function FrlgHeldEncounterSelector({
                         )
                     );
 
-                setSpeciesOptions(nextOptions);
-                setStatus("ready");
+                setEncounterResources({
+                    key: resourceKey,
+                    status: "ready",
+                    speciesOptions: nextOptions,
+                });
             } catch (error) {
                 if (cancelled) return;
                 console.error(
                     "Failed to load FRLG held-item encounter resources",
                     error
                 );
-                setSpeciesOptions([]);
-                setStatus("error");
+                setEncounterResources({
+                    key: resourceKey,
+                    status: "error",
+                    speciesOptions: [],
+                });
             }
         };
 
@@ -154,7 +184,7 @@ export default function FrlgHeldEncounterSelector({
         return () => {
             cancelled = true;
         };
-    }, [active, encounterCategory, game, resources]);
+    }, [active, encounterCategory, game, resourceKey, resources]);
 
     useEffect(() => {
         if (!active || status !== "ready") {

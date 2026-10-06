@@ -1,0 +1,58 @@
+name: Verify
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: verify-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    regression:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+            - uses: lincoln-lm/setup-emsdk@main
+              with:
+                  version: 4.0.11
+                  actions-cache-folder: emsdk-cache
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: npm
+            - name: Install dependencies
+              run: |
+                  pip install -r src/wasm/requirements.txt
+                  npm ci
+            - name: Build app and WASM tests
+              run: |
+                  emcmake cmake -S src/wasm -B src/wasm/build -G Ninja -DTEN_LINES_BUILD_TESTS=ON
+                  npm run build
+            - name: Verify types, affected lint, and regression suites
+              run: |
+                  npx eslint src/components/FrlgHeldEncounterSelector.tsx src/components/FrlgHeldItemSearcherPage.tsx
+                  ctest --test-dir src/wasm/build --output-on-failure
+                  npm test
+            - name: Install browser
+              run: npx playwright install --with-deps chromium
+            - name: Verify held-item result persistence in browser
+              run: npm run test:browser
+            - uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: regression-diagnostics
+                  path: test-results/
+                  if-no-files-found: ignore

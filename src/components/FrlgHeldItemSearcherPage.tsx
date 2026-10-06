@@ -236,6 +236,11 @@ export default function FrlgHeldItemSearcherPage({
         setHeldSeedURLState,
     } = useHeldSeedURLState();
     const [seedList, setSeedList] = useState<FRLGContiguousSeedEntry[]>([]);
+    const [loadedSeedListKey, setLoadedSeedListKey] = useState<string>();
+    const seedListCacheRef = useRef<{
+        key: string;
+        entries: FRLGContiguousSeedEntry[];
+    } | undefined>(undefined);
     const [seedListLoading, setSeedListLoading] = useState(true);
     const [seedListError, setSeedListError] = useState<string>();
     const [targetSeedInput, setTargetSeedInput] = useState("");
@@ -273,13 +278,17 @@ export default function FrlgHeldItemSearcherPage({
         (value: string) => value.trim().replace(/^0x/i, "").toUpperCase(),
         []
     );
+    const seedListKey = `${game}:${sound}:${buttonMode}:${button}:${heldButton}`;
+    const seedListIsCurrent = loadedSeedListKey === seedListKey;
 
     const targetSeedIndex = useMemo(
         () =>
-            seedList.findIndex(
-                (seed) => seed.initialSeed === targetSeedValue
-            ),
-        [seedList, targetSeedValue]
+            seedListIsCurrent
+                ? seedList.findIndex(
+                      (seed) => seed.initialSeed === targetSeedValue
+                  )
+                : -1,
+        [seedList, seedListIsCurrent, targetSeedValue]
     );
     const targetSeed =
         targetSeedIndex === -1 ? undefined : seedList[targetSeedIndex];
@@ -310,13 +319,19 @@ export default function FrlgHeldItemSearcherPage({
 
     useEffect(() => {
         if (hidden) {
-            setSeedList([]);
+            return;
+        }
+        const cachedSeedList = seedListCacheRef.current;
+        if (cachedSeedList?.key === seedListKey) {
+            setSeedList(cachedSeedList.entries);
+            setLoadedSeedListKey(seedListKey);
             setSeedListLoading(false);
             setSeedListError(undefined);
             return;
         }
 
         let cancelled = false;
+        setLoadedSeedListKey(undefined);
         setSeedListLoading(true);
         setSeedListError(undefined);
         setSeedList([]);
@@ -338,7 +353,12 @@ export default function FrlgHeldItemSearcherPage({
                     return;
                 }
 
+                seedListCacheRef.current = {
+                    key: seedListKey,
+                    entries: nextSeedList,
+                };
                 setSeedList(nextSeedList);
+                setLoadedSeedListKey(seedListKey);
             } catch (error) {
                 if (!cancelled) {
                     console.error(
@@ -369,11 +389,13 @@ export default function FrlgHeldItemSearcherPage({
         button,
         heldButton,
         hidden,
+        seedListKey,
     ]);
 
     useEffect(() => {
         if (
             hidden ||
+            !seedListIsCurrent ||
             seedListLoading ||
             seedList.length === 0 ||
             seedList.some(
@@ -391,6 +413,7 @@ export default function FrlgHeldItemSearcherPage({
     }, [
         seedList,
         seedListLoading,
+        seedListIsCurrent,
         targetSeedValue,
         setHeldSeedURLState,
         hidden,
@@ -420,6 +443,10 @@ export default function FrlgHeldItemSearcherPage({
     const heldItemFilterSignature = shinyOnlyMode
         ? undefined
         : `${searchMode}:${standardOffset}`;
+    const selectionSignature = selection
+        ? `${selection.speciesForm}:${selection.locationIndex}:${selection.locationId}`
+        : undefined;
+    const selectedLocationId = selection?.locationId;
     const shinyLibrarySize = seedList.length;
     const shinyTotalFrames = shinyOnlyMode
         ? shinyLibrarySize * advanceCount
@@ -427,16 +454,16 @@ export default function FrlgHeldItemSearcherPage({
 
     const presetProfile = useMemo(
         () =>
-            selection
+            selectedLocationId !== undefined
                 ? getFrlgHeldOffsetProfile(
                       FRLG_HELD_PROFILE_ENGLISH_SWITCH,
                       encounterGame,
                       encounterCategory,
-                      selection.locationId,
+                      selectedLocationId,
                       WILD_1
                   )
                 : undefined,
-        [encounterCategory, encounterGame, selection]
+        [encounterCategory, encounterGame, selectedLocationId]
     );
     const standardOffsetValue = parseInt(standardOffset, 10);
     const trainerIdValue = parseInt(trainerID, 10);
@@ -462,6 +489,11 @@ export default function FrlgHeldItemSearcherPage({
     );
 
     useEffect(() => {
+        // Changing datasets is different from remounting the selector on return.
+        setSelection(undefined);
+    }, [encounterCategory, encounterGame]);
+
+    useEffect(() => {
         requestIdRef.current += 1;
         setRows([]);
         setHasSearched(false);
@@ -472,7 +504,7 @@ export default function FrlgHeldItemSearcherPage({
         shinyOnlyMode,
         shinyFilter,
         encounterCategory,
-        selection,
+        selectionSignature,
         heldItemFilter,
         targetSeedValue,
         game,
@@ -488,7 +520,7 @@ export default function FrlgHeldItemSearcherPage({
     useEffect(() => {
         setStandardOffset(String(presetProfile?.baseOffset ?? 0));
         setStandardOffsetIsValid(true);
-    }, [presetProfile, selection?.locationId]);
+    }, [presetProfile, selectedLocationId]);
 
     useEffect(() => {
         const validItemIds = new Set(itemOptions.map(({ itemId }) => itemId));
@@ -507,6 +539,7 @@ export default function FrlgHeldItemSearcherPage({
             hidden ||
             searching ||
             !selection ||
+            !seedListIsCurrent ||
             seedListLoading ||
             !!seedListError ||
             !trainerIDIsValid ||
@@ -1094,6 +1127,7 @@ export default function FrlgHeldItemSearcherPage({
                 disabled={
                     searching ||
                     !selection ||
+                    !seedListIsCurrent ||
                     seedListLoading ||
                     !!seedListError ||
                     (shinyOnlyMode

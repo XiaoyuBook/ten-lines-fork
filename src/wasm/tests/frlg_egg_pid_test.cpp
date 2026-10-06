@@ -1,4 +1,5 @@
 #include "frlg_egg_pid.hpp"
+#include <Core/Enum/Game.hpp>
 #include <Core/Gen3/Generators/EggGenerator3.hpp>
 #include <algorithm>
 #include <array>
@@ -212,8 +213,8 @@ void test_pid_path_order_and_result_cap()
                 "PID path must preserve EggGenerator3 held/pickup ordering");
         }
 
-        expected.resize(2);
-        actual.resize(2);
+        expected.erase(expected.begin() + 2, expected.end());
+        actual.erase(actual.begin() + 2, actual.end());
         require_states_equal(expected, actual, "max-results truncation equivalence");
         require(
             actual[0].getAdvances() == 0 && actual[0].getPickupAdvances() == 1

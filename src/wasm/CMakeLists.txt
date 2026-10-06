@@ -93,6 +93,9 @@ if(TEN_LINES_BUILD_TESTS)
     target_link_libraries(frlg_egg_pid_test PRIVATE PokeFinderCore)
     if(EMSCRIPTEN)
         target_link_options(frlg_egg_pid_test PRIVATE -sENVIRONMENT=node)
+        # Emscripten's test runner is CommonJS; the frontend package is ESM.
+        file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/package.json"
+            CONTENT "{\"type\":\"commonjs\"}\n")
     endif()
 
     add_test(NAME frlg_egg_pid COMMAND frlg_egg_pid_test)
