@@ -33,6 +33,7 @@ import {
     DEFAULT_FRLG_EGG_COMPATIBILITY,
     DEFAULT_FRLG_EGG_MAX_RESULTS,
     DEFAULT_FRLG_EGG_METHOD,
+    DEFAULT_FRLG_EGG_MINIMUM_PICKUP_GAP,
     DEFAULT_FRLG_EGG_PARENT_IVS,
     DEFAULT_FRLG_EGG_SEED_SKIP_COUNT,
     FRLG_EGG_COMPATIBILITY_OPTIONS,
@@ -149,6 +150,10 @@ export default function EggForm({
     );
     const [heldAdvancesValid, setHeldAdvancesValid] = useState(true);
     const [pickupAdvancesValid, setPickupAdvancesValid] = useState(true);
+    const [minimumPickupGap, setMinimumPickupGap] = useState(
+        DEFAULT_FRLG_EGG_MINIMUM_PICKUP_GAP.toString()
+    );
+    const [minimumPickupGapValid, setMinimumPickupGapValid] = useState(true);
     const [heldOffset, setHeldOffset] = useState("0");
     const [pickupOffset, setPickupOffset] = useState("0");
     const [parentA, setParentA] = useState<EggParentState>({
@@ -203,6 +208,7 @@ export default function EggForm({
         parentBValid &&
         heldAdvancesValid &&
         pickupAdvancesValid &&
+        minimumPickupGapValid &&
         ivRangesValid;
     const submittedNatureFilters = natures.length === 0 ? [-1] : natures;
     const calibrationContext = {
@@ -325,6 +331,7 @@ export default function EggForm({
                         t("common.any"),
                         t("common.any"),
                         -1,
+                        parseDecimal(minimumPickupGap),
                         sameInitialSeedOnly,
                         proxy((batch: ExtendedEggGeneratorState[]) => {
                             receivedResults += batch.length;
@@ -591,6 +598,23 @@ export default function EggForm({
                     maximumValue={4294967295}
                     onChange={(_, next) => setPickupOffset(next.value)}
                 />
+                <Box>
+                    <NumericalInput
+                        label={t("labels.eggMinimumPickupGap")}
+                        name="eggMinimumPickupGap"
+                        value={minimumPickupGap}
+                        minimumValue={0}
+                        maximumValue={4294967295}
+                        disabled={searching}
+                        onChange={(_, next) => {
+                            setMinimumPickupGap(next.value);
+                            setMinimumPickupGapValid(next.isValid);
+                        }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                        {t("labels.eggMinimumPickupGapHelp")}
+                    </Typography>
+                </Box>
             </Box>
 
             <Typography variant="h6" sx={{ mt: 2 }}>

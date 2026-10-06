@@ -5,6 +5,7 @@ import {
     DEFAULT_FRLG_EGG_COMPATIBILITY,
     DEFAULT_FRLG_EGG_MAX_RESULTS,
     DEFAULT_FRLG_EGG_METHOD,
+    DEFAULT_FRLG_EGG_MINIMUM_PICKUP_GAP,
     DEFAULT_FRLG_EGG_PARENT_IVS,
     DEFAULT_FRLG_EGG_SEED_SKIP_COUNT,
     FRLG_EGG_COMPATIBILITY_OPTIONS,
@@ -35,6 +36,7 @@ import {
 } from "../src/components/frlgEggHelpers.ts";
 
 assert.equal(isFrlgEggGame("fr"), true);
+assert.equal(DEFAULT_FRLG_EGG_MINIMUM_PICKUP_GAP, 1800);
 assert.equal(isFrlgEggGame("fr_jpn_1_0"), true);
 assert.equal(isFrlgEggGame("lg_mgba"), true);
 assert.equal(isFrlgEggGame("e_painting"), false);

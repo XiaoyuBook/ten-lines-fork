@@ -149,6 +149,7 @@ void check_seeds_frlg_egg(
     std::string held_settings,
     std::string pickup_settings,
     double target_pid,
+    double minimum_pickup_gap,
     bool same_initial_seed_only,
     emscripten::callback<void(emscripten::typed_array<ExtendedEggGeneratorState>)> result_callback,
     emscripten::callback<void(double, double)> progress_callback,
@@ -157,6 +158,11 @@ void check_seeds_frlg_egg(
     SearchingStatus searching(searching_callback);
 
     if (!is_frlg_egg_method(method)) {
+        return;
+    }
+
+    if (minimum_pickup_gap >= 0
+        && static_cast<double>(pickup_advances_range.max()) - held_advances_range.min() < minimum_pickup_gap) {
         return;
     }
 
@@ -242,6 +248,12 @@ void check_seeds_frlg_egg(
                 filter,
                 static_cast<u32>(target_pid));
         for (const auto& state : states) {
+            // A negative value disables this search-only filter for calibration.
+            // Convert before subtraction so earlier pickup frames cannot underflow.
+            if (minimum_pickup_gap >= 0
+                && static_cast<double>(state.getPickupAdvances()) - state.getAdvances() < minimum_pickup_gap) {
+                continue;
+            }
             batch.push_back(ExtendedEggGeneratorState(
                 held_entry.initialSeed,
                 held_entry.seedTime,

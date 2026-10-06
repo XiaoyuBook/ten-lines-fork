@@ -57,7 +57,9 @@ async function loadTenLinesWith(worker: typeof FakeWorker) {
 
     const server = await createServer({
         appType: "custom",
+        configFile: false,
         server: { middlewareMode: true },
+        optimizeDeps: { noDiscovery: true },
     });
     const module = await server.ssrLoadModule("/src/tenLines/index.ts");
     return { fetchTenLines: module.default, server };

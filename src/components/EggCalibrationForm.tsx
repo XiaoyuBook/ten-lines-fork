@@ -724,6 +724,7 @@ export default function EggCalibrationForm({
                 buildEggSeedSettings(heldSettings),
                 buildEggSeedSettings(pickupSettings),
                 usePidFilter ? parseHex(childPid) : -1,
+                -1, // Calibration can compare independently restarted generation/pickup runs.
                 false,
                 proxy((batch: ExtendedEggGeneratorState[]) => {
                     receivedResults += batch.length;

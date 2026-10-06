@@ -39,6 +39,9 @@ import {
     FRLG_HELD_ENCOUNTER_SURFING,
     FRLG_HELD_PROFILE_ENGLISH_SWITCH,
     FRLG_HELD_SEARCH_MODE_ALL_METHODS,
+    FRLG_HELD_SEARCH_MODE_FIVE_TRACKS,
+    FRLG_HELD_SEARCH_MODE_FIVE_TRACKS_SYMMETRIC,
+    FRLG_HELD_SEARCH_MODE_FOUR_TRACKS,
     FRLG_HELD_SEARCH_MODE_H1_STABLE,
     HELD_ITEM_FILTER_ANY,
     HELD_ITEM_FILTER_ANY_ITEM,
@@ -69,9 +72,36 @@ const UNFILTERED_IV_RANGES: [number, number][] = Array.from(
     { length: 6 },
     () => [0, 31] as [number, number]
 );
-const SEARCH_MODE_OPTIONS: FrlgHeldSearchMode[] = [
-    FRLG_HELD_SEARCH_MODE_H1_STABLE,
-    FRLG_HELD_SEARCH_MODE_ALL_METHODS,
+const SEARCH_MODE_OPTIONS: {
+    value: FrlgHeldSearchMode;
+    labelKey: string;
+    helpKey: string;
+}[] = [
+    {
+        value: FRLG_HELD_SEARCH_MODE_H1_STABLE,
+        labelKey: "heldItems.searchModeH1Stable",
+        helpKey: "heldItems.searchModeH1StableHelp",
+    },
+    {
+        value: FRLG_HELD_SEARCH_MODE_ALL_METHODS,
+        labelKey: "heldItems.searchModeAllMethods",
+        helpKey: "heldItems.searchModeAllMethodsHelp",
+    },
+    {
+        value: FRLG_HELD_SEARCH_MODE_FOUR_TRACKS,
+        labelKey: "heldItems.searchModeFourTracks",
+        helpKey: "heldItems.searchModeFourTracksHelp",
+    },
+    {
+        value: FRLG_HELD_SEARCH_MODE_FIVE_TRACKS,
+        labelKey: "heldItems.searchModeFiveTracks",
+        helpKey: "heldItems.searchModeFiveTracksHelp",
+    },
+    {
+        value: FRLG_HELD_SEARCH_MODE_FIVE_TRACKS_SYMMETRIC,
+        labelKey: "heldItems.searchModeFiveTracksSymmetric",
+        helpKey: "heldItems.searchModeFiveTracksSymmetricHelp",
+    },
 ];
 const ENCOUNTER_CATEGORY_OPTIONS = [
     { value: FRLG_HELD_ENCOUNTER_GRASS, labelKey: "options.grass" },
@@ -206,6 +236,11 @@ export default function FrlgHeldItemSearcherPage({
         setHeldSeedURLState,
     } = useHeldSeedURLState();
     const [seedList, setSeedList] = useState<FRLGContiguousSeedEntry[]>([]);
+    const [loadedSeedListKey, setLoadedSeedListKey] = useState<string>();
+    const seedListCacheRef = useRef<{
+        key: string;
+        entries: FRLGContiguousSeedEntry[];
+    } | undefined>(undefined);
     const [seedListLoading, setSeedListLoading] = useState(true);
     const [seedListError, setSeedListError] = useState<string>();
     const [targetSeedInput, setTargetSeedInput] = useState("");
@@ -217,6 +252,9 @@ export default function FrlgHeldItemSearcherPage({
     const [searchMode, setSearchMode] = useState<FrlgHeldSearchMode>(
         FRLG_HELD_SEARCH_MODE_H1_STABLE
     );
+    const selectedSearchMode =
+        SEARCH_MODE_OPTIONS.find((option) => option.value === searchMode) ??
+        SEARCH_MODE_OPTIONS[0];
     const [shinyOnlyMode, setShinyOnlyMode] = useState(false);
     const [shinyFilter, setShinyFilter] = useState(1);
     const [trainerIDIsValid, setTrainerIDIsValid] = useState(true);
@@ -240,13 +278,17 @@ export default function FrlgHeldItemSearcherPage({
         (value: string) => value.trim().replace(/^0x/i, "").toUpperCase(),
         []
     );
+    const seedListKey = `${game}:${sound}:${buttonMode}:${button}:${heldButton}`;
+    const seedListIsCurrent = loadedSeedListKey === seedListKey;
 
     const targetSeedIndex = useMemo(
         () =>
-            seedList.findIndex(
-                (seed) => seed.initialSeed === targetSeedValue
-            ),
-        [seedList, targetSeedValue]
+            seedListIsCurrent
+                ? seedList.findIndex(
+                      (seed) => seed.initialSeed === targetSeedValue
+                  )
+                : -1,
+        [seedList, seedListIsCurrent, targetSeedValue]
     );
     const targetSeed =
         targetSeedIndex === -1 ? undefined : seedList[targetSeedIndex];
@@ -277,13 +319,19 @@ export default function FrlgHeldItemSearcherPage({
 
     useEffect(() => {
         if (hidden) {
-            setSeedList([]);
+            return;
+        }
+        const cachedSeedList = seedListCacheRef.current;
+        if (cachedSeedList?.key === seedListKey) {
+            setSeedList(cachedSeedList.entries);
+            setLoadedSeedListKey(seedListKey);
             setSeedListLoading(false);
             setSeedListError(undefined);
             return;
         }
 
         let cancelled = false;
+        setLoadedSeedListKey(undefined);
         setSeedListLoading(true);
         setSeedListError(undefined);
         setSeedList([]);
@@ -305,7 +353,12 @@ export default function FrlgHeldItemSearcherPage({
                     return;
                 }
 
+                seedListCacheRef.current = {
+                    key: seedListKey,
+                    entries: nextSeedList,
+                };
                 setSeedList(nextSeedList);
+                setLoadedSeedListKey(seedListKey);
             } catch (error) {
                 if (!cancelled) {
                     console.error(
@@ -336,11 +389,13 @@ export default function FrlgHeldItemSearcherPage({
         button,
         heldButton,
         hidden,
+        seedListKey,
     ]);
 
     useEffect(() => {
         if (
             hidden ||
+            !seedListIsCurrent ||
             seedListLoading ||
             seedList.length === 0 ||
             seedList.some(
@@ -358,6 +413,7 @@ export default function FrlgHeldItemSearcherPage({
     }, [
         seedList,
         seedListLoading,
+        seedListIsCurrent,
         targetSeedValue,
         setHeldSeedURLState,
         hidden,
@@ -384,6 +440,13 @@ export default function FrlgHeldItemSearcherPage({
     const advanceSearchSpaceTooLarge =
         advanceCount > MAX_ADVANCES_PER_SEARCH;
     const advanceSignature = advanceRangeStrings.join(":");
+    const heldItemFilterSignature = shinyOnlyMode
+        ? undefined
+        : `${searchMode}:${standardOffset}`;
+    const selectionSignature = selection
+        ? `${selection.speciesForm}:${selection.locationIndex}:${selection.locationId}`
+        : undefined;
+    const selectedLocationId = selection?.locationId;
     const shinyLibrarySize = seedList.length;
     const shinyTotalFrames = shinyOnlyMode
         ? shinyLibrarySize * advanceCount
@@ -391,16 +454,16 @@ export default function FrlgHeldItemSearcherPage({
 
     const presetProfile = useMemo(
         () =>
-            selection
+            selectedLocationId !== undefined
                 ? getFrlgHeldOffsetProfile(
                       FRLG_HELD_PROFILE_ENGLISH_SWITCH,
                       encounterGame,
                       encounterCategory,
-                      selection.locationId,
+                      selectedLocationId,
                       WILD_1
                   )
                 : undefined,
-        [encounterCategory, encounterGame, selection]
+        [encounterCategory, encounterGame, selectedLocationId]
     );
     const standardOffsetValue = parseInt(standardOffset, 10);
     const trainerIdValue = parseInt(trainerID, 10);
@@ -426,17 +489,22 @@ export default function FrlgHeldItemSearcherPage({
     );
 
     useEffect(() => {
+        // Changing datasets is different from remounting the selector on return.
+        setSelection(undefined);
+    }, [encounterCategory, encounterGame]);
+
+    useEffect(() => {
         requestIdRef.current += 1;
         setRows([]);
         setHasSearched(false);
         setSearchError(undefined);
         setSearching(false);
     }, [
-        searchMode,
+        heldItemFilterSignature,
         shinyOnlyMode,
         shinyFilter,
         encounterCategory,
-        selection,
+        selectionSignature,
         heldItemFilter,
         targetSeedValue,
         game,
@@ -445,7 +513,6 @@ export default function FrlgHeldItemSearcherPage({
         button,
         heldButton,
         advanceSignature,
-        standardOffset,
         trainerID,
         secretID,
     ]);
@@ -453,7 +520,7 @@ export default function FrlgHeldItemSearcherPage({
     useEffect(() => {
         setStandardOffset(String(presetProfile?.baseOffset ?? 0));
         setStandardOffsetIsValid(true);
-    }, [presetProfile, selection?.locationId]);
+    }, [presetProfile, selectedLocationId]);
 
     useEffect(() => {
         const validItemIds = new Set(itemOptions.map(({ itemId }) => itemId));
@@ -472,6 +539,7 @@ export default function FrlgHeldItemSearcherPage({
             hidden ||
             searching ||
             !selection ||
+            !seedListIsCurrent ||
             seedListLoading ||
             !!seedListError ||
             !trainerIDIsValid ||
@@ -833,41 +901,31 @@ export default function FrlgHeldItemSearcherPage({
                 </Alert>
             )}
 
-            {!shinyOnlyMode && (
-                <>
-                    <TextField
-                        label={t("heldItems.searchMode")}
-                        margin="normal"
-                        value={searchMode}
-                        onChange={(event) =>
-                            setSearchMode(
-                                event.target.value as FrlgHeldSearchMode
-                            )
-                        }
-                        select
-                        fullWidth
-                        disabled={searching}
-                    >
-                        {SEARCH_MODE_OPTIONS.map((modeOption) => (
-                            <MenuItem key={modeOption} value={modeOption}>
-                                {t(
-                                    modeOption ===
-                                        FRLG_HELD_SEARCH_MODE_H1_STABLE
-                                        ? "heldItems.searchModeH1Stable"
-                                        : "heldItems.searchModeAllMethods"
-                                )}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                    <Alert severity="info" sx={{ my: 1, textAlign: "left" }}>
-                        {t(
-                            searchMode === FRLG_HELD_SEARCH_MODE_H1_STABLE
-                                ? "heldItems.searchModeH1StableHelp"
-                                : "heldItems.searchModeAllMethodsHelp"
-                        )}
-                    </Alert>
-                </>
-            )}
+            <TextField
+                label={t("heldItems.searchMode")}
+                margin="normal"
+                value={searchMode}
+                onChange={(event) =>
+                    setSearchMode(event.target.value as FrlgHeldSearchMode)
+                }
+                select
+                fullWidth
+                disabled={searching}
+            >
+                {SEARCH_MODE_OPTIONS.map((modeOption) => (
+                    <MenuItem key={modeOption.value} value={modeOption.value}>
+                        {t(modeOption.labelKey)}
+                    </MenuItem>
+                ))}
+            </TextField>
+            <Alert severity="info" sx={{ my: 1, textAlign: "left" }}>
+                {t(selectedSearchMode.helpKey)}
+                {shinyOnlyMode && (
+                    <Typography component="div" sx={{ mt: 1 }}>
+                        {t("heldItems.searchModeShinyHelp")}
+                    </Typography>
+                )}
+            </Alert>
 
             <FormControlLabel
                 control={
@@ -992,47 +1050,44 @@ export default function FrlgHeldItemSearcherPage({
                 onChange={setSelection}
             />
 
+            <NumericalInput
+                label={t("heldItems.standardOffset")}
+                name="heldStandardOffset"
+                minimumValue={0}
+                maximumValue={0xffffffff}
+                value={standardOffset}
+                disabled={searching}
+                onChange={(_event, value) => {
+                    setStandardOffset(value.value);
+                    setStandardOffsetIsValid(value.isValid);
+                }}
+            />
+            <Alert
+                severity={presetProfile ? "info" : "warning"}
+                sx={{ my: 1, textAlign: "left" }}
+            >
+                {presetProfile
+                    ? t("heldItems.offsetPresetAvailable", {
+                          offset: String(presetProfile.baseOffset),
+                          offsets: searchOffsets
+                              .map((offset) => `+${offset}`)
+                              .join(" / "),
+                      })
+                    : t("heldItems.offsetPresetUnknown")}
+            </Alert>
+
+            {selection && (
+                <FrlgHeldItemNotice
+                    profileSet={FRLG_HELD_PROFILE_ENGLISH_SWITCH}
+                    game={encounterGame}
+                    encounterCategory={encounterCategory}
+                    location={selection.locationId}
+                    method={WILD_1}
+                    species={selection.speciesForm}
+                />
+            )}
+
             {!shinyOnlyMode && (
-                <>
-                    <NumericalInput
-                        label={t("heldItems.standardOffset")}
-                        name="heldStandardOffset"
-                        minimumValue={0}
-                        maximumValue={0xffffffff}
-                        value={standardOffset}
-                        disabled={searching}
-                        onChange={(_event, value) => {
-                            setStandardOffset(value.value);
-                            setStandardOffsetIsValid(value.isValid);
-                        }}
-                    />
-                    <Alert
-                        severity={presetProfile ? "info" : "warning"}
-                        sx={{ my: 1, textAlign: "left" }}
-                    >
-                        {presetProfile
-                            ? t("heldItems.offsetPresetAvailable", {
-                                  offset: String(presetProfile.baseOffset),
-                                  offsets: searchOffsets
-                                      .map((offset) => `+${offset}`)
-                                      .join(" / "),
-                              })
-                            : t("heldItems.offsetPresetUnknown")}
-                    </Alert>
-
-                    {selection && (
-                        <FrlgHeldItemNotice
-                            profileSet={
-                                FRLG_HELD_PROFILE_ENGLISH_SWITCH
-                            }
-                            game={encounterGame}
-                            encounterCategory={encounterCategory}
-                            location={selection.locationId}
-                            method={WILD_1}
-                            species={selection.speciesForm}
-                        />
-                    )}
-
                     <TextField
                         label={t("heldItems.filter")}
                         margin="normal"
@@ -1062,7 +1117,6 @@ export default function FrlgHeldItemSearcherPage({
                             </MenuItem>
                         ))}
                     </TextField>
-                </>
             )}
 
             <Button
@@ -1073,6 +1127,7 @@ export default function FrlgHeldItemSearcherPage({
                 disabled={
                     searching ||
                     !selection ||
+                    !seedListIsCurrent ||
                     seedListLoading ||
                     !!seedListError ||
                     (shinyOnlyMode
@@ -1112,7 +1167,6 @@ export default function FrlgHeldItemSearcherPage({
                         rows={rows}
                         standardOffset={standardOffsetValue}
                         searchMode={searchMode}
-                        shinyOnly={shinyOnlyMode}
                         game={game}
                         gameConsole={gameConsole}
                         encounterCategory={encounterCategory}

@@ -31,6 +31,7 @@ export type EggSeedSearchPhase<T> = {
 export const DEFAULT_FRLG_EGG_METHOD = 12;
 export const DEFAULT_FRLG_EGG_COMPATIBILITY = 20;
 export const DEFAULT_FRLG_EGG_ADVANCE_RANGE = [1000, 5000] as const;
+export const DEFAULT_FRLG_EGG_MINIMUM_PICKUP_GAP = 1800;
 export const DEFAULT_FRLG_EGG_PARENT_IVS = [31, 31, 31, 31, 31, 31] as const;
 export const DEFAULT_FRLG_EGG_MAX_RESULTS = 10;
 export const DEFAULT_FRLG_EGG_SEED_SKIP_COUNT = 10;
