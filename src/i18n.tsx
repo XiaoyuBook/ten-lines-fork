@@ -464,7 +464,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         heldItems: {
             pageTitle: "FRLG Wild Held Items",
             pageDescription:
-                "Search English Switch FireRed or LeafGreen H1 frames for grass/caves, Rock Smash, Surfing, and all three rods. Tested Offset presets currently apply to FireRed only.",
+                "Search English or Japanese Switch FireRed and LeafGreen H1 frames for grass/caves, Rock Smash, Surfing, and all three rods. Offset presets were tested on English FireRed; Japanese versions provisionally reuse the same presets.",
+            japaneseOffsetNotice:
+                "Japanese versions currently reuse the English-version Offset presets. These Offsets have not yet been verified on Japanese games; unknown presets still default to 0 and can be entered manually.",
             separatePageNotice:
                 "Search-specific settings and results stay independent. Game, console, TID, and SID are shared across pages.",
             seedAndAdvanceInstruction:
@@ -503,7 +505,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "Use English Switch FRLG held-item profiles (experimental)",
             sourceData: "FRLG source item rates:",
             profileAvailable:
-                "FireRed field-tested profile: {profiles}.",
+                "English FireRed field-tested profile: {profiles}.",
             profileUnavailable:
                 "No field-tested FireRed H1 Offset exists for this location. It defaults to 0 and can be entered manually.",
             interferenceWarning:
@@ -1011,7 +1013,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
         heldItems: {
             pageTitle: "FRLG \u91ce\u751f\u643a\u5e26\u7269",
             pageDescription:
-                "\u641c\u7d22 Switch \u82f1\u6587\u7248\u706b\u7ea2\u6216\u53f6\u7eff\u7684\u8349\u4e1b/\u6d1e\u7a9f\u3001\u788e\u5ca9\u3001\u51b2\u6d6a\u548c\u4e09\u79cd\u9493\u7aff H1 \u5e27\u3002\u5f53\u524d\u5b9e\u6d4b Offset \u9884\u8bbe\u4ec5\u9002\u7528\u4e8e\u706b\u7ea2\u3002",
+                "搜索 Switch 英文版或日版火红、叶绿的草丛/洞窟、碎岩、冲浪和三种钓竿 H1 帧。Offset 预设来自英文版火红实测，日版暂时沿用同一套预设。",
+            japaneseOffsetNotice:
+                "日版暂时沿用英文版 Offset 预设，尚未经日版实测验证；没有已知预设的组合仍默认为 0，可手动填写。",
             separatePageNotice:
                 "\u641c\u7d22\u4e13\u7528\u8bbe\u7f6e\u548c\u7ed3\u679c\u4ecd\u4fdd\u6301\u72ec\u7acb\uff1b\u6e38\u620f\u3001\u673a\u578b\u3001TID \u548c SID \u4f1a\u5728\u5404\u9875\u9762\u540c\u6b65\u3002",
             seedAndAdvanceInstruction:
@@ -1050,7 +1054,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             enableSweetScentProfile:
                 "使用 Switch 英文版 FRLG 携带物档案（实验）",
             sourceData: "FRLG 源码携带率：",
-            profileAvailable: "火红实机验证档案：{profiles}。",
+            profileAvailable: "英文版火红实机验证档案：{profiles}。",
             profileUnavailable:
                 "\u8be5\u5730\u70b9\u5c1a\u65e0\u706b\u7ea2\u5b9e\u673a H1 Offset\uff0c\u9ed8\u8ba4\u4e3a 0\uff0c\u53ef\u624b\u52a8\u8f93\u5165\u3002",
             interferenceWarning:
