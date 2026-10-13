@@ -28,8 +28,10 @@ try {
     // Use the repository's real seed binaries, avoiding OS/browser download
     // middleware that can replace .bin responses with empty 204 responses.
     // Search results and the WASM worker are not mocked.
+    const fetchedSeedFiles = [];
     await context.route("**/generated/*.bin", async (route) => {
         const filename = new URL(route.request().url()).pathname.split("/").pop();
+        fetchedSeedFiles.push(filename);
         await route.fulfill({
             path: fileURLToPath(new URL(`../public/generated/${filename}`, import.meta.url)),
             contentType: "application/octet-stream",
@@ -135,6 +137,43 @@ try {
 
     assert.deepEqual(pageErrors.filter((message) => message !== "Failed to fetch seeds file"), [], "Only the injected load failure is expected");
     console.log(`Passed held-item tab/transfer/language persistence and input invalidation (${resultRows.length} real results).`);
+
+    // Japanese Switch games must use their own seed libraries, not silently
+    // normalize to English FireRed. Offset presets are intentionally shared.
+    const japaneseGames = [
+        { game: "fr_jpn_nx", label: "Switch FireRed (JPN)", seedFile: "fr_jpn_nx.bin", offset: "166" },
+        { game: "lg_jpn_nx", label: "Switch LeafGreen (JPN)", seedFile: "lg_jpn_nx.bin", offset: "0" },
+    ];
+    for (const japanese of japaneseGames) {
+        await selectOption("Game", japanese.label);
+        await selectOption("Pokemon", "Meowth");
+        await selectOption("Location", "Route 5");
+        const offset = page.locator('input[name="heldStandardOffset"]');
+        await page.waitForFunction(
+            (value) => document.querySelector('input[name="heldStandardOffset"]')?.value === value,
+            japanese.offset,
+        );
+        await page.getByText(/Japanese versions currently reuse the English-version Offset presets/).waitFor();
+        // As in English LeafGreen, locations without a tested preset stay at 0.
+        await offset.fill("166");
+        await waitForEnabled(submit);
+        assert(fetchedSeedFiles.includes(japanese.seedFile), `${japanese.label} must load its own seed binary`);
+        assert.equal(new URL(page.url()).searchParams.get("game"), japanese.game);
+        await submit.click();
+        await page.locator("tbody tr").first().waitFor({ state: "visible" });
+        await waitForEnabled(submit);
+        const japaneseRows = await page.locator("tbody tr").allTextContents();
+        assert(japaneseRows.length > 0, `${japanese.label} must produce real search results`);
+        await page.locator("tbody tr").first().getByRole("button", { name: "Calibration", exact: true }).click();
+        assert.equal(new URL(page.url()).searchParams.get("game"), japanese.game);
+        await page.getByRole("tab", { name: "Held Items", exact: true }).click();
+        await waitForEnabled(combo("Pokemon"));
+        assert.equal(await combo("Game").innerText(), japanese.label);
+        assert.equal(await offset.inputValue(), "166");
+        assert.deepEqual(await page.locator("tbody tr").allTextContents(), japaneseRows);
+        console.log(`Passed ${japanese.label} search and calibration transfer (${japaneseRows.length} real results).`);
+    }
+    assert.deepEqual(pageErrors.filter((message) => message !== "Failed to fetch seeds file"), [], "Japanese searches must not cause browser errors");
 } catch (error) {
     if (page) {
         console.error(`Failure at ${page.url()}`);

@@ -67,7 +67,12 @@ const RESULT_LIMIT = 1000;
 const MAX_ADVANCES_PER_SEARCH = 100_000;
 const DEFAULT_ADVANCE_RANGE: [string, string] = ["1000", "100000"];
 const DEFAULT_SEED_GAME = "fr_nx";
-const ENGLISH_SWITCH_FRLG_SEED_GAMES = new Set(["fr_nx", "lg_nx"]);
+const SWITCH_FRLG_SEED_GAMES = new Set([
+    "fr_nx",
+    "fr_jpn_nx",
+    "lg_nx",
+    "lg_jpn_nx",
+]);
 const UNFILTERED_IV_RANGES: [number, number][] = Array.from(
     { length: 6 },
     () => [0, 31] as [number, number]
@@ -145,7 +150,7 @@ function useHeldSeedURLState() {
     const requestedGameParam = searchParams.get(HELD_SEED_QUERY_KEYS.game);
     const requestedGame = requestedGameParam || DEFAULT_SEED_GAME;
     const requestedGameIsSupported =
-        ENGLISH_SWITCH_FRLG_SEED_GAMES.has(requestedGame);
+        SWITCH_FRLG_SEED_GAMES.has(requestedGame);
     const game = requestedGameIsSupported
         ? requestedGame
         : DEFAULT_SEED_GAME;
@@ -295,7 +300,7 @@ export default function FrlgHeldItemSearcherPage({
     const heldSeedGameOptions = useMemo(
         () =>
             getAllGameOptions(t).filter((option) =>
-                ENGLISH_SWITCH_FRLG_SEED_GAMES.has(option.value)
+                SWITCH_FRLG_SEED_GAMES.has(option.value)
             ),
         [t]
     );
@@ -666,6 +671,11 @@ export default function FrlgHeldItemSearcherPage({
             <Typography color="text.secondary" sx={{ mb: 1 }}>
                 {t("heldItems.pageDescription")}
             </Typography>
+            {game.includes("jpn") && (
+                <Alert severity="warning" sx={{ my: 1, textAlign: "left" }}>
+                    {t("heldItems.japaneseOffsetNotice")}
+                </Alert>
+            )}
             <Alert severity="info" sx={{ my: 1, textAlign: "left" }}>
                 {t("heldItems.separatePageNotice")}
             </Alert>
