@@ -186,8 +186,9 @@ function useHeldSeedURLState() {
 
     const setHeldSeedURLState = useCallback(
         (state: Partial<HeldSeedURLState>) => {
-            setSearchParams((previous) => {
-                const next = new URLSearchParams(previous);
+            const next = new URLSearchParams(window.location.search);
+            if (next.get("page") !== "7") return;
+            setSearchParams(() => {
                 for (const [key, value] of Object.entries(state)) {
                     next.set(
                         HELD_SEED_QUERY_KEYS[key as keyof HeldSeedURLState],

@@ -310,6 +310,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             childInfo: "Child Info",
             seedPairCount: "Seed Pair Count",
             usePidFilter: "Filter by PID",
+            threeSegmentDudunsparce: "Three-Segment Dudunsparce",
             parentA: "Parent A",
             parentB: "Parent B",
             compatibility: "Compatibility",
@@ -651,6 +652,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             ivCalculationDisabled:
                 "IV calculation disabled. Searching all Natures.",
             filterByReachableAdvances: "Filter by reachable advances",
+            threeSegmentDudunsparceHelp:
+                "Filters the full unsigned PID using PID % 100 = 0, predicting the Three-Segment evolution after transfer to a game with Dudunsparce. Dunsparce stays unevolved in Gen 3. Other filters still apply.",
+            threeSegmentDudunsparceNatureConflict:
+                "This PID condition requires Hardy nature in Gen 3. Select Hardy or leave Nature unrestricted; the current Nature filter cannot match.",
             usePerfectIvFilter: "Use perfect IV filter",
             idComboIntro:
                 "Search for TID/SID combinations whose TSV makes the matching static target shiny.",
@@ -853,6 +858,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             childInfo: "\u5b50\u4ee3\u4fe1\u606f",
             seedPairCount: "Seed \u7ec4\u5408\u6570",
             usePidFilter: "\u6309 PID \u7b5b\u9009",
+            threeSegmentDudunsparce: "三节土龙节节",
             parentA: "\u4eb2\u4ee3 A",
             parentB: "\u4eb2\u4ee3 B",
             compatibility: "\u76f8\u6027",
@@ -1210,6 +1216,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u4e2a\u4f53\u503c\u8ba1\u7b97\u5df2\u5173\u95ed\uff0c\u6b63\u5728\u641c\u7d22\u5168\u90e8\u6027\u683c\u3002",
             filterByReachableAdvances:
                 "\u6309\u53ef\u8fbe\u6d88\u8017\u5e27\u7b5b\u9009",
+            threeSegmentDudunsparceHelp:
+                "按完整的无符号 PID 筛选：PID % 100 = 0，预测传送到支持土龙节节的游戏后的三节进化形态。第三世代中仍是土龙弟弟；其他筛选条件同时生效。",
+            threeSegmentDudunsparceNatureConflict:
+                "此 PID 条件在第三世代必定对应勤奋性格。请把性格设为勤奋或不限；当前性格筛选无法匹配。",
             usePerfectIvFilter:
                 "\u6ee1\u4e2a\u4f53\u503c\u7b5b\u9009",
             idComboIntro:

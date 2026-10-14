@@ -46,16 +46,17 @@ try {
 
     async function waitForEnabled(locator) {
         await locator.waitFor({ state: "visible" });
-        const element = await locator.elementHandle();
-        try {
-            await page.waitForFunction(
-                (node) => node.isConnected && !node.disabled &&
-                    node.getAttribute("aria-disabled") !== "true",
-                element,
-            );
-        } finally {
-            await element.dispose();
+        // The input can remount when selector resources finish loading. Resolve
+        // the locator again instead of waiting forever on a detached old node.
+        const deadline = Date.now() + 60_000;
+        while (Date.now() < deadline) {
+            if (await locator.isVisible() && await locator.isEnabled() &&
+                await locator.getAttribute("aria-disabled") !== "true") {
+                return;
+            }
+            await page.waitForTimeout(50);
         }
+        throw new Error(`Control did not become enabled: ${locator}`);
     }
 
     async function selectOption(label, option) {

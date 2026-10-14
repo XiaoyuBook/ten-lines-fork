@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "npm run build-wasm && vite preview",
     "test": "node tests/run-unit-tests.mjs",
-    "test:browser": "node tests/frlgHeldItemPersistence.browser.mjs"
+    "test:browser": "node tests/frlgHeldItemPersistence.browser.mjs && node tests/dudunsparce.browser.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

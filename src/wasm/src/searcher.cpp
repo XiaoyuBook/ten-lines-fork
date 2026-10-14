@@ -79,6 +79,66 @@ void search_seeds_static(
     searching_callback(false);
 }
 
+void search_seeds_wild_filtered(
+    Game game,
+    u16 trainer_id,
+    u16 secret_id,
+    Encounter encounter_category,
+    u16 location,
+    int pokemon,
+    Method method,
+    Lead lead,
+    u8 shininess,
+    int nature,
+    u8 gender,
+    int hidden_power,
+    emscripten::typed_array<emscripten::typed_range<u8>> iv_ranges,
+    bool three_segment_dudunsparce,
+    emscripten::callback<void(emscripten::typed_array<ExtendedWildSearcherState>)> result_callback,
+    emscripten::callback<void(bool)> searching_callback)
+{
+    // wild methods are +4 from static methods
+    method = Method(static_cast<std::underlying_type_t<Method>>(method) - 4);
+
+    // leads are only available in Emerald
+    if (game != Game::Emerald) {
+        lead = Lead::None;
+    }
+
+    std::array<u8, 6> min_ivs = { iv_ranges[0].min(), iv_ranges[1].min(), iv_ranges[2].min(), iv_ranges[3].min(), iv_ranges[4].min(), iv_ranges[5].min() };
+    std::array<u8, 6> max_ivs = { iv_ranges[0].max(), iv_ranges[1].max(), iv_ranges[2].max(), iv_ranges[3].max(), iv_ranges[4].max(), iv_ranges[5].max() };
+
+    EncounterArea3 encounter_area = get_encounter_area(encounter_category, location, game);
+    const bool filter_three_segment = three_segment_dudunsparce && (pokemon & 0x7ff) == 206;
+    // PID % 100 == 0 implies PID % 25 == 0 (Hardy). Apply this necessary
+    // condition early while retaining the user's explicit Nature constraint.
+    const int required_nature = filter_three_segment && nature == -1 ? 0 : nature;
+    WildStateFilter filter = build_wild_filter(encounter_area, pokemon, shininess, required_nature, gender, hidden_power, iv_ranges);
+    Profile3 profile = build_profile(game, trainer_id, secret_id);
+
+    searching_callback(true);
+    emscripten::typed_array<ExtendedWildSearcherState> results;
+
+    auto methods = method == Method(1 | 2 | 4) ? std::vector<Method> { Method::Method1, Method::Method2, Method::Method4 } : std::vector<Method> { method };
+    for (Method m : methods) {
+        WildSearcher3 searcher(m, lead, false, encounter_area, profile, filter);
+        searcher.startSearch(min_ivs, max_ivs);
+        auto search_results = searcher.getResults();
+        for (auto& result : search_results) {
+            // Apply the full unsigned PID condition before cross-thread
+            // transfer. Other species and legacy searches stay unchanged.
+            if (filter_three_segment && result.getPID() % 100 != 0) {
+                continue;
+            }
+            results.push_back(ExtendedWildSearcherState(m, result));
+        }
+    }
+
+    result_callback(results);
+
+    searching_callback(false);
+}
+
 void search_seeds_wild(
     Game game,
     u16 trainer_id,
@@ -96,41 +156,15 @@ void search_seeds_wild(
     emscripten::callback<void(emscripten::typed_array<ExtendedWildSearcherState>)> result_callback,
     emscripten::callback<void(bool)> searching_callback)
 {
-    // wild methods are +4 from static methods
-    method = Method(static_cast<std::underlying_type_t<Method>>(method) - 4);
-
-    // leads are only available in Emerald
-    if (game != Game::Emerald) {
-        lead = Lead::None;
-    }
-
-    std::array<u8, 6> min_ivs = { iv_ranges[0].min(), iv_ranges[1].min(), iv_ranges[2].min(), iv_ranges[3].min(), iv_ranges[4].min(), iv_ranges[5].min() };
-    std::array<u8, 6> max_ivs = { iv_ranges[0].max(), iv_ranges[1].max(), iv_ranges[2].max(), iv_ranges[3].max(), iv_ranges[4].max(), iv_ranges[5].max() };
-
-    EncounterArea3 encounter_area = get_encounter_area(encounter_category, location, game);
-    WildStateFilter filter = build_wild_filter(encounter_area, pokemon, shininess, nature, gender, hidden_power, iv_ranges);
-    Profile3 profile = build_profile(game, trainer_id, secret_id);
-
-    searching_callback(true);
-    emscripten::typed_array<ExtendedWildSearcherState> results;
-
-    auto methods = method == Method(1 | 2 | 4) ? std::vector<Method> { Method::Method1, Method::Method2, Method::Method4 } : std::vector<Method> { method };
-    for (Method m : methods) {
-        WildSearcher3 searcher(m, lead, false, encounter_area, profile, filter);
-        searcher.startSearch(min_ivs, max_ivs);
-        auto search_results = searcher.getResults();
-        for (auto& result : search_results) {
-            results.push_back(ExtendedWildSearcherState(m, result));
-        }
-    }
-
-    result_callback(results);
-
-    searching_callback(false);
+    search_seeds_wild_filtered(
+        game, trainer_id, secret_id, encounter_category, location, pokemon,
+        method, lead, shininess, nature, gender, hidden_power, iv_ranges,
+        false, result_callback, searching_callback);
 }
 
 EMSCRIPTEN_BINDINGS(searcher)
 {
     emscripten::smart_function("search_seeds_static", &search_seeds_static);
     emscripten::smart_function("search_seeds_wild", &search_seeds_wild);
+    emscripten::smart_function("search_seeds_wild_filtered", &search_seeds_wild_filtered);
 }

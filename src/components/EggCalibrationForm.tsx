@@ -374,8 +374,9 @@ export default function EggCalibrationForm({
     const { t, resources } = useI18n();
     const [searchParams, setSearchParams] = useSearchParams();
     const setURLState = useCallback((state: Record<string, string | null>) => {
-        setSearchParams((previous) => {
-            const params = new URLSearchParams(previous);
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("page") !== "6") return;
+        setSearchParams(() => {
             for (const [key, value] of Object.entries(state)) {
                 if (value === null) {
                     params.delete(key);
@@ -554,6 +555,9 @@ export default function EggCalibrationForm({
         childIvRangesValid;
 
     useEffect(() => {
+        if (hidden) {
+            return;
+        }
         let cancelled = false;
         setSeedListsLoading(true);
 
@@ -656,9 +660,13 @@ export default function EggCalibrationForm({
         pickupSettings,
         pickupSettingsText,
         setURLState,
+        hidden,
     ]);
 
     useEffect(() => {
+        if (hidden) {
+            return;
+        }
         const nextURLState: Record<string, string> = {};
         if (heldSeedList.length > 0 && heldTargetIndex === -1) {
             const defaultHeldSeed =
@@ -685,6 +693,7 @@ export default function EggCalibrationForm({
         pickupSeedList,
         pickupTargetIndex,
         setURLState,
+        hidden,
     ]);
 
     const runSearch = async () => {

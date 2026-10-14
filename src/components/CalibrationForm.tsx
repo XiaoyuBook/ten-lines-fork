@@ -295,11 +295,15 @@ function useCalibrationURLState() {
     const targetSeedValue =
         parseInt(searchParams.get("targetInitialSeed") || "DEAD", 16) ?? 0xdead;
     const setCalibrationURLState = (state: Partial<CalibrationURLState>) => {
-        setSearchParams((prev) => {
+        // Async seed loading may finish after navigation. Never restore the
+        // query snapshot captured by a previous render (including its page).
+        const current = new URLSearchParams(window.location.search);
+        if (current.get("page") !== "1") return;
+        setSearchParams(() => {
             for (const [key, value] of Object.entries(state)) {
-                prev.set(key, value);
+                current.set(key, value);
             }
-            return prev;
+            return current;
         });
     };
     return {
@@ -628,6 +632,10 @@ export default function CalibrationForm({
         !overworldFramesIsValid;
 
     useEffect(() => {
+        if (hidden) {
+            return;
+        }
+        let cancelled = false;
         const fetchSeedList = async () => {
             if (!isFRLG) {
                 setSeedList(
@@ -646,6 +654,9 @@ export default function CalibrationForm({
                 game,
                 heldButton
             );
+            if (cancelled) {
+                return;
+            }
             setSeedList(nextSeedList);
             if (
                 nextSeedList.findIndex(
@@ -664,8 +675,15 @@ export default function CalibrationForm({
                 });
             }
         };
-        void fetchSeedList();
-    }, [game, sound, buttonMode, button, heldButton]);
+        void fetchSeedList().catch((error) => {
+            if (!cancelled) {
+                console.error("Failed to load calibration seed list", error);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [game, sound, buttonMode, button, heldButton, hidden]);
 
     const normalizeSeedInput = useCallback(
         (value: string) => value.trim().replace(/^0x/i, "").toUpperCase(),
