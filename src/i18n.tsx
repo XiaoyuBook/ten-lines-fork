@@ -310,6 +310,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             childInfo: "Child Info",
             seedPairCount: "Seed Pair Count",
             usePidFilter: "Filter by PID",
+            threeSegmentDudunsparce: "Three-Segment Dudunsparce",
             parentA: "Parent A",
             parentB: "Parent B",
             compatibility: "Compatibility",
@@ -493,7 +494,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             searchModeFiveTracksSymmetricHelp:
                 "Uses O-2, O-1, O, O+1, and O+2 for symmetric adjacent-path coverage. During held-item filtering, all five tracks must match.",
             searchModeShinyHelp:
-                "In shiny + frame range mode, this selection controls the held-item tracks shown in results but does not filter any result.",
+                "Frame range searches also apply the held-item filter. Every Offset track in this mode must match the selected held-item condition.",
             standardOffset: "H1 standard Offset (O)",
             offsetPresetAvailable:
                 "Preset H1 Offset: +{offset}. This mode checks {offsets}; you may edit the preset.",
@@ -525,9 +526,9 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             resultCount: "Showing {count} results (up to {limit}).",
             shinyOnlyMode: "Shiny + frame range mode",
             shinyOnlyModeHelp:
-                "Searches the entire seed library ({count} seeds) and filters only by shiny status and the Advance range based on the entered TID/SID. The selected Offset coverage is display-only. WASM stops after {limit} matching results.",
+                "Searches the entire seed library ({count} seeds) within the Advance range, applying both the shiny filter based on TID/SID and the held-item filter across all selected Offsets. WASM stops after {limit} fully matching results.",
             shinyFilter: "Shiny filter",
-            noResultsShiny: "No matching shiny results were found.",
+            noResultsShiny: "No results match both the shiny and held-item conditions in this frame range.",
             shinySearchWorkload:
                 "This search covers {frames} frames ({seeds} seeds × {advances} Advances per seed) and may take a long time.",
         },
@@ -651,6 +652,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             ivCalculationDisabled:
                 "IV calculation disabled. Searching all Natures.",
             filterByReachableAdvances: "Filter by reachable advances",
+            threeSegmentDudunsparceHelp:
+                "Filters the full unsigned PID using PID % 100 = 0, predicting the Three-Segment evolution after transfer to a game with Dudunsparce. Dunsparce stays unevolved in Gen 3. Other filters still apply.",
+            threeSegmentDudunsparceNatureConflict:
+                "This PID condition requires Hardy nature in Gen 3. Select Hardy or leave Nature unrestricted; the current Nature filter cannot match.",
             usePerfectIvFilter: "Use perfect IV filter",
             idComboIntro:
                 "Search for TID/SID combinations whose TSV makes the matching static target shiny.",
@@ -853,6 +858,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             childInfo: "\u5b50\u4ee3\u4fe1\u606f",
             seedPairCount: "Seed \u7ec4\u5408\u6570",
             usePidFilter: "\u6309 PID \u7b5b\u9009",
+            threeSegmentDudunsparce: "三节土龙节节",
             parentA: "\u4eb2\u4ee3 A",
             parentB: "\u4eb2\u4ee3 B",
             compatibility: "\u76f8\u6027",
@@ -1043,7 +1049,7 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
             searchModeFiveTracksSymmetricHelp:
                 "\u4f7f\u7528 O-2\u3001O-1\u3001O\u3001O+1\u3001O+2 \u8fdb\u884c\u5bf9\u79f0\u7684\u76f8\u90bb\u8f68\u8ff9\u8986\u76d6\u3002\u8fdb\u884c\u643a\u5e26\u7269\u7b5b\u9009\u65f6\uff0c\u4e94\u8f68\u90fd\u5fc5\u987b\u7b26\u5408\u3002",
             searchModeShinyHelp:
-                "\u5728\u95ea\u5149 + \u5e27\u6570\u8303\u56f4\u6a21\u5f0f\u4e0b\uff0c\u8be5\u9009\u62e9\u53ea\u63a7\u5236\u7ed3\u679c\u4e2d\u663e\u793a\u7684\u643a\u5e26\u7269\u8f68\u8ff9\uff0c\u4e0d\u7b5b\u6389\u4efb\u4f55\u7ed3\u679c\u3002",
+                "帧数范围搜索也会应用携带物筛选；当前模式的每个 Offset 都必须符合所选携带物条件。",
             standardOffset: "H1 \u6807\u51c6 Offset\uff08O\uff09",
             offsetPresetAvailable:
                 "\u5df2\u5957\u7528 H1 Offset \u9884\u8bbe +{offset}\u3002\u5f53\u524d\u6a21\u5f0f\u68c0\u67e5 {offsets}\uff1b\u4ecd\u53ef\u624b\u52a8\u4fee\u6539\u3002",
@@ -1075,10 +1081,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u5f53\u524d\u663e\u793a {count} \u6761\u7ed3\u679c\uff08\u6700\u591a {limit} \u6761\uff09\u3002",
             shinyOnlyMode: "\u95ea\u5149\u0020\u002b\u0020\u5e27\u6570\u8303\u56f4\u6a21\u5f0f",
             shinyOnlyModeHelp:
-                "\u641c\u7d22\u6574\u4e2a\u0020seed\u0020\u5e93\uff08\u5171\u0020{count}\u0020\u6761\uff09\uff0c\u53ea\u6309\u95ea\u5149\u72b6\u6001\u4e0e\u0020Advance\uff08\u5e27\u6570\uff09\u8303\u56f4\u7b5b\u9009\uff1b\u6240\u9009\u0020Offset\u0020\u8986\u76d6\u4ec5\u7528\u4e8e\u7ed3\u679c\u5c55\u793a\u3002WASM\u0020\u5728\u6536\u96c6\u5230\u0020{limit}\u0020\u6761\u5339\u914d\u7ed3\u679c\u540e\u7acb\u5373\u505c\u6b62\u3002",
+                "在帧数范围内搜索整个 seed 库（共 {count} 条），同时应用基于 TID/SID 的闪光筛选，以及所有所选 Offset 的携带物筛选。WASM 收集到 {limit} 条完全匹配的结果后立即停止。",
             shinyFilter: "\u95ea\u5149\u7b5b\u9009",
             noResultsShiny:
-                "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u95ea\u5149\u7ed3\u679c\u3002",
+                "该帧数范围内没有同时符合闪光与携带物条件的结果。",
             shinySearchWorkload:
                 "\u672c\u6b21\u641c\u7d22\u8986\u76d6\u0020{frames}\u0020\u5e27\uff08{seeds}\u0020\u6761\u0020seed\u0020\u00d7\u0020\u6bcf\u6761\u0020{advances}\u0020\u5e27\uff09\uff0c\u8017\u65f6\u53ef\u80fd\u8f83\u957f\u3002",
         },
@@ -1210,6 +1216,10 @@ const TRANSLATIONS: Record<Locale, TranslationValue> = {
                 "\u4e2a\u4f53\u503c\u8ba1\u7b97\u5df2\u5173\u95ed\uff0c\u6b63\u5728\u641c\u7d22\u5168\u90e8\u6027\u683c\u3002",
             filterByReachableAdvances:
                 "\u6309\u53ef\u8fbe\u6d88\u8017\u5e27\u7b5b\u9009",
+            threeSegmentDudunsparceHelp:
+                "按完整的无符号 PID 筛选：PID % 100 = 0，预测传送到支持土龙节节的游戏后的三节进化形态。第三世代中仍是土龙弟弟；其他筛选条件同时生效。",
+            threeSegmentDudunsparceNatureConflict:
+                "此 PID 条件在第三世代必定对应勤奋性格。请把性格设为勤奋或不限；当前性格筛选无法匹配。",
             usePerfectIvFilter:
                 "\u6ee1\u4e2a\u4f53\u503c\u7b5b\u9009",
             idComboIntro:

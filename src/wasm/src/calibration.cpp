@@ -126,7 +126,7 @@ void check_seeds_static(
     searching_callback(false);
 }
 
-void check_seeds_wild_limited(
+void check_seeds_wild_held_items(
     emscripten::typed_array<FRLGContiguousSeedEntry> seeds,
     emscripten::typed_range<u32> advances_range,
     emscripten::typed_range<u32> ttv_advances_range,
@@ -145,6 +145,10 @@ void check_seeds_wild_limited(
     emscripten::typed_array<emscripten::typed_range<u8>> iv_ranges,
     u8 result_shininess,
     u32 result_limit,
+    emscripten::typed_array<u32> held_offsets,
+    u16 common_item,
+    u16 rare_item,
+    int held_item_filter,
     emscripten::callback<void(emscripten::typed_array<ExtendedWildGeneratorState>)> result_callback,
     emscripten::callback<void(bool)> searching_callback)
 {
@@ -189,6 +193,31 @@ void check_seeds_wild_limited(
         }
         return state.getShiny() != 0;
     };
+    // Filter before counting or transferring results. In particular, a rejected
+    // held-item roll must not consume the whole-library search's result limit.
+    std::vector<Jump> held_jumps;
+    PokeRNG jump_rng(0);
+    for (int i = 0; i < held_offsets.size(); i++) {
+        held_jumps.push_back(jump_rng.getJump(held_offsets[i]));
+    }
+    auto matches_held_item = [&](u32 iv2_end_seed) {
+        // -2 explicitly requests all results, including those without an item.
+        if (held_item_filter == -2) {
+            return true;
+        }
+        if (iv2_end_seed == 0 || held_jumps.empty()) {
+            return false;
+        }
+        for (const Jump& jump : held_jumps) {
+            u16 roll = ((iv2_end_seed * jump.mult + jump.add) >> 16) % 100;
+            u16 item = common_item == rare_item ? common_item
+                : roll >= 95 ? rare_item : roll >= 45 ? common_item : 0;
+            if (held_item_filter == -1 ? item == 0 : item != held_item_filter) {
+                return false;
+            }
+        }
+        return true;
+    };
 
     for (int i = 0; i < seeds.size() && !result_limit_reached; i++) {
         FRLGContiguousSeedEntry entry = seeds[i];
@@ -203,29 +232,40 @@ void check_seeds_wild_limited(
             u32 max_advances = ending_advances - starting_advances;
 
             for (Method m : methods) {
-                WildGenerator3 generator(
-                    starting_advances + ttv_advances * 313,
-                    max_advances,
-                    offset,
-                    m,
-                    lead,
-                    false,
-                    encounter_area,
-                    profile,
-                    filter);
-                auto generator_results = generator.generate(seed);
-                for (auto& generator_result : generator_results) {
-                    if (!matches_result_shininess(generator_result)) {
-                        continue;
-                    }
-                    batch.push_back(ExtendedWildGeneratorState(seed, seed_time, ttv_advances, m, generator_result));
-                    result_count++;
-                    if (batch.size() >= RESULT_BATCH_SIZE) {
-                        flush_batch();
-                    }
-                    if (result_limit > 0 && result_count >= result_limit) {
-                        result_limit_reached = true;
-                        break;
+                // Do not materialize an entire seed's unfiltered result vector
+                // before checking the limit. Bound temporary memory and stop
+                // generating as soon as enough fully matching targets exist.
+                constexpr u32 ADVANCE_CHUNK_SIZE = 2048;
+                for (u64 chunk = 0; chunk <= max_advances && !result_limit_reached; chunk += ADVANCE_CHUNK_SIZE) {
+                    u32 chunk_max = static_cast<u32>(std::min<u64>(ADVANCE_CHUNK_SIZE - 1, max_advances - chunk));
+                    WildGenerator3 generator(
+                        starting_advances + ttv_advances * 313 + static_cast<u32>(chunk),
+                        chunk_max,
+                        offset,
+                        m,
+                        lead,
+                        false,
+                        encounter_area,
+                        profile,
+                        filter);
+                    auto generator_results = generator.generate(seed);
+                    for (auto& generator_result : generator_results) {
+                        if (!matches_result_shininess(generator_result)) {
+                            continue;
+                        }
+                        ExtendedWildGeneratorState current_result(seed, seed_time, ttv_advances, m, generator_result);
+                        if (!matches_held_item(current_result.iv2EndSeed)) {
+                            continue;
+                        }
+                        batch.push_back(current_result);
+                        result_count++;
+                        if (batch.size() >= RESULT_BATCH_SIZE) {
+                            flush_batch();
+                        }
+                        if (result_limit > 0 && result_count >= result_limit) {
+                            result_limit_reached = true;
+                            break;
+                        }
                     }
                 }
                 if (result_limit_reached) {
@@ -236,6 +276,36 @@ void check_seeds_wild_limited(
     }
     flush_batch();
     searching_callback(false);
+}
+
+void check_seeds_wild_limited(
+    emscripten::typed_array<FRLGContiguousSeedEntry> seeds,
+    emscripten::typed_range<u32> advances_range,
+    emscripten::typed_range<u32> ttv_advances_range,
+    u32 offset,
+    Game game,
+    u16 trainer_id,
+    u16 secret_id,
+    Encounter encounter_category,
+    u16 location,
+    int pokemon,
+    Method method,
+    Lead lead,
+    u8 shininess,
+    int nature,
+    u8 gender,
+    emscripten::typed_array<emscripten::typed_range<u8>> iv_ranges,
+    u8 result_shininess,
+    u32 result_limit,
+    emscripten::callback<void(emscripten::typed_array<ExtendedWildGeneratorState>)> result_callback,
+    emscripten::callback<void(bool)> searching_callback)
+{
+    check_seeds_wild_held_items(
+        seeds, advances_range, ttv_advances_range, offset, game,
+        trainer_id, secret_id, encounter_category, location, pokemon,
+        method, lead, shininess, nature, gender, iv_ranges,
+        result_shininess, result_limit, {}, 0, 0, -2,
+        result_callback, searching_callback);
 }
 
 void check_seeds_wild(
@@ -288,4 +358,7 @@ EMSCRIPTEN_BINDINGS(calibration)
     emscripten::smart_function(
         "check_seeds_wild_limited",
         &check_seeds_wild_limited);
+    emscripten::smart_function(
+        "check_seeds_wild_held_items",
+        &check_seeds_wild_held_items);
 }

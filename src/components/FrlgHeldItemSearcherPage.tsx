@@ -186,8 +186,9 @@ function useHeldSeedURLState() {
 
     const setHeldSeedURLState = useCallback(
         (state: Partial<HeldSeedURLState>) => {
-            setSearchParams((previous) => {
-                const next = new URLSearchParams(previous);
+            const next = new URLSearchParams(window.location.search);
+            if (next.get("page") !== "7") return;
+            setSearchParams(() => {
                 for (const [key, value] of Object.entries(state)) {
                     next.set(
                         HELD_SEED_QUERY_KEYS[key as keyof HeldSeedURLState],
@@ -445,9 +446,7 @@ export default function FrlgHeldItemSearcherPage({
     const advanceSearchSpaceTooLarge =
         advanceCount > MAX_ADVANCES_PER_SEARCH;
     const advanceSignature = advanceRangeStrings.join(":");
-    const heldItemFilterSignature = shinyOnlyMode
-        ? undefined
-        : `${searchMode}:${standardOffset}`;
+    const heldItemFilterSignature = `${searchMode}:${standardOffset}`;
     const selectionSignature = selection
         ? `${selection.speciesForm}:${selection.locationIndex}:${selection.locationId}`
         : undefined;
@@ -478,8 +477,7 @@ export default function FrlgHeldItemSearcherPage({
         searchMode
     );
     const hasUsableOffset =
-        shinyOnlyMode ||
-        (standardOffsetIsValid && searchOffsets.length > 0);
+        standardOffsetIsValid && searchOffsets.length > 0;
     const slots = selection
         ? getFrlgHeldItemSlots(selection.speciesForm & 0x7ff)
         : undefined;
@@ -544,6 +542,7 @@ export default function FrlgHeldItemSearcherPage({
             hidden ||
             searching ||
             !selection ||
+            !slots ||
             !seedListIsCurrent ||
             seedListLoading ||
             !!seedListError ||
@@ -581,7 +580,7 @@ export default function FrlgHeldItemSearcherPage({
                             },
                         ]
                       : [];
-                await tenLines.check_seeds_wild_limited(
+                await tenLines.check_seeds_wild_held_items(
                     seeds,
                     advanceRange,
                     [0, 0],
@@ -599,18 +598,22 @@ export default function FrlgHeldItemSearcherPage({
                     255,
                     UNFILTERED_IV_RANGES,
                     shinyOnlyMode ? shinyFilter : 255,
-                    shinyOnlyMode ? RESULT_LIMIT : 0,
+                    RESULT_LIMIT,
+                    searchOffsets,
+                    slots.common,
+                    slots.rare,
+                    heldItemFilter,
                     proxy((results: ExtendedWildGeneratorState[]) => {
                         if (requestIdRef.current !== requestId) {
                             return;
                         }
 
                         const matchingRows = results.filter((row) => {
-                            if (shinyOnlyMode) {
-                                return matchesFrlgHeldShinyFilter(
-                                    row,
-                                    shinyFilter
-                                );
+                            if (
+                                shinyOnlyMode &&
+                                !matchesFrlgHeldShinyFilter(row, shinyFilter)
+                            ) {
+                                return false;
                             }
                             const prediction = predictFrlgHeldItemAtOffsets({
                                 species: row.species,
@@ -1097,37 +1100,34 @@ export default function FrlgHeldItemSearcherPage({
                 />
             )}
 
-            {!shinyOnlyMode && (
-                    <TextField
-                        label={t("heldItems.filter")}
-                        margin="normal"
-                        value={heldItemFilter}
-                        onChange={(event) =>
-                            setHeldItemFilter(Number(event.target.value))
-                        }
-                        select
-                        fullWidth
-                        disabled={searching || !selection || !hasUsableOffset}
-                        helperText={
-                            selection && !hasUsableOffset
-                                ? t("heldItems.offsetRequired")
-                                : undefined
-                        }
-                    >
-                        <MenuItem value={HELD_ITEM_FILTER_ANY}>
-                            {t("heldItems.filterAny")}
-                        </MenuItem>
-                        <MenuItem value={HELD_ITEM_FILTER_ANY_ITEM}>
-                            {t("heldItems.filterAnyItem")}
-                        </MenuItem>
-                        {itemOptions.map(({ itemId, percent }) => (
-                            <MenuItem key={itemId} value={itemId}>
-                                {getFrlgHeldItemName(locale, itemId)} (
-                                {percent}%)
-                            </MenuItem>
-                        ))}
-                    </TextField>
-            )}
+            <TextField
+                label={t("heldItems.filter")}
+                margin="normal"
+                value={heldItemFilter}
+                onChange={(event) =>
+                    setHeldItemFilter(Number(event.target.value))
+                }
+                select
+                fullWidth
+                disabled={searching || !selection || !hasUsableOffset}
+                helperText={
+                    selection && !hasUsableOffset
+                        ? t("heldItems.offsetRequired")
+                        : undefined
+                }
+            >
+                <MenuItem value={HELD_ITEM_FILTER_ANY}>
+                    {t("heldItems.filterAny")}
+                </MenuItem>
+                <MenuItem value={HELD_ITEM_FILTER_ANY_ITEM}>
+                    {t("heldItems.filterAnyItem")}
+                </MenuItem>
+                {itemOptions.map(({ itemId, percent }) => (
+                    <MenuItem key={itemId} value={itemId}>
+                        {getFrlgHeldItemName(locale, itemId)} ({percent}%)
+                    </MenuItem>
+                ))}
+            </TextField>
 
             <Button
                 type="submit"

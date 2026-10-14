@@ -46,16 +46,17 @@ try {
 
     async function waitForEnabled(locator) {
         await locator.waitFor({ state: "visible" });
-        const element = await locator.elementHandle();
-        try {
-            await page.waitForFunction(
-                (node) => node.isConnected && !node.disabled &&
-                    node.getAttribute("aria-disabled") !== "true",
-                element,
-            );
-        } finally {
-            await element.dispose();
+        // The input can remount when selector resources finish loading. Resolve
+        // the locator again instead of waiting forever on a detached old node.
+        const deadline = Date.now() + 60_000;
+        while (Date.now() < deadline) {
+            if (await locator.isVisible() && await locator.isEnabled() &&
+                await locator.getAttribute("aria-disabled") !== "true") {
+                return;
+            }
+            await page.waitForTimeout(50);
         }
+        throw new Error(`Control did not become enabled: ${locator}`);
     }
 
     async function selectOption(label, option) {
@@ -174,6 +175,54 @@ try {
         console.log(`Passed ${japanese.label} search and calibration transfer (${japaneseRows.length} real results).`);
     }
     assert.deepEqual(pageErrors.filter((message) => message !== "Failed to fetch seeds file"), [], "Japanese searches must not cause browser errors");
+
+    // Frame-range / whole-library mode must not bypass held-item filtering.
+    // This reproduces the user's Japanese-version report with real search data.
+    await selectOption("Game", "Switch FireRed (JPN)");
+    await selectOption("Pokemon", "Meowth");
+    await selectOption("Location", "Route 5");
+    await page.locator('input[name="heldStandardOffset"]').fill("166");
+    const range = page.locator('input[name="heldAdvanceRange"]');
+    await range.nth(0).fill("4000");
+    await range.nth(1).fill("4500");
+    await page.getByRole("checkbox", { name: "Shiny + frame range mode", exact: true }).check();
+    await selectOption("Shiny filter", "No");
+    await selectOption("Held-item filter", "Nugget (5%)");
+    await waitForEnabled(submit);
+    await submit.click();
+    await page.locator("tbody tr").first().waitFor({ state: "visible" });
+    await waitForEnabled(submit);
+    const frameRows = await page.locator("tbody tr").allTextContents();
+    assert(frameRows.length > 0 && frameRows.length <= 1000);
+    for (const row of frameRows) {
+        assert(!row.includes("No item"), "Frame-range held-item results must not include empty tracks");
+        const rolls = [...row.matchAll(/%\s*100\s*=\s*(\d+)/g)].map((match) => Number(match[1]));
+        assert.equal(rolls.length, 2);
+        assert(rolls.every((roll) => roll >= 95), "Both stable tracks must predict Nugget");
+    }
+    await page.locator('input[name="heldStandardOffset"]').fill("167");
+    await page.locator("tbody tr").first().waitFor({ state: "detached" });
+    console.log(`Passed whole-library frame-range item intersection (${frameRows.length} real Japanese results) and Offset invalidation.`);
+
+    await selectOption("Pokemon", "Chansey");
+    await selectOption("Location", "Safari Zone Center");
+    await selectOption("Search mode", "Five-track symmetric: O-2 / O-1 / O / O+1 / O+2");
+    await selectOption("Held-item filter", "Lucky Egg (5%)");
+    await waitForEnabled(submit);
+    await submit.click();
+    await waitForEnabled(submit);
+    const chanseyRows = await page.locator("tbody tr").allTextContents();
+    for (const row of chanseyRows) {
+        assert(!row.includes("No item"), "Chansey's five-track search must reject missing Lucky Eggs");
+        const rolls = [...row.matchAll(/%\s*100\s*=\s*(\d+)/g)].map((match) => Number(match[1]));
+        assert.equal(rolls.length, 5);
+        assert(rolls.every((roll) => roll >= 95));
+    }
+    if (chanseyRows.length === 0) {
+        await page.getByText("No results match both the shiny and held-item conditions in this frame range.", { exact: true }).waitFor();
+    }
+    console.log(`Passed reported Chansey / five-track frame-range scenario (${chanseyRows.length} matching results; no empty-item rows).`);
+    assert.deepEqual(pageErrors.filter((message) => message !== "Failed to fetch seeds file"), []);
 } catch (error) {
     if (page) {
         console.error(`Failure at ${page.url()}`);

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
     Autocomplete,
+    Alert,
     Box,
     Button,
     Checkbox,
@@ -10,6 +11,7 @@ import {
     Switch,
     type SxProps,
     TextField,
+    Typography,
     type Theme,
 } from "@mui/material";
 
@@ -40,6 +42,10 @@ import SearcherTable, {
 } from "./SearcherTable";
 import { filterNatureOptions } from "../utils/natureSearch";
 import {
+    DUNSPARCE_SPECIES,
+    isThreeSegmentDudunsparcePid,
+} from "../utils/dudunsparce";
+import {
     applyEggIvPreset,
     type EggIvPresetValue,
     FRLG_EGG_IV_PRESETS,
@@ -61,6 +67,7 @@ export interface SearcherFormState {
     wildLocation: number;
     wildPokemon: number;
     wildLead: number;
+    threeSegmentDudunsparce: boolean;
     method: number;
 }
 
@@ -215,6 +222,7 @@ export default function CalibrationForm({
             wildLocation: 0,
             wildPokemon: 0,
             wildLead: 255,
+            threeSegmentDudunsparce: false,
             method: 1,
         });
     const {
@@ -268,6 +276,11 @@ export default function CalibrationForm({
         !ivRangesAreValid ||
         (isReachableAdvancesFilterEnabled && !requiredAdvancesRangeIsValid);
     const isStatic = searcherFormState.method <= STATIC_4;
+    const isDunsparceTarget =
+        !isStatic &&
+        (searcherFormState.wildPokemon & 0x7ff) === DUNSPARCE_SPECIES;
+    const threeSegmentFilterEnabled =
+        isDunsparceTarget && searcherFormState.threeSegmentDudunsparce;
     const isFRLG = game.startsWith("fr") || game.startsWith("lg");
     const isFRLGE = isFRLG || game.startsWith("e_");
 
@@ -292,10 +305,12 @@ export default function CalibrationForm({
     ]);
     const visibleRows = useMemo(
         () =>
-            searcherFormState.natures.length === 0
-                ? rows
-                : rows.filter((row) => selectedNatureSet.has(row.nature)),
-        [rows, searcherFormState.natures, selectedNatureSet]
+            rows.filter(
+                (row) =>
+                    (selectedNatureSet.size === 0 || selectedNatureSet.has(row.nature)) &&
+                    (!threeSegmentFilterEnabled || isThreeSegmentDudunsparcePid(row.pid))
+            ),
+        [rows, selectedNatureSet, threeSegmentFilterEnabled]
     );
     const submittedNatureFilters =
         searcherFormState.natures.length === 0
@@ -394,6 +409,11 @@ export default function CalibrationForm({
                 >(
                     results: T[]
                 ) => {
+                    if (threeSegmentFilterEnabled) {
+                        results = results.filter((result) =>
+                            isThreeSegmentDudunsparcePid(result.pid)
+                        );
+                    }
                     if (!isReachableAdvancesFilterEnabled) {
                         return results as SearcherRowWithAdvances[];
                     }
@@ -489,7 +509,7 @@ export default function CalibrationForm({
                                 searchingCallback
                             );
                         } else {
-                            await tenLines.search_seeds_wild(
+                            await tenLines.search_seeds_wild_filtered(
                                 SEED_IDENTIFIER_TO_GAME[game],
                                 parseInt(trainerID),
                                 parseInt(secretID),
@@ -503,6 +523,7 @@ export default function CalibrationForm({
                                 searcherFormState.gender,
                                 searcherFormState.hiddenPower,
                                 currentIvRanges,
+                                threeSegmentFilterEnabled,
                                 proxy(async (results: ExtendedWildSearcherState[]) => {
                                     appendResults(
                                         await filterResultsByRequiredAdvances(results)
@@ -690,12 +711,43 @@ export default function CalibrationForm({
                             wildLocation,
                             wildPokemon,
                             wildLead,
+                            threeSegmentDudunsparce:
+                                (wildPokemon & 0x7ff) === DUNSPARCE_SPECIES &&
+                                data.threeSegmentDudunsparce,
                         }));
                     }}
                     shouldFilterPokemon={true}
                     allowAnyPokemon
                     isSearcher
                 />
+            )}
+            {isDunsparceTarget && (
+                <Box sx={{ my: 1, textAlign: "left" }}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={searcherFormState.threeSegmentDudunsparce}
+                                disabled={searching}
+                                onChange={(event) => {
+                                    setSearcherFormState((data) => ({
+                                        ...data,
+                                        threeSegmentDudunsparce: event.target.checked,
+                                    }));
+                                    setRows([]);
+                                }}
+                            />
+                        }
+                        label={t("labels.threeSegmentDudunsparce")}
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                        {t("messages.threeSegmentDudunsparceHelp")}
+                    </Typography>
+                    {threeSegmentFilterEnabled && selectedNatureSet.size > 0 && !selectedNatureSet.has(0) && (
+                        <Alert severity="warning" sx={{ mt: 1 }}>
+                            {t("messages.threeSegmentDudunsparceNatureConflict")}
+                        </Alert>
+                    )}
+                </Box>
             )}
             <TextField
                 label={t("labels.shininess")}

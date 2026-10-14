@@ -128,6 +128,7 @@ export interface MainModule {
     check_seeds_static: (...args: any[]) => any;
     check_seeds_wild: (...args: any[]) => any;
     check_seeds_wild_limited: (...args: any[]) => any;
+    check_seeds_wild_held_items: (...args: any[]) => any;
     check_seeds_frlg_egg: (...args: any[]) => any;
     calc_ivs_static: (...args: any[]) => IVRange[] | Promise<IVRange[]>;
     calc_ivs_generic: (...args: any[]) => IVRange[] | Promise<IVRange[]>;
@@ -135,6 +136,7 @@ export interface MainModule {
     get_all_contiguous_seed_list: (...args: any[]) => FRLGContiguousSeedEntry[] | Promise<FRLGContiguousSeedEntry[]>;
     search_seeds_static: (...args: any[]) => any;
     search_seeds_wild: (...args: any[]) => any;
+    search_seeds_wild_filtered: (...args: any[]) => any;
     search_frlge_id_combos: (...args: any[]) => any;
     filter_reachable_target_seeds: (...args: any[]) => InitialSeedReachability[] | Promise<InitialSeedReachability[]>;
     filter_reachable_target_seeds_with_sound: (...args: any[]) => InitialSeedReachability[] | Promise<InitialSeedReachability[]>;
