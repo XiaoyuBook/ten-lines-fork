@@ -39,7 +39,7 @@ jobs:
                   npm ci
             - name: Build app and WASM tests
               run: |
-                  emcmake cmake -S src/wasm -B src/wasm/build -G Ninja -DTEN_LINES_BUILD_TESTS=ON
+                  emcmake cmake -S src/wasm -B src/wasm/build -G Ninja -DTEN_LINES_BUILD_TESTS=ON -DPython3_EXECUTABLE="$(command -v python)"
                   npm run build
             - name: Verify types, affected lint, and regression suites
               run: |
